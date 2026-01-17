@@ -1,0 +1,66 @@
+{
+    "app": {
+        "name": "Security Guard HRM",
+        "tagline": "Security Personnel Management System"
+    },
+    "navigation": {
+        "dashboard": "Dashboard",
+        "employees": "Employees",
+        "schedule": "Schedule",
+        "attendance": "Attendance",
+        "leave": "Leave",
+        "reports": "Reports",
+        "settings": "Settings"
+    },
+    "actions": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "filter": "Filter",
+        "export": "Export",
+        "import": "Import",
+        "submit": "Submit",
+        "confirm": "Confirm",
+        "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "previous": "Previous",
+        "loading": "Loading..."
+    },
+    "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "completed": "Completed"
+    },
+    "messages": {
+        "success": "Success",
+        "error": "Error",
+        "saved": "Saved successfully",
+        "deleted": "Deleted successfully",
+        "updated": "Updated successfully",
+        "confirmDelete": "Are you sure you want to delete?",
+        "noData": "No data available",
+        "required": "This field is required"
+    },
+    "time": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "tomorrow": "Tomorrow",
+        "thisWeek": "This Week",
+        "thisMonth": "This Month",
+        "date": "Date",
+        "time": "Time",
+        "from": "From",
+        "to": "To"
+    },
+    "language": {
+        "th": "Thai",
+        "en": "English"
+    }
+}

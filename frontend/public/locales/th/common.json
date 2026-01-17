@@ -1,0 +1,66 @@
+{
+    "app": {
+        "name": "Security Guard HRM",
+        "tagline": "ระบบจัดการพนักงานรักษาความปลอดภัย"
+    },
+    "navigation": {
+        "dashboard": "แดชบอร์ด",
+        "employees": "พนักงาน",
+        "schedule": "ตารางเวร",
+        "attendance": "การลงเวลา",
+        "leave": "การลา",
+        "reports": "รายงาน",
+        "settings": "ตั้งค่า"
+    },
+    "actions": {
+        "save": "บันทึก",
+        "cancel": "ยกเลิก",
+        "delete": "ลบ",
+        "edit": "แก้ไข",
+        "add": "เพิ่ม",
+        "search": "ค้นหา",
+        "filter": "กรอง",
+        "export": "ส่งออก",
+        "import": "นำเข้า",
+        "submit": "ส่ง",
+        "confirm": "ยืนยัน",
+        "close": "ปิด",
+        "back": "กลับ",
+        "next": "ถัดไป",
+        "previous": "ก่อนหน้า",
+        "loading": "กำลังโหลด..."
+    },
+    "status": {
+        "active": "ใช้งาน",
+        "inactive": "ไม่ใช้งาน",
+        "pending": "รอดำเนินการ",
+        "approved": "อนุมัติแล้ว",
+        "rejected": "ปฏิเสธ",
+        "completed": "เสร็จสิ้น"
+    },
+    "messages": {
+        "success": "สำเร็จ",
+        "error": "เกิดข้อผิดพลาด",
+        "saved": "บันทึกสำเร็จ",
+        "deleted": "ลบสำเร็จ",
+        "updated": "อัปเดตสำเร็จ",
+        "confirmDelete": "คุณแน่ใจหรือไม่ว่าต้องการลบ?",
+        "noData": "ไม่มีข้อมูล",
+        "required": "จำเป็นต้องกรอก"
+    },
+    "time": {
+        "today": "วันนี้",
+        "yesterday": "เมื่อวาน",
+        "tomorrow": "พรุ่งนี้",
+        "thisWeek": "สัปดาห์นี้",
+        "thisMonth": "เดือนนี้",
+        "date": "วันที่",
+        "time": "เวลา",
+        "from": "จาก",
+        "to": "ถึง"
+    },
+    "language": {
+        "th": "ไทย",
+        "en": "English"
+    }
+}

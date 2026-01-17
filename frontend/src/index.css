@@ -1,0 +1,573 @@
+/* ============================================
+   SELF-HOSTED FONTS
+   ============================================ */
+
+/* Kanit - Headings (aesthetic) */
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/kanit-v17-latin_thai-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/kanit-v17-latin_thai-700.woff2') format('woff2');
+}
+
+/* IBM Plex Sans Thai Looped - Body, Inputs, Data Tables (readability) */
+@font-face {
+  font-family: 'IBM Plex Sans Thai Looped';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-thai-looped-v12-latin_thai-regular.woff2') format('woff2');
+}
+
+/* ============================================
+   TAILWIND CSS IMPORT
+   ============================================ */
+@import 'tailwindcss';
+
+/* ============================================
+   CUSTOM THEME FOR SECURITY GUARD HRM
+   ============================================ */
+@theme {
+  /* Primary Colors - Deep Blue for Trust and Professionalism */
+  --color-primary-50: oklch(0.97 0.01 250);
+  --color-primary-100: oklch(0.93 0.03 250);
+  --color-primary-200: oklch(0.86 0.06 250);
+  --color-primary-300: oklch(0.76 0.09 250);
+  --color-primary-400: oklch(0.64 0.12 250);
+  --color-primary-500: oklch(0.53 0.14 250);
+  --color-primary-600: oklch(0.45 0.13 250);
+  --color-primary-700: oklch(0.38 0.11 250);
+  --color-primary-800: oklch(0.32 0.09 250);
+  --color-primary-900: oklch(0.27 0.07 250);
+  --color-primary-950: oklch(0.18 0.05 250);
+
+  /* Secondary Colors - Teal for Balance */
+  --color-secondary-50: oklch(0.97 0.02 180);
+  --color-secondary-100: oklch(0.93 0.04 180);
+  --color-secondary-200: oklch(0.86 0.08 180);
+  --color-secondary-300: oklch(0.76 0.12 180);
+  --color-secondary-400: oklch(0.64 0.15 180);
+  --color-secondary-500: oklch(0.52 0.14 180);
+  --color-secondary-600: oklch(0.44 0.12 180);
+  --color-secondary-700: oklch(0.37 0.10 180);
+  --color-secondary-800: oklch(0.31 0.08 180);
+  --color-secondary-900: oklch(0.26 0.06 180);
+  --color-secondary-950: oklch(0.17 0.04 180);
+
+  /* Accent Colors - Orange for Alerts and Actions */
+  --color-accent-50: oklch(0.98 0.02 60);
+  --color-accent-100: oklch(0.95 0.05 60);
+  --color-accent-200: oklch(0.90 0.10 55);
+  --color-accent-300: oklch(0.83 0.15 50);
+  --color-accent-400: oklch(0.75 0.18 45);
+  --color-accent-500: oklch(0.67 0.20 40);
+  --color-accent-600: oklch(0.58 0.18 35);
+  --color-accent-700: oklch(0.48 0.15 35);
+  --color-accent-800: oklch(0.40 0.12 35);
+  --color-accent-900: oklch(0.33 0.09 35);
+  --color-accent-950: oklch(0.22 0.06 35);
+
+  /* Success Colors */
+  --color-success-50: oklch(0.97 0.02 150);
+  --color-success-100: oklch(0.93 0.05 150);
+  --color-success-200: oklch(0.86 0.10 150);
+  --color-success-300: oklch(0.76 0.15 150);
+  --color-success-400: oklch(0.64 0.18 150);
+  --color-success-500: oklch(0.52 0.16 150);
+  --color-success-600: oklch(0.44 0.14 150);
+  --color-success-700: oklch(0.37 0.11 150);
+  --color-success-800: oklch(0.31 0.09 150);
+  --color-success-900: oklch(0.26 0.06 150);
+
+  /* Warning Colors */
+  --color-warning-50: oklch(0.98 0.02 85);
+  --color-warning-100: oklch(0.95 0.05 85);
+  --color-warning-200: oklch(0.90 0.10 85);
+  --color-warning-300: oklch(0.84 0.15 85);
+  --color-warning-400: oklch(0.77 0.18 85);
+  --color-warning-500: oklch(0.70 0.18 85);
+  --color-warning-600: oklch(0.60 0.15 85);
+  --color-warning-700: oklch(0.50 0.12 85);
+  --color-warning-800: oklch(0.42 0.09 85);
+  --color-warning-900: oklch(0.35 0.06 85);
+
+  /* Error/Danger Colors */
+  --color-error-50: oklch(0.97 0.02 25);
+  --color-error-100: oklch(0.93 0.05 25);
+  --color-error-200: oklch(0.86 0.10 25);
+  --color-error-300: oklch(0.76 0.15 25);
+  --color-error-400: oklch(0.64 0.18 25);
+  --color-error-500: oklch(0.55 0.18 25);
+  --color-error-600: oklch(0.47 0.16 25);
+  --color-error-700: oklch(0.40 0.13 25);
+  --color-error-800: oklch(0.34 0.10 25);
+  --color-error-900: oklch(0.28 0.07 25);
+
+  /* Dark Mode Surface Colors */
+  --color-surface-50: oklch(0.98 0.00 0);
+  --color-surface-100: oklch(0.96 0.00 0);
+  --color-surface-200: oklch(0.93 0.00 0);
+  --color-surface-300: oklch(0.88 0.00 0);
+  --color-surface-400: oklch(0.75 0.00 0);
+  --color-surface-500: oklch(0.55 0.00 0);
+  --color-surface-600: oklch(0.40 0.00 0);
+  --color-surface-700: oklch(0.30 0.01 250);
+  --color-surface-800: oklch(0.22 0.01 250);
+  --color-surface-900: oklch(0.16 0.02 250);
+  --color-surface-950: oklch(0.12 0.02 250);
+
+  /* ============================================
+     TYPOGRAPHY SYSTEM
+     ============================================ */
+
+  /* Font Families */
+  --font-heading: 'Kanit', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 20px -5px var(--color-primary-500);
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ============================================
+   KEYFRAMES
+   ============================================ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -5px var(--color-primary-500);
+  }
+
+  50% {
+    box-shadow: 0 0 30px -3px var(--color-primary-400);
+  }
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  @apply bg-surface-50 text-surface-900;
+}
+
+/* ============================================
+   TYPOGRAPHY - HEADINGS (Kanit)
+   ============================================ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  @apply text-surface-900;
+}
+
+h1,
+.h1 {
+  font-size: var(--text-4xl);
+  line-height: 1.1;
+}
+
+h2,
+.h2 {
+  font-size: var(--text-3xl);
+}
+
+h3,
+.h3 {
+  font-size: var(--text-2xl);
+}
+
+h4,
+.h4 {
+  font-size: var(--text-xl);
+}
+
+h5,
+.h5 {
+  font-size: var(--text-lg);
+}
+
+h6,
+.h6 {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+/* Responsive heading sizes */
+@media (min-width: 768px) {
+
+  h1,
+  .h1 {
+    font-size: var(--text-5xl);
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--text-4xl);
+  }
+
+  h3,
+  .h3 {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (min-width: 1024px) {
+
+  h1,
+  .h1 {
+    font-size: var(--text-6xl);
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--text-5xl);
+  }
+}
+
+/* ============================================
+   TYPOGRAPHY - BODY TEXT (IBM Plex Sans Thai Looped)
+   ============================================ */
+p,
+span,
+div,
+li,
+td,
+th,
+label,
+a {
+  font-family: var(--font-sans);
+}
+
+/* Data-critical text - ensure maximum readability */
+.data-text,
+.customer-name,
+.customer-id,
+[data-readable] {
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  font-feature-settings: 'tnum' 1;
+  /* Tabular numbers for alignment */
+}
+
+/* ============================================
+   FORM ELEMENTS (IBM Plex Sans Thai Looped for readability)
+   ============================================ */
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-family: var(--font-sans);
+  @apply text-surface-400;
+}
+
+/* ============================================
+   DATA TABLES (IBM Plex Sans Thai Looped for accuracy)
+   ============================================ */
+table {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+th {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  @apply text-surface-600;
+}
+
+td {
+  font-family: var(--font-sans);
+  @apply text-surface-800;
+}
+
+/* Numeric data in tables - tabular figures for alignment */
+td[data-type="number"],
+td[data-type="id"],
+td[data-type="phone"],
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-surface-950 text-surface-100;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .heading {
+    @apply text-white;
+  }
+
+  th {
+    @apply text-surface-400;
+  }
+
+  td {
+    @apply text-surface-200;
+  }
+}
+
+.dark body {
+  @apply bg-surface-950 text-surface-100;
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark .heading {
+  @apply text-white;
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-surface-500;
+}
+
+.dark ::-webkit-scrollbar-track {
+  @apply bg-surface-800;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-surface-600;
+}
+
+/* ============================================
+   FOCUS & SELECTION STYLES
+   ============================================ */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-500;
+}
+
+::selection {
+  @apply bg-primary-500/30;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Font family utilities */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-sans);
+}
+
+.font-data {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glass effect */
+.glass {
+  backdrop-filter: blur(12px) saturate(180%);
+  @apply bg-white/70;
+}
+
+.dark .glass {
+  @apply bg-surface-900/70;
+}
+
+/* Text gradient */
+.text-gradient {
+  @apply bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+}
+
+/* Button styles */
+.btn-primary {
+  font-family: var(--font-sans);
+  @apply bg-primary-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-primary-600 active:bg-primary-700 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+}
+
+.btn-secondary {
+  font-family: var(--font-sans);
+  @apply bg-secondary-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-secondary-600 active:bg-secondary-700 focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2;
+}
+
+.btn-outline {
+  font-family: var(--font-sans);
+  @apply border-2 border-primary-500 text-primary-500 font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-primary-500 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+}
+
+/* Input styles */
+.input-base {
+  font-family: var(--font-sans);
+  @apply w-full px-4 py-2 rounded-lg border border-surface-300 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-150 placeholder:text-surface-400;
+}
+
+.dark .input-base {
+  @apply border-surface-600 bg-surface-800 placeholder:text-surface-500;
+}
+
+/* Loading Spinner */
+.spinner {
+  @apply animate-spin rounded-full border-2 border-primary-500 border-t-transparent;
+}
+
+/* ============================================
+   PROSE/CONTENT STYLES
+   ============================================ */
+.prose {
+  font-family: var(--font-sans);
+  line-height: 1.7;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: var(--font-heading);
+}
