@@ -26,8 +26,10 @@ i18n
             lookupLocalStorage: 'i18nextLng',
         },
 
+        // Only use common namespace since that's all we have
         defaultNS: 'common',
-        ns: ['common', 'auth', 'employees', 'shifts', 'attendance', 'leave'],
+        ns: ['common'],
     });
 
 export default i18n;
+

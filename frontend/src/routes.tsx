@@ -22,6 +22,10 @@ const LeavePage = lazy(() => import('./pages/leave/LeavePage'));
 const LeaveBalancesPage = lazy(() => import('./pages/leave/LeaveBalancesPage'));
 const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'));
 
+// Sprint 6: Reports & Settings pages
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+
 // Layouts
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
 const LiffLayout = lazy(() => import('./components/layout/LiffLayout'));
@@ -105,9 +109,15 @@ const routes: RouteObject[] = [
                 path: 'leave-types',
                 element: withSuspense(LeaveTypesPage),
             },
-            // TODO: Add more dashboard routes in Sprint 6+
-            // { path: 'reports', element: withSuspense(ReportsPage) },
-            // { path: 'settings', element: withSuspense(SettingsPage) },
+            // Sprint 6: Reports & Settings
+            {
+                path: 'reports',
+                element: withSuspense(ReportsPage),
+            },
+            {
+                path: 'settings',
+                element: withSuspense(SettingsPage),
+            },
         ],
     },
 

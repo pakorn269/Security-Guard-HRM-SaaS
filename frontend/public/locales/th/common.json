@@ -7,8 +7,11 @@
         "dashboard": "แดชบอร์ด",
         "employees": "พนักงาน",
         "schedule": "ตารางเวร",
+        "shiftTemplates": "รูปแบบกะงาน",
         "attendance": "การลงเวลา",
         "leave": "การลา",
+        "leaveBalances": "ยอดวันลา",
+        "leaveTypes": "ประเภทการลา",
         "reports": "รายงาน",
         "settings": "ตั้งค่า"
     },
@@ -28,7 +31,12 @@
         "back": "กลับ",
         "next": "ถัดไป",
         "previous": "ก่อนหน้า",
-        "loading": "กำลังโหลด..."
+        "loading": "กำลังโหลด...",
+        "refresh": "รีเฟรช",
+        "view": "ดู",
+        "approve": "อนุมัติ",
+        "reject": "ปฏิเสธ",
+        "generate": "สร้าง"
     },
     "status": {
         "active": "ใช้งาน",
@@ -36,7 +44,12 @@
         "pending": "รอดำเนินการ",
         "approved": "อนุมัติแล้ว",
         "rejected": "ปฏิเสธ",
-        "completed": "เสร็จสิ้น"
+        "completed": "เสร็จสิ้น",
+        "onTime": "ตรงเวลา",
+        "late": "มาสาย",
+        "absent": "ไม่มา",
+        "published": "เผยแพร่แล้ว",
+        "draft": "ฉบับร่าง"
     },
     "messages": {
         "success": "สำเร็จ",
@@ -57,10 +70,73 @@
         "date": "วันที่",
         "time": "เวลา",
         "from": "จาก",
-        "to": "ถึง"
+        "to": "ถึง",
+        "hours": "ชั่วโมง",
+        "minutes": "นาที",
+        "days": "วัน"
     },
     "language": {
         "th": "ไทย",
         "en": "English"
+    },
+    "attendance": {
+        "clockIn": "ลงเวลาเข้า",
+        "clockOut": "ลงเวลาออก",
+        "totalHours": "ชั่วโมงทำงานรวม",
+        "overtime": "ทำงานล่วงเวลา",
+        "summary": "สรุปการลงเวลา",
+        "trend": "แนวโน้มการลงเวลา",
+        "rate": "อัตราการมาทำงาน"
+    },
+    "leave": {
+        "request": "ใบลา",
+        "balance": "ยอดวันลา",
+        "type": "ประเภทการลา",
+        "entitled": "ได้รับ",
+        "used": "ใช้ไป",
+        "remaining": "คงเหลือ",
+        "pendingDays": "วันที่รอดำเนินการ",
+        "usageRate": "อัตราการใช้"
+    },
+    "reports": {
+        "title": "รายงาน",
+        "attendanceReport": "รายงานการลงเวลา",
+        "leaveReport": "รายงานการลา",
+        "generateReport": "สร้างรายงาน",
+        "exportCSV": "ส่งออก CSV",
+        "dateRange": "ช่วงวันที่",
+        "year": "ปี",
+        "totalEmployees": "พนักงานทั้งหมด",
+        "employeeDetails": "รายละเอียดพนักงาน"
+    },
+    "settings": {
+        "title": "ตั้งค่า",
+        "companyProfile": "ข้อมูลบริษัท",
+        "attendanceSettings": "ตั้งค่าการลงเวลา",
+        "notificationSettings": "ตั้งค่าการแจ้งเตือน",
+        "leaveSettings": "ตั้งค่าการลา",
+        "lateThreshold": "เกณฑ์มาสาย",
+        "overtimeThreshold": "เกณฑ์ทำงานล่วงเวลา",
+        "gpsRadius": "รัศมี GPS",
+        "shiftReminder": "แจ้งเตือนก่อนกะงาน",
+        "leaveResetMonth": "เดือนรีเซ็ตวันลา"
+    },
+    "notifications": {
+        "title": "การแจ้งเตือน",
+        "markAllRead": "ทำเครื่องหมายอ่านทั้งหมด",
+        "noNotifications": "ไม่มีการแจ้งเตือน",
+        "shiftPublished": "ตารางเวรเผยแพร่แล้ว",
+        "shiftReminder": "เตือนก่อนเข้ากะ",
+        "leaveApproved": "การลาได้รับอนุมัติ",
+        "leaveRejected": "การลาถูกปฏิเสธ"
+    },
+    "employee": {
+        "code": "รหัสพนักงาน",
+        "name": "ชื่อ",
+        "position": "ตำแหน่ง",
+        "department": "แผนก",
+        "phone": "โทรศัพท์",
+        "email": "อีเมล",
+        "hireDate": "วันที่เริ่มงาน"
     }
 }
