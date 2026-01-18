@@ -138,5 +138,47 @@
         "phone": "โทรศัพท์",
         "email": "อีเมล",
         "hireDate": "วันที่เริ่มงาน"
+    },
+    "employees": {
+        "title": "พนักงาน",
+        "subtitle": "จัดการข้อมูลสมาชิกในทีมของคุณ",
+        "code": "รหัสพนักงาน",
+        "name": "ชื่อ",
+        "phone": "โทรศัพท์",
+        "email": "อีเมล",
+        "status": "สถานะ",
+        "account": "บัญชีผู้ใช้",
+        "addEmployee": "เพิ่มพนักงาน",
+        "editEmployee": "แก้ไขพนักงาน",
+        "searchPlaceholder": "ค้นหาชื่อ, รหัส, เบอร์โทร...",
+        "allStatuses": "สถานะทั้งหมด",
+        "statusActive": "ทำงานอยู่",
+        "statusOnLeave": "ลางาน",
+        "statusTerminated": "ออกจากงาน",
+        "noEmployees": "ไม่พบพนักงาน",
+        "hireDate": "วันที่เริ่มงาน",
+        "fullName": "ชื่อ-นามสกุล (ภาษาอังกฤษ)",
+        "fullNameTh": "ชื่อ-นามสกุล (ภาษาไทย)",
+        "address": "ที่อยู่",
+        "emergencyContactName": "ชื่อผู้ติดต่อฉุกเฉิน",
+        "emergencyContactPhone": "เบอร์โทรผู้ติดต่อฉุกเฉิน",
+        "notes": "หมายเหตุ",
+        "createUserAccount": "สร้างบัญชีผู้ใช้สำหรับพนักงานนี้",
+        "userRole": "บทบาทผู้ใช้",
+        "password": "รหัสผ่าน"
+    },
+    "common": {
+        "cancel": "ยกเลิก",
+        "save": "บันทึก"
+    },
+    "roles": {
+        "guard": "พนักงานรักษาความปลอดภัย",
+        "manager": "ผู้จัดการ"
+    },
+    "validation": {
+        "required": "จำเป็นต้องกรอก",
+        "invalidEmail": "รูปแบบอีเมลไม่ถูกต้อง",
+        "emailRequiredForAccount": "ต้องกรอกอีเมลสำหรับสร้างบัญชีผู้ใช้",
+        "passwordMinLength": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"
     }
 }

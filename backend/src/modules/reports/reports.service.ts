@@ -36,9 +36,9 @@ export class ReportsService {
         // Get all employees
         let employeeQuery = supabaseAdmin
             .from('employees')
-            .select('id, employee_code, user:users(full_name)')
+            .select('id, employee_code, full_name')
             .eq('company_id', companyId)
-            .eq('is_active', true);
+            .eq('status', 'active');
 
         if (employeeId) {
             employeeQuery = employeeQuery.eq('id', employeeId);
@@ -158,7 +158,7 @@ export class ReportsService {
             employeeRows.push({
                 employeeId: emp.id,
                 employeeCode: emp.employee_code || '',
-                employeeName: (emp.user as any)?.full_name || 'Unknown',
+                employeeName: (emp as any).full_name || 'Unknown',
                 totalShifts: empShifts.length,
                 onTimeCount,
                 lateCount,
@@ -240,9 +240,9 @@ export class ReportsService {
         // Get all employees
         let empQuery = supabaseAdmin
             .from('employees')
-            .select('id, employee_code, user:users(full_name)')
+            .select('id, employee_code, full_name')
             .eq('company_id', companyId)
-            .eq('is_active', true);
+            .eq('status', 'active');
 
         if (employeeId) {
             empQuery = empQuery.eq('id', employeeId);
@@ -334,7 +334,7 @@ export class ReportsService {
                 employeeRows.push({
                     employeeId: emp.id,
                     employeeCode: emp.employee_code || '',
-                    employeeName: (emp.user as any)?.full_name || 'Unknown',
+                    employeeName: (emp as any).full_name || 'Unknown',
                     leaveTypeId: lt.id,
                     leaveTypeName: lt.name,
                     leaveTypeNameTh: lt.name_th,
