@@ -6,11 +6,15 @@ import { AuthProvider } from './context/AuthContext';
 import './i18n';
 import './index.css';
 
+import { NotificationProvider } from './context/NotificationContext';
+
 // App wrapper component for providers
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <NotificationProvider>
+        <RouterProvider router={router} />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

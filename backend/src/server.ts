@@ -2,6 +2,8 @@ import app from './app.js';
 import { env } from './config/env.js';
 import logger from './utils/logger.js';
 
+import { initScheduler } from './jobs/scheduler.js';
+
 const PORT = parseInt(env.PORT, 10);
 
 const server = app.listen(PORT, () => {
@@ -9,6 +11,11 @@ const server = app.listen(PORT, () => {
     logger.info(`📚 API Version: ${env.API_VERSION}`);
     logger.info(`🌍 Environment: ${env.NODE_ENV}`);
     logger.info(`🔗 API URL: http://localhost:${PORT}/api/${env.API_VERSION}`);
+
+    // Initialize Scheduler
+    if (env.NODE_ENV !== 'test') {
+        initScheduler();
+    }
 });
 
 // Graceful shutdown

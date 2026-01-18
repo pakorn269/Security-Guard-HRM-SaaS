@@ -22,6 +22,8 @@ import {
     leaveBalancesRouter as leaveBalanceRoutes,
     leaveRouter as leaveRoutes,
 } from './modules/leave/index.js';
+import { notificationRoutes } from './modules/notifications/index.js';
+import { reportRoutes } from './modules/reports/index.js';
 
 // Create Express app
 const app: Application = express();
@@ -112,9 +114,9 @@ apiRouter.use('/leave-requests', leaveRequestRoutes);
 apiRouter.use('/leave-balances', leaveBalanceRoutes);
 apiRouter.use('/leave', leaveRoutes);
 
-// TODO: Add module routes here in Sprint 6+
-// apiRouter.use('/notifications', notificationRoutes);
-// apiRouter.use('/reports', reportRoutes);
+// Sprint 6: Notifications & Reports
+apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/reports', reportRoutes);
 
 // API root info
 apiRouter.get('/', (_req, res) => {

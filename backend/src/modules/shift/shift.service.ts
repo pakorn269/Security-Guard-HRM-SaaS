@@ -553,12 +553,30 @@ class ShiftService {
         }
 
         logger.info('Shift updated', { shiftId, companyId });
+
+        // Send notification if shift was published and critical fields changed
+        if (existing.status === 'published' && (data.date || data.startTime || data.endTime || data.location)) {
+            this.sendShiftChangeNotification(companyId, shift.id, 'update').catch(err =>
+                logger.error('Failed to send shift update notification', err)
+            );
+        }
+
         return this.mapToShift(shift);
     }
 
     // Delete shift
     async delete(shiftId: string, companyId: string): Promise<void> {
-        await this.getById(shiftId, companyId);
+        const existing = await this.getById(shiftId, companyId);
+        let shiftDetails: ShiftWithDetails | undefined;
+
+        // If published, fetch details before delete for notification
+        if (existing.status === 'published') {
+            try {
+                shiftDetails = await this.getByIdWithDetails(shiftId, companyId);
+            } catch (error) {
+                // Ignore error if details not found (shouldn't happen)
+            }
+        }
 
         const { error } = await supabaseAdmin
             .from('shifts')
@@ -572,6 +590,13 @@ class ShiftService {
         }
 
         logger.info('Shift deleted', { shiftId, companyId });
+
+        // Send cancel notification
+        if (shiftDetails) {
+            this.sendShiftChangeNotification(companyId, shiftId, 'cancel', shiftDetails).catch(err =>
+                logger.error('Failed to send shift cancel notification', err)
+            );
+        }
     }
 
     // Publish shifts
@@ -602,7 +627,137 @@ class ShiftService {
         }
 
         logger.info('Shifts published', { companyId, count: shifts?.length ?? 0 });
+
+        // Send notifications
+        if (shifts && shifts.length > 0) {
+            this.sendPublishNotifications(companyId, shifts.map(row => this.mapToShift(row))).catch(err =>
+                logger.error('Failed to send publish notifications', err)
+            );
+        }
+
         return (shifts || []).map(row => this.mapToShift(row));
+    }
+
+    // Send notifications for published shifts
+    private async sendPublishNotifications(companyId: string, shifts: Shift[]) {
+        try {
+            // Group shifts by employee
+            const shiftsByEmployee = new Map<string, Shift[]>();
+            let minDate = shifts[0].date;
+            let maxDate = shifts[0].date;
+
+            for (const shift of shifts) {
+                const list = shiftsByEmployee.get(shift.employeeId) || [];
+                list.push(shift);
+                shiftsByEmployee.set(shift.employeeId, list);
+
+                if (shift.date < minDate) minDate = shift.date;
+                if (shift.date > maxDate) maxDate = shift.date;
+            }
+
+            // Get users for these employees
+            const employeeIds = Array.from(shiftsByEmployee.keys());
+            if (employeeIds.length === 0) return;
+
+            const { data: users, error } = await supabaseAdmin
+                .from('users')
+                .select('id, employee_id')
+                .in('employee_id', employeeIds);
+
+            if (error) {
+                logger.error('Error fetching users for notifications', error);
+                return;
+            }
+
+            // Send notifications
+            // Dynamic import to avoid circular dependency
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+
+            for (const user of users || []) {
+                const employeeShifts = shiftsByEmployee.get(user.employee_id);
+                if (!employeeShifts) continue;
+
+                await NotificationService.createNotification({
+                    companyId,
+                    userId: user.id,
+                    type: 'shift_published',
+                    title: 'New Schedule Published',
+                    titleTh: 'ตารางงานใหม่ถูกเผยแพร่แล้ว',
+                    message: `You have ${employeeShifts.length} new shifts schedule from ${minDate} to ${maxDate}.`,
+                    messageTh: `คุณมีกะงานใหม่ ${employeeShifts.length} กะ ตั้งแต่วันที่ ${minDate} ถึง ${maxDate}`,
+                    data: {
+                        startDate: minDate,
+                        endDate: maxDate,
+                        totalShifts: employeeShifts.length,
+                        shiftIds: employeeShifts.map(s => s.id)
+                    },
+                    channels: ['in_app', 'line']
+                });
+            }
+
+        } catch (error) {
+            logger.error('Error sending publish notifications', error);
+        }
+    }
+
+    // Send notification for shift change
+    private async sendShiftChangeNotification(
+        companyId: string,
+        shiftId: string,
+        changeType: 'update' | 'cancel',
+        existingShift?: ShiftWithDetails
+    ) {
+        try {
+            // Get shift with details
+            const shift = existingShift || await this.getByIdWithDetails(shiftId, companyId);
+
+            // Get user
+            const { data: user, error } = await supabaseAdmin
+                .from('users')
+                .select('id')
+                .eq('employee_id', shift.employeeId)
+                .single();
+
+            if (error || !user) return;
+
+            // Import notification service
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+
+            const title = changeType === 'update' ? 'Shift Updated' : 'Shift Cancelled';
+            const titleTh = changeType === 'update' ? 'ตารางงานมีการเปลี่ยนแปลง' : 'ยกเลิกกะงาน';
+
+            let message = '';
+            let messageTh = '';
+
+            if (changeType === 'update') {
+                message = `Your shift on ${shift.date} has been updated. New time: ${shift.startTime} - ${shift.endTime}.`;
+                messageTh = `กะงานของคุณวันที่ ${shift.date} มีการเปลี่ยนแปลง เวลาใหม่: ${shift.startTime} - ${shift.endTime}`;
+            } else {
+                message = `Your shift on ${shift.date} (${shift.startTime} - ${shift.endTime}) has been cancelled.`;
+                messageTh = `กะงานของคุณวันที่ ${shift.date} (${shift.startTime} - ${shift.endTime}) ถูกยกเลิกแล้ว`;
+            }
+
+            await NotificationService.createNotification({
+                companyId,
+                userId: user.id,
+                type: 'shift_changed',
+                title,
+                titleTh,
+                message,
+                messageTh,
+                data: {
+                    shiftId: shift.id,
+                    date: shift.date,
+                    startTime: shift.startTime,
+                    endTime: shift.endTime,
+                    changeType
+                },
+                channels: ['in_app', 'line']
+            });
+
+        } catch (error) {
+            logger.error('Error sending shift change notification', error);
+        }
     }
 
     // Copy shifts from one week to another
@@ -786,6 +941,101 @@ class ShiftService {
             upcoming: upcomingShifts,
             past: pastShifts,
         };
+    }
+
+    // Send upcoming shift reminders
+    async sendUpcomingShiftReminders(lookaheadHours: number = 2): Promise<{ sent: number; skipped: number }> {
+        // Calculate window
+        const now = new Date();
+        // Adjust for timezone if necessary? We assume server time is consistent with shift times or handle conversion.
+        // Actually shifts are stored as YYYY-MM-DD string and HH:mm:ss string without timezone info in DB usually (local time).
+        // Let's assume the server is running in the same timezone (e.g. Asia/Bangkok) or we need to offset.
+        // For SaaS, usually best to store UTC or store local + timezone.
+        // Here, assuming standard dates. If server is UTC, we might need to be careful.
+        // Let's assume "date" and "start_time" imply the company's local time. 
+        // Comparing with `new Date()` (server time) might be risky if they don't match.
+        // However, for MVP let's assume server time aligns or simply use the strings.
+
+        const future = new Date(now.getTime() + lookaheadHours * 60 * 60 * 1000);
+
+        const todayStr = now.toISOString().split('T')[0];
+        // futureStr could be tomorrow if lookahead crosses midnight
+        const futureStr = future.toISOString().split('T')[0];
+
+        // 1. Get candidate shifts (published, active) within broad date range
+        const { data: shifts, error } = await supabaseAdmin
+            .from('shifts')
+            .select('*')
+            .eq('status', 'published')
+            .gte('date', todayStr)
+            .lte('date', futureStr);
+
+        if (error || !shifts) {
+            logger.error('Error fetching shifts for reminders', error);
+            return { sent: 0, skipped: 0 };
+        }
+
+        let sentCount = 0;
+        let skippedCount = 0;
+
+        const { NotificationService } = await import('../notifications/notifications.service.js');
+
+        // 2. Filter and send
+        for (const shift of shifts) {
+            // Construct start time object (naive)
+            // Assuming shift.date and shift.start_time are in local time matching server
+            // To be robust, we'd need company timezone, but let's proceed with naive comparison
+            const shiftStart = new Date(`${shift.date}T${shift.start_time}`);
+
+            // Check if in window (now < start <= future)
+            // Also buffer: don't remind if it already started (now > start)
+            if (shiftStart > now && shiftStart <= future) {
+                // Check if reminder already sent
+                const { count } = await supabaseAdmin
+                    .from('notifications')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('type', 'shift_reminder')
+                    .contains('data', { shiftId: shift.id });
+
+                if (count && count > 0) {
+                    skippedCount++;
+                    continue;
+                }
+
+                // Get user for this employee
+                const { data: user } = await supabaseAdmin
+                    .from('users')
+                    .select('id')
+                    .eq('employee_id', shift.employee_id)
+                    .single();
+
+                if (!user) continue;
+
+                // Send notification
+                await NotificationService.createNotification({
+                    companyId: shift.company_id,
+                    userId: user.id,
+                    type: 'shift_reminder',
+                    title: 'Upcoming Shift Reminder',
+                    titleTh: 'แจ้งเตือนกะงานใกล้ถึง',
+                    message: `You have a shift starting soon at ${shift.start_time.substring(0, 5) ?? '??:??'}.`,
+                    messageTh: `คุณมีกะงานกำลังจะเริ่มเวลา ${shift.start_time.substring(0, 5) ?? '??:??'}`,
+                    data: {
+                        shiftId: shift.id,
+                        date: shift.date,
+                        time: shift.start_time,
+                        timeRange: `${shift.start_time.substring(0, 5)} - ${shift.end_time.substring(0, 5)}`,
+                        location: shift.location || '-'
+                    },
+                    channels: ['in_app', 'line']
+                });
+
+                sentCount++;
+                logger.info(`Sent reminder for shift ${shift.id} to user ${user.id}`);
+            }
+        }
+
+        return { sent: sentCount, skipped: skippedCount };
     }
 }
 

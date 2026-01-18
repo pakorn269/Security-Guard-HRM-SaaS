@@ -7,8 +7,11 @@
         "dashboard": "Dashboard",
         "employees": "Employees",
         "schedule": "Schedule",
+        "shiftTemplates": "Shift Templates",
         "attendance": "Attendance",
         "leave": "Leave",
+        "leaveBalances": "Leave Balances",
+        "leaveTypes": "Leave Types",
         "reports": "Reports",
         "settings": "Settings"
     },
@@ -28,7 +31,12 @@
         "back": "Back",
         "next": "Next",
         "previous": "Previous",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "refresh": "Refresh",
+        "view": "View",
+        "approve": "Approve",
+        "reject": "Reject",
+        "generate": "Generate"
     },
     "status": {
         "active": "Active",
@@ -36,7 +44,12 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "completed": "Completed"
+        "completed": "Completed",
+        "onTime": "On Time",
+        "late": "Late",
+        "absent": "Absent",
+        "published": "Published",
+        "draft": "Draft"
     },
     "messages": {
         "success": "Success",
@@ -57,10 +70,73 @@
         "date": "Date",
         "time": "Time",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "hours": "hours",
+        "minutes": "minutes",
+        "days": "days"
     },
     "language": {
         "th": "Thai",
         "en": "English"
+    },
+    "attendance": {
+        "clockIn": "Clock In",
+        "clockOut": "Clock Out",
+        "totalHours": "Total Hours",
+        "overtime": "Overtime",
+        "summary": "Attendance Summary",
+        "trend": "Attendance Trend",
+        "rate": "Attendance Rate"
+    },
+    "leave": {
+        "request": "Leave Request",
+        "balance": "Leave Balance",
+        "type": "Leave Type",
+        "entitled": "Entitled",
+        "used": "Used",
+        "remaining": "Remaining",
+        "pendingDays": "Pending Days",
+        "usageRate": "Usage Rate"
+    },
+    "reports": {
+        "title": "Reports",
+        "attendanceReport": "Attendance Report",
+        "leaveReport": "Leave Report",
+        "generateReport": "Generate Report",
+        "exportCSV": "Export CSV",
+        "dateRange": "Date Range",
+        "year": "Year",
+        "totalEmployees": "Total Employees",
+        "employeeDetails": "Employee Details"
+    },
+    "settings": {
+        "title": "Settings",
+        "companyProfile": "Company Profile",
+        "attendanceSettings": "Attendance Settings",
+        "notificationSettings": "Notification Settings",
+        "leaveSettings": "Leave Settings",
+        "lateThreshold": "Late Threshold",
+        "overtimeThreshold": "Overtime Threshold",
+        "gpsRadius": "GPS Radius",
+        "shiftReminder": "Shift Reminder",
+        "leaveResetMonth": "Leave Reset Month"
+    },
+    "notifications": {
+        "title": "Notifications",
+        "markAllRead": "Mark All as Read",
+        "noNotifications": "No notifications",
+        "shiftPublished": "Schedule Published",
+        "shiftReminder": "Shift Reminder",
+        "leaveApproved": "Leave Approved",
+        "leaveRejected": "Leave Rejected"
+    },
+    "employee": {
+        "code": "Employee Code",
+        "name": "Name",
+        "position": "Position",
+        "department": "Department",
+        "phone": "Phone",
+        "email": "Email",
+        "hireDate": "Hire Date"
     }
 }

@@ -277,55 +277,55 @@
 
 ---
 
-## Sprint 6: Notifications & Polish (Week 12)
+## Sprint 6: Notifications & Polish (Week 12) ✅
 
-### S6.1 LINE Messaging Integration
-- [ ] **S6.1.1** Create notification service
-- [ ] **S6.1.2** Set up LINE Messaging API client
-- [ ] **S6.1.3** Implement push message function
-- [ ] **S6.1.4** Create message templates (Flex Messages)
-- [ ] **S6.1.5** Implement notification queue (simple)
-- [ ] **S6.1.6** Handle LINE API errors gracefully
+### S6.1 LINE Messaging Integration ✅
+- [x] **S6.1.1** Create notification service
+- [x] **S6.1.2** Set up LINE Messaging API client
+- [x] **S6.1.3** Implement push message function
+- [x] **S6.1.4** Create message templates (Flex Messages)
+- [x] **S6.1.5** Implement notification queue (simple - direct for now)
+- [x] **S6.1.6** Handle LINE API errors gracefully
 
-### S6.2 Notification Triggers
-- [ ] **S6.2.1** Send notification on schedule publish
-- [ ] **S6.2.2** Send notification on shift change
-- [ ] **S6.2.3** Send notification on leave status change
-- [ ] **S6.2.4** Send shift reminder (configurable hours before)
-- [ ] **S6.2.5** Send certification expiry warning
+### S6.2 Notification Triggers ✅
+- [x] **S6.2.1** Send notification on schedule publish
+- [x] **S6.2.2** Send notification on shift change
+- [x] **S6.2.3** Send notification on leave status change
+- [x] **S6.2.4** Send shift reminder (configurable hours before)
+- [ ] **S6.2.5** Send certification expiry warning *(deferred - requires certification tracking)*
 
-### S6.3 In-App Notifications
-- [ ] **S6.3.1** Create notifications table endpoints
-- [ ] **S6.3.2** Create notification bell icon with badge
-- [ ] **S6.3.3** Create notification dropdown/panel
-- [ ] **S6.3.4** Implement mark as read
-- [ ] **S6.3.5** Implement mark all as read
+### S6.3 In-App Notifications ✅
+- [x] **S6.3.1** Create notifications table endpoints
+- [x] **S6.3.2** Create notification bell icon with badge
+- [x] **S6.3.3** Create notification dropdown/panel
+- [x] **S6.3.4** Implement mark as read
+- [x] **S6.3.5** Implement mark all as read
 
-### S6.4 Reports
-- [ ] **S6.4.1** Create attendance summary report endpoint
-- [ ] **S6.4.2** Create leave usage report endpoint
-- [ ] **S6.4.3** Create ReportsPage
-- [ ] **S6.4.4** Implement date range filter
-- [ ] **S6.4.5** Create simple charts (attendance trend)
-- [ ] **S6.4.6** Implement CSV export
+### S6.4 Reports ✅
+- [x] **S6.4.1** Create attendance summary report endpoint
+- [x] **S6.4.2** Create leave usage report endpoint
+- [x] **S6.4.3** Create ReportsPage
+- [x] **S6.4.4** Implement date range filter
+- [x] **S6.4.5** Create simple charts (attendance trend)
+- [x] **S6.4.6** Implement CSV export
 
-### S6.5 Settings Page
-- [ ] **S6.5.1** Create SettingsPage layout
-- [ ] **S6.5.2** Company profile settings
-- [ ] **S6.5.3** Attendance thresholds configuration
-- [ ] **S6.5.4** Notification preferences
+### S6.5 Settings Page ✅
+- [x] **S6.5.1** Create SettingsPage layout
+- [x] **S6.5.2** Company profile settings
+- [x] **S6.5.3** Attendance thresholds configuration
+- [x] **S6.5.4** Notification preferences
 
-### S6.6 Final Polish
-- [ ] **S6.6.1** Complete Thai translations
-- [ ] **S6.6.2** Complete English translations
-- [ ] **S6.6.3** Add loading states everywhere
-- [ ] **S6.6.4** Add error states everywhere
-- [ ] **S6.6.5** Add empty states everywhere
-- [ ] **S6.6.6** Mobile responsiveness fixes
-- [ ] **S6.6.7** LIFF UI polish
-- [ ] **S6.6.8** Performance audit
+### S6.6 Final Polish ✅
+- [x] **S6.6.1** Complete Thai translations
+- [x] **S6.6.2** Complete English translations
+- [x] **S6.6.3** Add loading states everywhere
+- [x] **S6.6.4** Add error states everywhere
+- [x] **S6.6.5** Add empty states everywhere
+- [x] **S6.6.6** Mobile responsiveness fixes ✅
+- [ ] **S6.6.7** LIFF UI polish *(ongoing)*
+- [ ] **S6.6.8** Performance audit *(deferred)*
 
-**Sprint 6 Deliverable**: Notifications working, reports available, UI polished for launch
+**Sprint 6 Deliverable**: Notifications working, reports available, UI polished for launch ✅
 
 ---
 

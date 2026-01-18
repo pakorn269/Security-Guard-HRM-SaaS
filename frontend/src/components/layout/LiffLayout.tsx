@@ -34,10 +34,10 @@ export default function LiffLayout() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-surface-50">
-                <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center justify-center min-h-screen bg-surface-50 safe-area-top safe-area-bottom">
+                <div className="flex flex-col items-center gap-4 p-4">
                     <div className="w-12 h-12 spinner" />
-                    <p className="text-surface-500">กำลังโหลด...</p>
+                    <p className="text-surface-500 text-center">กำลังโหลด...</p>
                 </div>
             </div>
         );
@@ -45,21 +45,28 @@ export default function LiffLayout() {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-surface-50 p-4">
-                <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm text-center">
+            <div className="flex items-center justify-center min-h-screen bg-surface-50 p-4 safe-area-top safe-area-bottom">
+                <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-error-100 flex items-center justify-center">
                         <span className="text-3xl">❌</span>
                     </div>
                     <h1 className="text-xl font-semibold text-surface-800 mb-2">เกิดข้อผิดพลาด</h1>
-                    <p className="text-surface-500">{error}</p>
+                    <p className="text-surface-500 text-sm">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-4 w-full px-4 py-3 bg-primary-600 text-white rounded-lg font-medium touch-target"
+                    >
+                        ลองใหม่อีกครั้ง
+                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-surface-50">
+        <div className="min-h-screen bg-surface-50 no-overscroll safe-area-top safe-area-bottom">
             <Outlet />
         </div>
     );
 }
+

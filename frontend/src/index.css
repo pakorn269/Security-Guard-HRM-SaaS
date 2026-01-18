@@ -1,35 +1,5 @@
 /* ============================================
-   SELF-HOSTED FONTS
-   ============================================ */
-
-/* Kanit - Headings (aesthetic) */
-@font-face {
-  font-family: 'Kanit';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/kanit-v17-latin_thai-regular.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Kanit';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/kanit-v17-latin_thai-700.woff2') format('woff2');
-}
-
-/* IBM Plex Sans Thai Looped - Body, Inputs, Data Tables (readability) */
-@font-face {
-  font-family: 'IBM Plex Sans Thai Looped';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/ibm-plex-sans-thai-looped-v12-latin_thai-regular.woff2') format('woff2');
-}
-
-/* ============================================
-   TAILWIND CSS IMPORT
+   TAILWIND CSS IMPORT - MUST BE FIRST!
    ============================================ */
 @import 'tailwindcss';
 
@@ -37,7 +7,7 @@
    CUSTOM THEME FOR SECURITY GUARD HRM
    ============================================ */
 @theme {
-  /* Primary Colors - Deep Blue for Trust and Professionalism */
+  /* Primary Colors - Deep Blue */
   --color-primary-50: oklch(0.97 0.01 250);
   --color-primary-100: oklch(0.93 0.03 250);
   --color-primary-200: oklch(0.86 0.06 250);
@@ -50,7 +20,7 @@
   --color-primary-900: oklch(0.27 0.07 250);
   --color-primary-950: oklch(0.18 0.05 250);
 
-  /* Secondary Colors - Teal for Balance */
+  /* Secondary Colors - Teal */
   --color-secondary-50: oklch(0.97 0.02 180);
   --color-secondary-100: oklch(0.93 0.04 180);
   --color-secondary-200: oklch(0.86 0.08 180);
@@ -63,7 +33,22 @@
   --color-secondary-900: oklch(0.26 0.06 180);
   --color-secondary-950: oklch(0.17 0.04 180);
 
-  /* Accent Colors - Orange for Alerts and Actions */
+  /* Surface Colors - Improved Contrast */
+  --color-surface-50: oklch(0.98 0.00 0);
+  --color-surface-100: oklch(0.96 0.00 0);
+  --color-surface-200: oklch(0.93 0.00 0);
+  --color-surface-300: oklch(0.88 0.00 0);
+  --color-surface-400: oklch(0.75 0.00 0);
+  --color-surface-500: oklch(0.55 0.00 0);
+  --color-surface-600: oklch(0.40 0.00 0);
+  --color-surface-700: oklch(0.30 0.01 250);
+  --color-surface-800: oklch(0.35 0.02 250);
+  /* Lighter for card contrast */
+  --color-surface-900: oklch(0.15 0.02 250);
+  /* Darker for depth */
+  --color-surface-950: oklch(0.10 0.02 250);
+
+  /* Accent/Status Colors */
   --color-accent-50: oklch(0.98 0.02 60);
   --color-accent-100: oklch(0.95 0.05 60);
   --color-accent-200: oklch(0.90 0.10 55);
@@ -76,7 +61,6 @@
   --color-accent-900: oklch(0.33 0.09 35);
   --color-accent-950: oklch(0.22 0.06 35);
 
-  /* Success Colors */
   --color-success-50: oklch(0.97 0.02 150);
   --color-success-100: oklch(0.93 0.05 150);
   --color-success-200: oklch(0.86 0.10 150);
@@ -88,7 +72,6 @@
   --color-success-800: oklch(0.31 0.09 150);
   --color-success-900: oklch(0.26 0.06 150);
 
-  /* Warning Colors */
   --color-warning-50: oklch(0.98 0.02 85);
   --color-warning-100: oklch(0.95 0.05 85);
   --color-warning-200: oklch(0.90 0.10 85);
@@ -100,7 +83,6 @@
   --color-warning-800: oklch(0.42 0.09 85);
   --color-warning-900: oklch(0.35 0.06 85);
 
-  /* Error/Danger Colors */
   --color-error-50: oklch(0.97 0.02 25);
   --color-error-100: oklch(0.93 0.05 25);
   --color-error-200: oklch(0.86 0.10 25);
@@ -112,24 +94,7 @@
   --color-error-800: oklch(0.34 0.10 25);
   --color-error-900: oklch(0.28 0.07 25);
 
-  /* Dark Mode Surface Colors */
-  --color-surface-50: oklch(0.98 0.00 0);
-  --color-surface-100: oklch(0.96 0.00 0);
-  --color-surface-200: oklch(0.93 0.00 0);
-  --color-surface-300: oklch(0.88 0.00 0);
-  --color-surface-400: oklch(0.75 0.00 0);
-  --color-surface-500: oklch(0.55 0.00 0);
-  --color-surface-600: oklch(0.40 0.00 0);
-  --color-surface-700: oklch(0.30 0.01 250);
-  --color-surface-800: oklch(0.22 0.01 250);
-  --color-surface-900: oklch(0.16 0.02 250);
-  --color-surface-950: oklch(0.12 0.02 250);
-
-  /* ============================================
-     TYPOGRAPHY SYSTEM
-     ============================================ */
-
-  /* Font Families */
+  /* Fonts */
   --font-heading: 'Kanit', system-ui, sans-serif;
   --font-sans: 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -170,98 +135,42 @@
 }
 
 /* ============================================
-   KEYFRAMES
+   SELF-HOSTED FONTS
    ============================================ */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/kanit-v17-latin_thai-regular.woff2') format('woff2');
 }
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/kanit-v17-latin_thai-700.woff2') format('woff2');
 }
 
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes pulse-glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 20px -5px var(--color-primary-500);
-  }
-
-  50% {
-    box-shadow: 0 0 30px -3px var(--color-primary-400);
-  }
-}
-
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Animation classes */
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-.animate-slide-in {
-  animation: slide-in 0.3s ease-out;
+@font-face {
+  font-family: 'IBM Plex Sans Thai Looped';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-thai-looped-v12-latin_thai-regular.woff2') format('woff2');
 }
 
 /* ============================================
    GLOBAL STYLES
    ============================================ */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Default reset is handled by Tailwind Preflight */
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
 }
 
 html {
@@ -595,4 +504,214 @@ td[data-type="phone"],
 .prose h5,
 .prose h6 {
   font-family: var(--font-heading);
+}
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Touch-friendly tap targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile-optimized scrolling */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevent overscroll bounce */
+.no-overscroll {
+  overscroll-behavior: contain;
+}
+
+/* Mobile table wrapper */
+.table-mobile-wrapper {
+  @apply overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile table styles */
+@media (max-width: 640px) {
+
+  .mobile-table th,
+  .mobile-table td {
+    @apply px-3 py-2 text-sm;
+  }
+
+  .mobile-table th {
+    @apply text-xs;
+  }
+}
+
+/* Mobile card grid */
+@media (max-width: 640px) {
+  .mobile-stack {
+    @apply flex flex-col gap-3;
+  }
+
+  .mobile-stack>* {
+    @apply w-full;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive text utilities */
+@media (max-width: 640px) {
+  .text-responsive-sm {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .text-responsive-base {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 640px) {
+  .modal-mobile {
+    @apply m-0 max-w-full h-full rounded-none;
+  }
+
+  .modal-mobile-content {
+    @apply min-h-screen;
+  }
+}
+
+/* Sticky bottom actions for mobile */
+.sticky-bottom-mobile {
+  @apply fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-surface-800 border-t border-surface-200 dark:border-surface-700 z-30;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sticky-bottom-mobile {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Improve touch response */
+@media (hover: none) and (pointer: coarse) {
+
+  button,
+  a,
+  input[type="submit"],
+  .touchable {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active,
+  a:active,
+  .touchable:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+}
+
+/* Mobile-first responsive spacing */
+@media (max-width: 640px) {
+  .space-y-mobile>*+* {
+    margin-top: 0.75rem;
+  }
+
+  .gap-mobile {
+    gap: 0.75rem;
+  }
+
+  .p-mobile {
+    padding: 1rem;
+  }
+}
+
+/* Prevent zoom on input focus for iOS */
+@media screen and (max-width: 640px) {
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Bottom navigation support */
+.bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-800 border-t border-surface-200 dark:border-surface-700 z-50;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Responsive grid utilities */
+@media (max-width: 640px) {
+  .grid-cols-mobile-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-cols-mobile-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Slide-in from bottom animation for mobile */
+@keyframes slide-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-bottom 0.3s ease-out;
+}
+
+/* Pull-to-refresh indicator styles */
+.pull-indicator {
+  @apply flex items-center justify-center py-4 text-surface-500;
+}
+
+/* Landscape mode adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-compact {
+    @apply py-2;
+  }
+
+  .landscape-compact h1 {
+    font-size: 1.25rem;
+  }
 }

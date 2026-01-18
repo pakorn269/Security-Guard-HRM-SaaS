@@ -630,7 +630,11 @@ class LeaveService {
                 .eq('id', currentBalance.id);
         }
 
-        return this.mapToLeaveRequestWithDetails(updated as LeaveRequestRowWithDetails);
+        const result = this.mapToLeaveRequestWithDetails(updated as LeaveRequestRowWithDetails);
+        this.sendLeaveStatusNotification(companyId, result, 'approved').catch(err =>
+            logger.error('Failed to send leave notification', err)
+        );
+        return result;
     }
 
     // Reject leave request
@@ -691,7 +695,11 @@ class LeaveService {
                 .eq('id', currentBalance.id);
         }
 
-        return this.mapToLeaveRequestWithDetails(updated as LeaveRequestRowWithDetails);
+        const result = this.mapToLeaveRequestWithDetails(updated as LeaveRequestRowWithDetails);
+        this.sendLeaveStatusNotification(companyId, result, 'rejected').catch(err =>
+            logger.error('Failed to send leave notification', err)
+        );
+        return result;
     }
 
     // Cancel leave request (by employee)
@@ -1129,6 +1137,57 @@ class LeaveService {
         }
 
         return this.mapToLeaveBalance(updated as LeaveBalanceRow);
+    }
+
+    // Send leave status notification
+    private async sendLeaveStatusNotification(
+        companyId: string,
+        request: LeaveRequestWithDetails,
+        status: 'approved' | 'rejected'
+    ) {
+        try {
+            // Get user for employee
+            const { data: user, error } = await supabaseAdmin
+                .from('users')
+                .select('id')
+                .eq('employee_id', request.employeeId)
+                .single();
+
+            if (error || !user) return;
+
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+
+            const isApproved = status === 'approved';
+            const type = isApproved ? 'leave_approved' : 'leave_rejected';
+            const title = isApproved ? 'Leave Approved' : 'Leave Rejected';
+            const titleTh = isApproved ? 'อนุมัติการลา' : 'ปฏิเสธการลา';
+            const message = isApproved
+                ? `Your leave request for ${request.leaveType?.name} from ${request.startDate} to ${request.endDate} has been approved.`
+                : `Your leave request for ${request.leaveType?.name} from ${request.startDate} to ${request.endDate} has been rejected.`;
+            const messageTh = isApproved
+                ? `คำขอลา ${request.leaveType?.nameTh || request.leaveType?.name} ของคุณตั้งแต่วันที่ ${request.startDate} ถึง ${request.endDate} ได้รับการอนุมัติแล้ว`
+                : `คำขอลา ${request.leaveType?.nameTh || request.leaveType?.name} ของคุณตั้งแต่วันที่ ${request.startDate} ถึง ${request.endDate} ถูกปฏิเสธ`;
+
+            await NotificationService.createNotification({
+                companyId,
+                userId: user.id,
+                type,
+                title,
+                titleTh,
+                message,
+                messageTh,
+                data: {
+                    requestId: request.id,
+                    startDate: request.startDate,
+                    endDate: request.endDate,
+                    leaveType: request.leaveType?.name,
+                    status
+                },
+                channels: ['in_app', 'line']
+            });
+        } catch (error) {
+            logger.error('Error sending leave notification', error);
+        }
     }
 
     // Initialize balances for all employees (admin)
