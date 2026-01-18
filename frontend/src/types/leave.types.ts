@@ -63,6 +63,11 @@ export interface LeaveBalance {
 
     // Populated
     leaveType?: LeaveType;
+    employee?: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+    };
 }
 
 export interface LeaveRequestPayload {

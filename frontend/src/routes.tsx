@@ -14,6 +14,14 @@ const EmployeeDetailPage = lazy(() => import('./pages/employees/EmployeeDetailPa
 const SchedulePage = lazy(() => import('./pages/shifts/SchedulePage'));
 const ShiftTemplatesPage = lazy(() => import('./pages/shifts/ShiftTemplatesPage'));
 
+// Sprint 4: Attendance pages
+const AttendancePage = lazy(() => import('./pages/attendance/AttendancePage'));
+
+// Sprint 5: Leave Management pages
+const LeavePage = lazy(() => import('./pages/leave/LeavePage'));
+const LeaveBalancesPage = lazy(() => import('./pages/leave/LeaveBalancesPage'));
+const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'));
+
 // Layouts
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
 const LiffLayout = lazy(() => import('./components/layout/LiffLayout'));
@@ -79,9 +87,25 @@ const routes: RouteObject[] = [
                 path: 'shift-templates',
                 element: withSuspense(ShiftTemplatesPage),
             },
-            // TODO: Add more dashboard routes in Sprint 4+
-            // { path: 'attendance', element: withSuspense(AttendancePage) },
-            // { path: 'leave', element: withSuspense(LeavePage) },
+            // Sprint 4: Attendance
+            {
+                path: 'attendance',
+                element: withSuspense(AttendancePage),
+            },
+            // Sprint 5: Leave Management
+            {
+                path: 'leave',
+                element: withSuspense(LeavePage),
+            },
+            {
+                path: 'leave-balances',
+                element: withSuspense(LeaveBalancesPage),
+            },
+            {
+                path: 'leave-types',
+                element: withSuspense(LeaveTypesPage),
+            },
+            // TODO: Add more dashboard routes in Sprint 6+
             // { path: 'reports', element: withSuspense(ReportsPage) },
             // { path: 'settings', element: withSuspense(SettingsPage) },
         ],
