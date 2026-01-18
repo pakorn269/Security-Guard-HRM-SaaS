@@ -10,6 +10,11 @@ import logger from './utils/logger.js';
 
 // Route imports
 import healthRoutes from './modules/health/health.routes.js';
+import { authRoutes } from './modules/auth/index.js';
+import { companyRoutes } from './modules/company/index.js';
+import { userRoutes } from './modules/user/index.js';
+import { employeeRoutes } from './modules/employee/index.js';
+import { shiftRoutes } from './modules/shift/index.js';
 
 // Create Express app
 const app: Application = express();
@@ -80,13 +85,18 @@ app.use(`/api/${env.API_VERSION}`, apiRouter);
 // Health check routes (database, storage)
 apiRouter.use('/health', healthRoutes);
 
-// TODO: Add module routes here in Sprint 1+
-// apiRouter.use('/auth', authRoutes);
-// apiRouter.use('/companies', companyRoutes);
-// apiRouter.use('/users', userRoutes);
-// apiRouter.use('/employees', employeeRoutes);
-// apiRouter.use('/shifts', shiftRoutes);
-// apiRouter.use('/shift-templates', shiftTemplateRoutes);
+// Sprint 1: Authentication & Company Setup
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/companies', companyRoutes);
+
+// Sprint 2: Employee Management
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/employees', employeeRoutes);
+
+// Sprint 3: Shift Scheduling
+apiRouter.use('/shifts', shiftRoutes);
+
+// TODO: Add module routes here in Sprint 4+
 // apiRouter.use('/attendance', attendanceRoutes);
 // apiRouter.use('/leave-types', leaveTypeRoutes);
 // apiRouter.use('/leave-requests', leaveRequestRoutes);
@@ -100,6 +110,20 @@ apiRouter.get('/', (_req, res) => {
         version: env.API_VERSION,
         documentation: '/api/v1/docs',
         endpoints: {
+            auth: {
+                register: 'POST /api/v1/auth/register',
+                login: 'POST /api/v1/auth/login',
+                lineLogin: 'POST /api/v1/auth/line',
+                refresh: 'POST /api/v1/auth/refresh',
+                logout: 'POST /api/v1/auth/logout',
+                me: 'GET /api/v1/auth/me',
+            },
+            companies: {
+                list: 'GET /api/v1/companies',
+                current: 'GET /api/v1/companies/current',
+                getById: 'GET /api/v1/companies/:id',
+                settings: 'GET/PUT /api/v1/companies/:id/settings',
+            },
             health: '/api/v1/health/db',
             tables: '/api/v1/health/tables',
             storage: '/api/v1/health/storage',

@@ -3,7 +3,16 @@ import { lazy, Suspense } from 'react';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+
+// Sprint 2: Employee pages
+const EmployeesPage = lazy(() => import('./pages/employees/EmployeesPage'));
+const EmployeeDetailPage = lazy(() => import('./pages/employees/EmployeeDetailPage'));
+
+// Sprint 3: Shift Scheduling pages
+const SchedulePage = lazy(() => import('./pages/shifts/SchedulePage'));
+const ShiftTemplatesPage = lazy(() => import('./pages/shifts/ShiftTemplatesPage'));
 
 // Layouts
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
@@ -38,6 +47,10 @@ const routes: RouteObject[] = [
         path: '/login',
         element: withSuspense(LoginPage),
     },
+    {
+        path: '/register',
+        element: withSuspense(RegisterPage),
+    },
 
     // Dashboard routes (admin/manager)
     {
@@ -48,10 +61,25 @@ const routes: RouteObject[] = [
                 index: true,
                 element: withSuspense(DashboardPage),
             },
-            // TODO: Add more dashboard routes in Sprint 2+
-            // { path: 'employees', element: withSuspense(EmployeesPage) },
-            // { path: 'employees/:id', element: withSuspense(EmployeeDetailPage) },
-            // { path: 'schedule', element: withSuspense(SchedulePage) },
+            // Sprint 2: Employee Management
+            {
+                path: 'employees',
+                element: withSuspense(EmployeesPage),
+            },
+            {
+                path: 'employees/:id',
+                element: withSuspense(EmployeeDetailPage),
+            },
+            // Sprint 3: Shift Scheduling
+            {
+                path: 'schedule',
+                element: withSuspense(SchedulePage),
+            },
+            {
+                path: 'shift-templates',
+                element: withSuspense(ShiftTemplatesPage),
+            },
+            // TODO: Add more dashboard routes in Sprint 4+
             // { path: 'attendance', element: withSuspense(AttendancePage) },
             // { path: 'leave', element: withSuspense(LeavePage) },
             // { path: 'reports', element: withSuspense(ReportsPage) },

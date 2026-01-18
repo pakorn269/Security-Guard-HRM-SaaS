@@ -64,6 +64,12 @@ export class ConflictError extends AppError {
     }
 }
 
+export class BadRequestError extends AppError {
+    constructor(message: string, messageTh = 'คำขอไม่ถูกต้อง') {
+        super(message, 'BAD_REQUEST', 400, messageTh);
+    }
+}
+
 // Attendance-specific errors
 export class AlreadyClockedInError extends AppError {
     constructor() {

@@ -83,3 +83,41 @@ export const sendPaginated = <T>(
         totalPages: Math.ceil(total / pageSize),
     });
 };
+
+// Helper function for building success response objects
+export interface SuccessResponseWithMessage<T> {
+    success: true;
+    message: string;
+    message_th?: string;
+    data: T;
+    meta?: {
+        pagination?: {
+            page: number;
+            pageSize: number;
+            total: number;
+            totalPages: number;
+        };
+        [key: string]: unknown;
+    };
+}
+
+export const success = <T>(
+    data: T,
+    message: string = 'Success',
+    messageTh?: string,
+    meta?: SuccessResponseWithMessage<T>['meta']
+): SuccessResponseWithMessage<T> => {
+    const response: SuccessResponseWithMessage<T> = {
+        success: true,
+        message,
+        data,
+    };
+    if (messageTh) {
+        response.message_th = messageTh;
+    }
+    if (meta) {
+        response.meta = meta;
+    }
+    return response;
+};
+
