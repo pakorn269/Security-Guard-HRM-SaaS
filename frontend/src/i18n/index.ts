@@ -8,6 +8,7 @@ i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
+        lng: 'th', // Force Thai as default language
         fallbackLng: 'th',
         supportedLngs: ['th', 'en'],
         debug: import.meta.env.DEV,
@@ -21,7 +22,7 @@ i18n
         },
 
         detection: {
-            order: ['localStorage', 'navigator', 'htmlTag'],
+            order: ['localStorage', 'htmlTag'], // Remove navigator to prevent browser language override
             caches: ['localStorage'],
             lookupLocalStorage: 'i18nextLng',
         },
