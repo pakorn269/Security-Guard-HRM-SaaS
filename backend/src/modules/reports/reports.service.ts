@@ -52,12 +52,13 @@ export class ReportsService {
         }
 
         // Get all attendance records for the period
+        // Note: attendance_logs uses clock_in_time (TIMESTAMPTZ), not date
         let attendanceQuery = supabaseAdmin
             .from('attendance_logs')
             .select('*')
             .eq('company_id', companyId)
-            .gte('date', startDate)
-            .lte('date', endDate);
+            .gte('clock_in_time', startDate)
+            .lte('clock_in_time', endDate + 'T23:59:59');
 
         if (employeeId) {
             attendanceQuery = attendanceQuery.eq('employee_id', employeeId);
@@ -405,13 +406,14 @@ export class ReportsService {
         });
 
         // Get all attendance records for the period
+        // Note: attendance_logs uses clock_in_time (TIMESTAMPTZ), not date
         const { data: attendanceRecords, error: attError } = await supabaseAdmin
             .from('attendance_logs')
-            .select('date, status')
+            .select('clock_in_time, status')
             .eq('company_id', companyId)
-            .gte('date', startDate)
-            .lte('date', endDate)
-            .order('date', { ascending: true });
+            .gte('clock_in_time', startDate)
+            .lte('clock_in_time', endDate + 'T23:59:59')
+            .order('clock_in_time', { ascending: true });
 
         if (attError) {
             logger.error('Error fetching attendance for trend', attError);
@@ -451,11 +453,13 @@ export class ReportsService {
 
         // Count attendance status
         for (const att of attendanceRecords || []) {
-            if (dateMap.has(att.date)) {
+            // Extract date from clock_in_time (TIMESTAMPTZ)
+            const attDate = att.clock_in_time ? att.clock_in_time.split('T')[0] : null;
+            if (attDate && dateMap.has(attDate)) {
                 if (att.status === 'on_time') {
-                    dateMap.get(att.date)!.onTimeCount++;
+                    dateMap.get(attDate)!.onTimeCount++;
                 } else if (att.status === 'late') {
-                    dateMap.get(att.date)!.lateCount++;
+                    dateMap.get(attDate)!.lateCount++;
                 }
             }
         }
