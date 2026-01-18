@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(node -e:*)",
+      "Bash(npm exec -- node -e \"import\\(''bcryptjs''\\).then\\(bcrypt => { const hash = bcrypt.default.hashSync\\(''admin123'', 12\\); console.log\\(''admin123:'', hash\\); const hash2 = bcrypt.default.hashSync\\(''manager123'', 12\\); console.log\\(''manager123:'', hash2\\); }\\)\")",
+      "Bash(npm install)"
+    ]
+  }
+}

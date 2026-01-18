@@ -35,7 +35,7 @@ VALUES (
     'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'admin@security-group.com',
-    '$2a$10$rQEY7i8xZq4tPJK5j9rQqu.h5XEPGxI.MXHzH0c8Z5CKPF0qVnGHa', -- admin123
+    '$2b$12$uL5M/KzMfAbjxoIZXpC.suneVG/voMqF2hyQWbexKsBu6XFdfvYCC', -- admin123 (bcrypt 12 rounds)
     'company_admin',
     true,
     'th'
@@ -47,7 +47,7 @@ VALUES (
     'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'manager@security-group.com',
-    '$2a$10$rQEY7i8xZq4tPJK5j9rQqu.h5XEPGxI.MXHzH0c8Z5CKPF0qVnGHa', -- manager123
+    '$2b$12$2nBcjjXKVkbEeexdpT677ubuvcHIrknmZxrLc1vNdnYgDjCTMcaM6', -- manager123 (bcrypt 12 rounds)
     'manager',
     true,
     'th'
