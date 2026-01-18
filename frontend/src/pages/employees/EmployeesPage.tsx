@@ -6,7 +6,7 @@ import { employeeService, type EmployeeWithUser, type ListEmployeesParams } from
 import EmployeeFormModal from './EmployeeFormModal';
 
 // Status badge component
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string, fallback?: string) => string }) {
     const statusStyles: Record<string, string> = {
         active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
         on_leave: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -14,9 +14,9 @@ function StatusBadge({ status }: { status: string }) {
     };
 
     const statusLabels: Record<string, string> = {
-        active: 'Active',
-        on_leave: 'On Leave',
-        terminated: 'Terminated',
+        active: t('employees.statusActive', 'Active'),
+        on_leave: t('employees.statusOnLeave', 'On Leave'),
+        terminated: t('employees.statusTerminated', 'Terminated'),
     };
 
     return (
@@ -139,7 +139,7 @@ export default function EmployeesPage() {
         {
             key: 'status',
             header: t('employees.status', 'Status'),
-            render: (employee: EmployeeWithUser) => <StatusBadge status={employee.status} />,
+            render: (employee: EmployeeWithUser) => <StatusBadge status={employee.status} t={t} />,
         },
         {
             key: 'hasUser',
