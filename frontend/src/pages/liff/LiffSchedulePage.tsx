@@ -3,15 +3,6 @@ import { getMyShifts } from '../../services/shift.service';
 import type { ShiftWithDetails, MyShiftsResponse } from '../../types/shift.types';
 
 // Helper functions
-const formatThaiDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('th-TH', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-    });
-};
-
 const formatThaiShortDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('th-TH', {

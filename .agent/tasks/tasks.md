@@ -183,97 +183,97 @@
 
 ## Sprint 4: Attendance (Clock In/Out) (Weeks 8-9)
 
-### S4.1 Backend Attendance Module
-- [ ] **S4.1.1** Create attendance routes (`/api/v1/attendance/*`)
-- [ ] **S4.1.2** Implement clock-in endpoint with GPS validation
-- [ ] **S4.1.3** Implement clock-out endpoint with GPS validation
-- [ ] **S4.1.4** Auto-detect current shift on clock-in
-- [ ] **S4.1.5** Implement late/on-time status calculation
-- [ ] **S4.1.6** Implement attendance adjustment endpoint
-- [ ] **S4.1.7** Create attendance list endpoint (with filters)
-- [ ] **S4.1.8** Create "my attendance" endpoint for guards
-- [ ] **S4.1.9** Calculate total hours and overtime
-- [ ] **S4.1.10** Write tests for clock-in validation
+### S4.1 Backend Attendance Module ✅
+- [x] **S4.1.1** Create attendance routes (`/api/v1/attendance/*`)
+- [x] **S4.1.2** Implement clock-in endpoint with GPS validation
+- [x] **S4.1.3** Implement clock-out endpoint with GPS validation
+- [x] **S4.1.4** Auto-detect current shift on clock-in
+- [x] **S4.1.5** Implement late/on-time status calculation
+- [x] **S4.1.6** Implement attendance adjustment endpoint
+- [x] **S4.1.7** Create attendance list endpoint (with filters)
+- [x] **S4.1.8** Create "my attendance" endpoint for guards
+- [x] **S4.1.9** Calculate total hours and overtime
+- [ ] **S4.1.10** Write tests for clock-in validation *(deferred)*
 
-### S4.2 LIFF Clock In/Out
-- [ ] **S4.2.1** Create LiffClockPage
-- [ ] **S4.2.2** Implement geolocation hook
-- [ ] **S4.2.3** Create GPS permission request flow
-- [ ] **S4.2.4** Handle GPS errors gracefully
-- [ ] **S4.2.5** Create clock-in button with loading state
-- [ ] **S4.2.6** Create clock-out button with loading state
-- [ ] **S4.2.7** Display current shift info
-- [ ] **S4.2.8** Display clock-in/out success confirmation
-- [ ] **S4.2.9** Show location accuracy indicator
-- [ ] **S4.2.10** Handle "no shift today" state
+### S4.2 LIFF Clock In/Out ✅
+- [x] **S4.2.1** Create LiffClockPage
+- [x] **S4.2.2** Implement geolocation hook
+- [x] **S4.2.3** Create GPS permission request flow
+- [x] **S4.2.4** Handle GPS errors gracefully
+- [x] **S4.2.5** Create clock-in button with loading state
+- [x] **S4.2.6** Create clock-out button with loading state
+- [x] **S4.2.7** Display current shift info
+- [x] **S4.2.8** Display clock-in/out success confirmation
+- [x] **S4.2.9** Show location accuracy indicator
+- [x] **S4.2.10** Handle "no shift today" state
 
-### S4.3 Frontend Attendance Dashboard
-- [ ] **S4.3.1** Create AttendancePage
-- [ ] **S4.3.2** Create daily attendance overview
-- [ ] **S4.3.3** Create attendance list with filters
-- [ ] **S4.3.4** Show attendance status badges (on-time, late, no-show)
-- [ ] **S4.3.5** Create attendance detail modal
-- [ ] **S4.3.6** Display GPS location on map (Google Maps embed)
-- [ ] **S4.3.7** Create attendance adjustment form
-- [ ] **S4.3.8** Implement attendance export (CSV)
+### S4.3 Frontend Attendance Dashboard ✅
+- [x] **S4.3.1** Create AttendancePage
+- [x] **S4.3.2** Create daily attendance overview
+- [x] **S4.3.3** Create attendance list with filters
+- [x] **S4.3.4** Show attendance status badges (on-time, late, no-show)
+- [x] **S4.3.5** Create attendance detail modal
+- [ ] **S4.3.6** Display GPS location on map (Google Maps embed) *(stretch)*
+- [x] **S4.3.7** Create attendance adjustment form
+- [ ] **S4.3.8** Implement attendance export (CSV) *(deferred)*
 
 ### S4.4 Manager Dashboard Widget
-- [ ] **S4.4.1** Create DashboardPage structure
-- [ ] **S4.4.2** Create "Today's Attendance" widget
-- [ ] **S4.4.3** Show clocked-in vs expected count
-- [ ] **S4.4.4** List late arrivals
-- [ ] **S4.4.5** List no-shows
+- [x] **S4.4.1** Create DashboardPage structure *(existed from Sprint 1)*
+- [ ] **S4.4.2** Create "Today's Attendance" widget *(deferred to Sprint 6)*
+- [ ] **S4.4.3** Show clocked-in vs expected count *(deferred to Sprint 6)*
+- [ ] **S4.4.4** List late arrivals *(deferred to Sprint 6)*
+- [ ] **S4.4.5** List no-shows *(deferred to Sprint 6)*
 
-**Sprint 4 Deliverable**: Guards can clock in/out via LINE with GPS, managers see real-time attendance
+**Sprint 4 Deliverable**: Guards can clock in/out via LINE with GPS, managers see real-time attendance ✅
 
 ---
 
 ## Sprint 5: Leave Management (Weeks 10-11)
 
 ### S5.1 Backend Leave Module
-- [ ] **S5.1.1** Create leave type routes
-- [ ] **S5.1.2** Implement leave type CRUD
-- [ ] **S5.1.3** Create leave request routes (`/api/v1/leave-requests/*`)
-- [ ] **S5.1.4** Implement leave request submission
-- [ ] **S5.1.5** Implement leave request approval/rejection
-- [ ] **S5.1.6** Implement leave balance calculation
-- [ ] **S5.1.7** Validate leave against balance
-- [ ] **S5.1.8** Check for shift conflicts on leave request
-- [ ] **S5.1.9** Create "my leave requests" endpoint
-- [ ] **S5.1.10** Create "my leave balance" endpoint
-- [ ] **S5.1.11** Write tests for balance calculation
+- [x] **S5.1.1** Create leave type routes
+- [x] **S5.1.2** Implement leave type CRUD
+- [x] **S5.1.3** Create leave request routes (`/api/v1/leave-requests/*`)
+- [x] **S5.1.4** Implement leave request submission
+- [x] **S5.1.5** Implement leave request approval/rejection
+- [x] **S5.1.6** Implement leave balance calculation
+- [x] **S5.1.7** Validate leave against balance
+- [x] **S5.1.8** Check for shift conflicts on leave request
+- [x] **S5.1.9** Create "my leave requests" endpoint
+- [x] **S5.1.10** Create "my leave balance" endpoint
+- [x] **S5.1.11** Write tests for balance calculation
 
 ### S5.2 LIFF Leave Request
-- [ ] **S5.2.1** Create LiffLeavePage
-- [ ] **S5.2.2** Display current leave balances
-- [ ] **S5.2.3** Create leave request form
-- [ ] **S5.2.4** Implement date range picker
-- [ ] **S5.2.5** Show leave type selection
-- [ ] **S5.2.6** Calculate and display requested days
-- [ ] **S5.2.7** Handle form submission
-- [ ] **S5.2.8** Display request history
-- [ ] **S5.2.9** Show request status (pending/approved/rejected)
+- [x] **S5.2.1** Create LiffLeavePage
+- [x] **S5.2.2** Display current leave balances
+- [x] **S5.2.3** Create leave request form
+- [x] **S5.2.4** Implement date range picker
+- [x] **S5.2.5** Show leave type selection
+- [x] **S5.2.6** Calculate and display requested days
+- [x] **S5.2.7** Handle form submission
+- [x] **S5.2.8** Display request history
+- [x] **S5.2.9** Show request status (pending/approved/rejected)
 
 ### S5.3 Frontend Leave Management
-- [ ] **S5.3.1** Create LeavePage
-- [ ] **S5.3.2** Create pending requests list
-- [ ] **S5.3.3** Create request detail modal
-- [ ] **S5.3.4** Implement approve/reject actions
-- [ ] **S5.3.5** Add rejection reason input
-- [ ] **S5.3.6** Create leave calendar view (who's off when)
-- [ ] **S5.3.7** Create employee leave balance view
+- [x] **S5.3.1** Create LeavePage
+- [x] **S5.3.2** Create pending requests list
+- [x] **S5.3.3** Create request detail modal
+- [x] **S5.3.4** Implement approve/reject actions
+- [x] **S5.3.5** Add rejection reason input
+- [x] **S5.3.6** Create leave calendar view (who's off when)
+- [x] **S5.3.7** Create employee leave balance view
 
 ### S5.4 Leave Type Configuration
-- [ ] **S5.4.1** Create leave type settings page
-- [ ] **S5.4.2** Create leave type form
-- [ ] **S5.4.3** Configure max days, paid/unpaid, etc.
-- [ ] **S5.4.4** Set leave reset date
+- [x] **S5.4.1** Create leave type settings page
+- [x] **S5.4.2** Create leave type form
+- [x] **S5.4.3** Configure max days, paid/unpaid, etc.
+- [x] **S5.4.4** Set leave reset date
 
 ### S5.5 Dashboard Widgets
-- [ ] **S5.5.1** Create "Pending Leave Requests" widget
-- [ ] **S5.5.2** Create "Who's Off Today" widget
+- [x] **S5.5.1** Create "Pending Leave Requests" widget
+- [x] **S5.5.2** Create "Who's Off Today" widget
 
-**Sprint 5 Deliverable**: Full leave request workflow functional via LINE and web
+**Sprint 5 Deliverable**: Full leave request workflow functional via LINE and web ✅
 
 ---
 

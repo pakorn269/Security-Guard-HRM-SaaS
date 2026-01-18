@@ -15,6 +15,13 @@ import { companyRoutes } from './modules/company/index.js';
 import { userRoutes } from './modules/user/index.js';
 import { employeeRoutes } from './modules/employee/index.js';
 import { shiftRoutes } from './modules/shift/index.js';
+import { attendanceRoutes } from './modules/attendance/index.js';
+import {
+    leaveTypesRouter as leaveTypeRoutes,
+    leaveRequestsRouter as leaveRequestRoutes,
+    leaveBalancesRouter as leaveBalanceRoutes,
+    leaveRouter as leaveRoutes,
+} from './modules/leave/index.js';
 
 // Create Express app
 const app: Application = express();
@@ -96,10 +103,16 @@ apiRouter.use('/employees', employeeRoutes);
 // Sprint 3: Shift Scheduling
 apiRouter.use('/shifts', shiftRoutes);
 
-// TODO: Add module routes here in Sprint 4+
-// apiRouter.use('/attendance', attendanceRoutes);
-// apiRouter.use('/leave-types', leaveTypeRoutes);
-// apiRouter.use('/leave-requests', leaveRequestRoutes);
+// Sprint 4: Attendance (Clock In/Out)
+apiRouter.use('/attendance', attendanceRoutes);
+
+// Sprint 5: Leave Management
+apiRouter.use('/leave-types', leaveTypeRoutes);
+apiRouter.use('/leave-requests', leaveRequestRoutes);
+apiRouter.use('/leave-balances', leaveBalanceRoutes);
+apiRouter.use('/leave', leaveRoutes);
+
+// TODO: Add module routes here in Sprint 6+
 // apiRouter.use('/notifications', notificationRoutes);
 // apiRouter.use('/reports', reportRoutes);
 

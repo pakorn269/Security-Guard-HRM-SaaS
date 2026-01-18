@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import PendingLeaveRequestsWidget from '../../components/dashboard/PendingLeaveRequestsWidget';
+import WhosOffTodayWidget from '../../components/dashboard/WhosOffTodayWidget';
 
 export default function DashboardPage() {
     const { t } = useTranslation();
@@ -78,37 +80,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Pending leave requests */}
-                <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                    <h2 className="text-lg font-semibold text-surface-800 dark:text-white mb-4">
-                        คำขอลารออนุมัติ
-                    </h2>
-                    <div className="space-y-3">
-                        {[1, 2].map((i) => (
-                            <div
-                                key={i}
-                                className="flex items-center gap-3 p-3 rounded-lg bg-surface-50 dark:bg-surface-700"
-                            >
-                                <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-semibold">
-                                    ส
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-medium text-surface-800 dark:text-white">
-                                        สมชาย รักงาน
-                                    </p>
-                                    <p className="text-sm text-surface-500">ลาป่วย 2 วัน</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="p-2 rounded-lg bg-success-500 text-white hover:bg-success-600 transition-colors">
-                                        ✓
-                                    </button>
-                                    <button className="p-2 rounded-lg bg-error-500 text-white hover:bg-error-600 transition-colors">
-                                        ✕
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Pending leave requests */}
+                <PendingLeaveRequestsWidget />
+
+                {/* Who's Off Today */}
+                <WhosOffTodayWidget />
             </div>
 
             {/* Placeholder notice */}
