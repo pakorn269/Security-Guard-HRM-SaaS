@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -11,26 +12,30 @@ interface ToastProps {
     onClose: (id: string) => void;
 }
 
-const typeStyles: Record<ToastType, { bg: string; icon: string; iconBg: string }> = {
+const typeStyles: Record<ToastType, {
+    bg: string;
+    Icon: typeof Info;
+    iconColor: string;
+}> = {
     success: {
-        bg: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
-        icon: '✓',
-        iconBg: 'bg-green-500',
+        bg: 'bg-success-50 dark:bg-success-900/30 border-success-200 dark:border-success-800',
+        Icon: CheckCircle,
+        iconColor: 'text-success-500',
     },
     error: {
-        bg: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
-        icon: '✕',
-        iconBg: 'bg-red-500',
+        bg: 'bg-error-50 dark:bg-error-900/30 border-error-200 dark:border-error-800',
+        Icon: XCircle,
+        iconColor: 'text-error-500',
     },
     warning: {
-        bg: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800',
-        icon: '!',
-        iconBg: 'bg-yellow-500',
+        bg: 'bg-warning-50 dark:bg-warning-900/30 border-warning-200 dark:border-warning-800',
+        Icon: AlertTriangle,
+        iconColor: 'text-warning-500',
     },
     info: {
-        bg: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800',
-        icon: 'i',
-        iconBg: 'bg-blue-500',
+        bg: 'bg-info-50 dark:bg-info-900/30 border-info-200 dark:border-info-800',
+        Icon: Info,
+        iconColor: 'text-info-500',
     },
 };
 
@@ -45,42 +50,28 @@ function Toast({ id, type, message, duration = 5000, onClose }: ToastProps) {
     }, [id, duration, onClose]);
 
     const styles = typeStyles[type];
+    const IconComponent = styles.Icon;
 
     return (
         <div
             className={`
                 flex items-center gap-3 p-4
-                rounded-xl border shadow-lg
+                rounded-md border shadow-lg
                 animate-slide-in
                 ${styles.bg}
             `}
         >
-            <div
-                className={`
-                    flex-shrink-0 w-6 h-6
-                    rounded-full
-                    flex items-center justify-center
-                    text-white text-sm font-bold
-                    ${styles.iconBg}
-                `}
-            >
-                {styles.icon}
+            <div className="flex-shrink-0">
+                <IconComponent size={20} className={styles.iconColor} />
             </div>
-            <p className="flex-1 text-sm text-surface-700 dark:text-surface-200">
+            <p className="flex-1 text-sm text-neutral-700 dark:text-neutral-200">
                 {message}
             </p>
             <button
                 onClick={() => onClose(id)}
-                className="flex-shrink-0 p-1 rounded-lg text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+                className="flex-shrink-0 p-1 rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50 transition-colors"
             >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                    />
-                </svg>
+                <X size={16} />
             </button>
         </div>
     );

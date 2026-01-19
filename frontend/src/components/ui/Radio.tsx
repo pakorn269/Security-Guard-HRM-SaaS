@@ -63,8 +63,8 @@ const Radio = forwardRef<HTMLInputElement, RadioProps>(
     const sizeConfig = sizeClasses[size];
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (groupContext?.onChange && value) {
-        groupContext.onChange(value);
+      if (groupContext?.onChange && value !== undefined) {
+        groupContext.onChange(String(value));
       }
       onChange?.(e);
     };
@@ -97,10 +97,9 @@ const Radio = forwardRef<HTMLInputElement, RadioProps>(
                 ${sizeConfig.box}
                 flex items-center justify-center
                 rounded-full border-2 transition-all
-                ${
-                  error
-                    ? 'border-error-500'
-                    : 'border-neutral-300 dark:border-neutral-600'
+                ${error
+                  ? 'border-error-500'
+                  : 'border-neutral-300 dark:border-neutral-600'
                 }
                 peer-checked:border-primary-500
                 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/25 peer-focus-visible:ring-offset-2

@@ -1209,6 +1209,15 @@ td[data-type="phone"],
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
@@ -1227,6 +1236,10 @@ td[data-type="phone"],
 
 .animate-slide-in-bottom {
   animation: slide-in-bottom 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
 }
 
 /* Pull-to-refresh indicator styles */

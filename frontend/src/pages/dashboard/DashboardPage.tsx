@@ -7,13 +7,12 @@ import {
   Clock,
   Calendar,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
   Bell,
 } from 'lucide-react';
 import { PageHeader } from '../../components/layout';
 import { StatCard, StatGroup, Timeline } from '../../components/data-display';
-import { Card, CardHeader, CardFooter, Badge, Avatar } from '../../components/common';
+import { Card, CardHeader, Badge, Avatar } from '../../components/common';
 import { Button } from '../../components/common';
 import PendingLeaveRequestsWidget from '../../components/dashboard/PendingLeaveRequestsWidget';
 import WhosOffTodayWidget from '../../components/dashboard/WhosOffTodayWidget';
@@ -129,7 +128,7 @@ export default function DashboardPage() {
             trend={stat.trend}
             trendValue={stat.trendValue}
             helpText={stat.helpText}
-            variant="bordered"
+            cardVariant="bordered"
           />
         ))}
       </StatGroup>

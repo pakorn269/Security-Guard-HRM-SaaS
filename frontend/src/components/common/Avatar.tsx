@@ -143,10 +143,10 @@ export function AvatarGroup({ children, max, size = 'md', className = '' }: Avat
       {displayedAvatars.map((avatar, index) =>
         React.isValidElement(avatar)
           ? React.cloneElement(avatar as React.ReactElement<AvatarProps>, {
-              key: index,
-              size,
-              className: `ring-2 ring-white dark:ring-neutral-900 ${avatar.props.className || ''}`,
-            })
+            key: index,
+            size,
+            className: `ring-2 ring-white dark:ring-neutral-900 ${(avatar as React.ReactElement<AvatarProps>).props.className || ''}`,
+          })
           : avatar
       )}
       {remaining > 0 && (

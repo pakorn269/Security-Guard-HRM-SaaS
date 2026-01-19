@@ -3,7 +3,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 
 type SearchInputSize = 'sm' | 'md' | 'lg';
 
-interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> {
+interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange' | 'onSubmit'> {
   /** Current search value */
   value?: string;
   /** Change handler */
@@ -50,7 +50,7 @@ export default function SearchInput({
 }: SearchInputProps) {
   const [internalValue, setInternalValue] = useState(controlledValue || '');
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync with controlled value
   useEffect(() => {

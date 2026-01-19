@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -150,6 +150,14 @@ export default function Sidebar({
           />
         ))}
       </nav>
+
+      {/* Divider */}
+      <div className="mx-3 border-t border-primary-800 dark:border-neutral-800" />
+
+      {/* User Profile Section */}
+      <div className="p-3 flex-shrink-0">
+        <SidebarUserMenu isExpanded={isExpanded} />
+      </div>
     </aside>
   );
 }
@@ -174,11 +182,10 @@ function SidebarNavItem({ item, isExpanded, onClick }: SidebarNavItemProps) {
         `
           flex items-center gap-3 px-3 py-2.5 rounded-md transition-all
           ${isExpanded ? '' : 'justify-center'}
-          ${
-            isActive
-              ? 'bg-primary-500 dark:bg-primary-600 text-white shadow-md'
-              : 'hover:bg-primary-800 dark:hover:bg-neutral-800 text-primary-100 dark:text-neutral-300'
-          }
+          ${isActive
+          ? 'bg-primary-500 dark:bg-primary-600 text-white shadow-md'
+          : 'hover:bg-primary-800 dark:hover:bg-neutral-800 text-primary-100 dark:text-neutral-300'
+        }
         `
       }
       title={!isExpanded ? t(item.labelKey) : undefined}
@@ -196,5 +203,72 @@ function SidebarNavItem({ item, isExpanded, onClick }: SidebarNavItemProps) {
   );
 }
 
+// Sidebar User Menu Component
+interface SidebarUserMenuProps {
+  isExpanded: boolean;
+}
+
+function SidebarUserMenu({ isExpanded }: SidebarUserMenuProps) {
+  const { t } = useTranslation();
+
+  // TODO: Get actual user data from auth context
+  const user = {
+    name: 'Admin User',
+    initials: 'AU',
+  };
+
+  const handleLogout = () => {
+    // TODO: Implement actual logout logic
+    console.log('Logout clicked');
+  };
+
+  return (
+    <div
+      className={`
+        flex items-center gap-3 px-3 py-2.5 rounded-md
+        ${isExpanded ? '' : 'justify-center'}
+      `}
+    >
+      {/* User Avatar */}
+      <div className="w-8 h-8 rounded-full bg-primary-600 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+        <span className="text-xs font-semibold text-white">
+          {user.initials}
+        </span>
+      </div>
+
+      {/* User Info & Logout (visible when expanded) */}
+      <div
+        className={`
+          flex-1 min-w-0 transition-all duration-300
+          ${isExpanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}
+        `}
+      >
+        <p className="text-sm font-medium text-white truncate">
+          {user.name}
+        </p>
+        <button
+          onClick={handleLogout}
+          className="text-xs text-primary-300 dark:text-neutral-400 hover:text-white transition-colors"
+        >
+          {t('auth.logout')}
+        </button>
+      </div>
+
+      {/* Logout icon only (visible when collapsed) */}
+      {!isExpanded && (
+        <button
+          onClick={handleLogout}
+          className="absolute -right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-primary-700 dark:hover:bg-neutral-700 transition-colors"
+          title={t('auth.logout')}
+          aria-label={t('auth.logout')}
+        >
+          <LogOut size={16} className="text-primary-300 dark:text-neutral-400" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export { NAV_ITEMS, BOTTOM_NAV_ITEMS };
 export type { SidebarProps, NavItem };
+

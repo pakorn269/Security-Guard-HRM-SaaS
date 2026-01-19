@@ -11,9 +11,7 @@ import {
   List,
   Map,
   MapPin,
-  Camera,
-  ChevronLeft,
-  ChevronRight,
+
   Filter,
   ChevronDown,
 } from 'lucide-react';
@@ -232,12 +230,6 @@ export default function AttendancePage() {
           <span className="font-mono text-sm font-medium text-neutral-800 dark:text-neutral-100">
             {formatTime(record.clockInTime)}
           </span>
-          {record.clockInPhoto && (
-            <div className="flex items-center gap-1 text-xs text-neutral-500">
-              <Camera size={10} />
-              <span>{t('attendance.hasPhoto', 'มีรูป')}</span>
-            </div>
-          )}
           <LocationAccuracy accuracy={record.clockInAccuracy} />
         </div>
       ),
@@ -250,12 +242,6 @@ export default function AttendancePage() {
           <span className="font-mono text-sm font-medium text-neutral-800 dark:text-neutral-100">
             {formatTime(record.clockOutTime)}
           </span>
-          {record.clockOutPhoto && (
-            <div className="flex items-center gap-1 text-xs text-neutral-500">
-              <Camera size={10} />
-              <span>{t('attendance.hasPhoto', 'มีรูป')}</span>
-            </div>
-          )}
           {record.clockOutTime && <LocationAccuracy accuracy={record.clockOutAccuracy} />}
         </div>
       ),
@@ -333,37 +319,37 @@ export default function AttendancePage() {
           <Stat
             label={t('attendance.expected', 'คาดว่าจะมา')}
             value={summary.expectedToWork}
-            icon={Users}
+            icon={<Users size={20} />}
             variant="primary"
           />
           <Stat
             label={t('attendance.clockedIn', 'ลงเวลาแล้ว')}
             value={summary.clockedIn}
-            icon={CheckCircle}
+            icon={<CheckCircle size={20} />}
             variant="success"
           />
           <Stat
             label={t('attendance.onTime', 'ตรงเวลา')}
             value={summary.onTime}
-            icon={Clock}
+            icon={<Clock size={20} />}
             variant="info"
           />
           <Stat
             label={t('attendance.late', 'สาย')}
             value={summary.late}
-            icon={AlertTriangle}
+            icon={<AlertTriangle size={20} />}
             variant="warning"
           />
           <Stat
             label={t('attendance.noShow', 'ไม่มา')}
             value={summary.noShow}
-            icon={XCircle}
+            icon={<XCircle size={20} />}
             variant="error"
           />
           <Stat
             label={t('attendance.completed', 'เสร็จสิ้น')}
             value={summary.completed}
-            icon={Flag}
+            icon={<Flag size={20} />}
             variant="neutral"
           />
         </div>
