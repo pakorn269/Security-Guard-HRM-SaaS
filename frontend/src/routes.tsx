@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import { ErrorBoundary } from './components/common';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -58,16 +59,19 @@ const routes: RouteObject[] = [
     {
         path: '/login',
         element: withSuspense(LoginPage),
+        errorElement: <ErrorBoundary />,
     },
     {
         path: '/register',
         element: withSuspense(RegisterPage),
+        errorElement: <ErrorBoundary />,
     },
 
     // Dashboard routes (admin/manager)
     {
         path: '/',
         element: withSuspense(DashboardLayout),
+        errorElement: <ErrorBoundary />,
         children: [
             {
                 index: true,
@@ -125,6 +129,7 @@ const routes: RouteObject[] = [
     {
         path: '/liff',
         element: withSuspense(LiffLayout),
+        errorElement: <ErrorBoundary />,
         children: [
             {
                 path: 'schedule',
