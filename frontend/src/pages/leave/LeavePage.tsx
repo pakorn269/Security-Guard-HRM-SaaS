@@ -1,533 +1,615 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Hourglass,
+  Calendar,
+  CalendarDays,
+  List,
+  Users,
+  CalendarCheck,
+  X,
+  Check,
+  Eye,
+  AlertTriangle,
+  ChevronDown,
+  Filter,
+} from 'lucide-react';
+import { Button, Card, Badge, Modal, Avatar, LoadingSpinner } from '../../components/common';
+import { PageHeader } from '../../components/layout';
+import { Stat } from '../../components/data-display';
+import { Tabs, TabList, Tab, Menu, MenuItem } from '../../components/navigation';
+import { DataTable, Pagination, type ColumnDef } from '../../components/data-display';
 import leaveService, {
-    type LeaveRequestWithDetails,
-    type LeaveSummary,
-    type ListLeaveRequestsQuery,
-    type LeaveRequestStatus,
+  type LeaveRequestWithDetails,
+  type LeaveSummary,
+  type ListLeaveRequestsQuery,
+  type LeaveRequestStatus,
 } from '../../services/leave.service';
 import LeaveCalendar from '../../components/leave/LeaveCalendar';
 
+/**
+ * Leave Page - Redesigned (Part 5.6)
+ *
+ * Changes from original:
+ * - PageHeader with consistent layout
+ * - Lucide icons instead of emojis
+ * - Stat component for summary cards
+ * - List + Calendar toggle view
+ * - Improved approval modal with Modal component
+ * - Enhanced data table with DataTable component
+ * - Status badges with Badge component
+ */
+
+// Status configuration
+const STATUS_CONFIG = {
+  pending: { label: 'รออนุมัติ', variant: 'warning' as const, icon: Hourglass },
+  approved: { label: 'อนุมัติ', variant: 'success' as const, icon: CheckCircle },
+  rejected: { label: 'ไม่อนุมัติ', variant: 'error' as const, icon: XCircle },
+  cancelled: { label: 'ยกเลิก', variant: 'neutral' as const, icon: X },
+};
+
 // Approval modal component
 function ApprovalModal({
-    request,
-    onClose,
-    onApprove,
-    onReject,
+  request,
+  onClose,
+  onApprove,
+  onReject,
 }: {
-    request: LeaveRequestWithDetails;
-    onClose: () => void;
-    onApprove: (id: string, notes?: string) => Promise<void>;
-    onReject: (id: string, notes: string) => Promise<void>;
+  request: LeaveRequestWithDetails;
+  onClose: () => void;
+  onApprove: (id: string, notes?: string) => Promise<void>;
+  onReject: (id: string, notes: string) => Promise<void>;
 }) {
-    const [action, setAction] = useState<'approve' | 'reject' | null>(null);
-    const [notes, setNotes] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const [action, setAction] = useState<'approve' | 'reject' | null>(null);
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!action) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!action) return;
 
-        if (action === 'reject' && !notes.trim()) {
-            setError('กรุณาระบุเหตุผลในการไม่อนุมัติ');
-            return;
-        }
+    if (action === 'reject' && !notes.trim()) {
+      setError(t('leave.rejectReasonRequired', 'กรุณาระบุเหตุผลในการไม่อนุมัติ'));
+      return;
+    }
 
-        try {
-            setSubmitting(true);
-            setError(null);
+    try {
+      setSubmitting(true);
+      setError(null);
 
-            if (action === 'approve') {
-                await onApprove(request.id, notes || undefined);
-            } else {
-                await onReject(request.id, notes);
-            }
+      if (action === 'approve') {
+        await onApprove(request.id, notes || undefined);
+      } else {
+        await onReject(request.id, notes);
+      }
 
-            onClose();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-        } finally {
-            setSubmitting(false);
-        }
-    };
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error', 'เกิดข้อผิดพลาด'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('th-TH', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-        });
-    };
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
 
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-surface-800">รายละเอียดคำขอลา</h2>
-                        <button
-                            onClick={onClose}
-                            className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center hover:bg-surface-200"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    {/* Request details */}
-                    <div className="space-y-4 mb-6">
-                        <div className="bg-surface-50 rounded-xl p-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-surface-500">พนักงาน</p>
-                                    <p className="font-medium text-surface-800">
-                                        {request.employee?.fullName || '-'}
-                                    </p>
-                                    <p className="text-sm text-surface-500">
-                                        {request.employee?.employeeCode}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-surface-500">ประเภทการลา</p>
-                                    <p className="font-medium text-surface-800">
-                                        {request.leaveType?.nameTh || request.leaveType?.name}
-                                    </p>
-                                    {request.leaveType?.isPaid && (
-                                        <span className="text-xs text-success-600">ได้รับเงินเดือน</span>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-sm text-surface-500">วันที่ลา</p>
-                                    <p className="font-medium text-surface-800">
-                                        {formatDate(request.startDate)}
-                                        {request.startDate !== request.endDate && (
-                                            <> - {formatDate(request.endDate)}</>
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-surface-500">จำนวนวัน</p>
-                                    <p className="font-medium text-surface-800 text-lg">
-                                        {request.totalDays} วัน
-                                    </p>
-                                </div>
-                            </div>
-                            {request.reason && (
-                                <div className="mt-4 pt-4 border-t border-surface-200">
-                                    <p className="text-sm text-surface-500">เหตุผล</p>
-                                    <p className="text-surface-800">{request.reason}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {error && (
-                        <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl mb-4">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Action buttons */}
-                    {!action ? (
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => setAction('approve')}
-                                className="flex-1 btn-primary py-3"
-                            >
-                                ✓ อนุมัติ
-                            </button>
-                            <button
-                                onClick={() => setAction('reject')}
-                                className="flex-1 bg-error-500 hover:bg-error-600 text-white py-3 rounded-xl font-medium transition-colors"
-                            >
-                                ✕ ไม่อนุมัติ
-                            </button>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-surface-700 mb-2">
-                                    {action === 'approve' ? 'หมายเหตุ (ถ้ามี)' : 'เหตุผลในการไม่อนุมัติ *'}
-                                </label>
-                                <textarea
-                                    className="input-base"
-                                    rows={3}
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder={action === 'approve' ? 'ระบุหมายเหตุ...' : 'ระบุเหตุผล...'}
-                                    required={action === 'reject'}
-                                />
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setAction(null);
-                                        setNotes('');
-                                        setError(null);
-                                    }}
-                                    className="flex-1 btn-outline py-3"
-                                    disabled={submitting}
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    type="submit"
-                                    className={`flex-1 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 ${action === 'approve'
-                                        ? 'bg-success-500 hover:bg-success-600 text-white'
-                                        : 'bg-error-500 hover:bg-error-600 text-white'
-                                        }`}
-                                    disabled={submitting}
-                                >
-                                    {submitting ? 'กำลังดำเนินการ...' : action === 'approve' ? 'ยืนยันอนุมัติ' : 'ยืนยันไม่อนุมัติ'}
-                                </button>
-                            </div>
-                        </form>
-                    )}
+  return (
+    <Modal isOpen={true} onClose={onClose} title={t('leave.requestDetails', 'รายละเอียดคำขอลา')} size="lg">
+      <div className="space-y-6">
+        {/* Request details */}
+        <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-lg p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-neutral-500 mb-1">{t('leave.employee', 'พนักงาน')}</p>
+              <div className="flex items-center gap-2">
+                <Avatar name={request.employee?.fullName || ''} size="sm" />
+                <div>
+                  <p className="font-medium text-neutral-800 dark:text-neutral-100">
+                    {request.employee?.fullName || '-'}
+                  </p>
+                  <p className="text-xs text-neutral-500">{request.employee?.employeeCode}</p>
                 </div>
+              </div>
             </div>
+            <div>
+              <p className="text-xs text-neutral-500 mb-1">{t('leave.type', 'ประเภทการลา')}</p>
+              <p className="font-medium text-neutral-800 dark:text-neutral-100">
+                {request.leaveType?.nameTh || request.leaveType?.name}
+              </p>
+              {request.leaveType?.isPaid && (
+                <span className="text-xs text-success-600">{t('leave.paid', 'ได้รับเงินเดือน')}</span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500 mb-1">{t('leave.dates', 'วันที่ลา')}</p>
+              <p className="font-medium text-neutral-800 dark:text-neutral-100">
+                {formatDate(request.startDate)}
+                {request.startDate !== request.endDate && <> - {formatDate(request.endDate)}</>}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500 mb-1">{t('leave.totalDays', 'จำนวนวัน')}</p>
+              <p className="font-semibold text-lg text-neutral-800 dark:text-neutral-100">
+                {request.totalDays} {t('leave.days', 'วัน')}
+              </p>
+            </div>
+          </div>
+          {request.reason && (
+            <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+              <p className="text-xs text-neutral-500 mb-1">{t('leave.reason', 'เหตุผล')}</p>
+              <p className="text-neutral-800 dark:text-neutral-100">{request.reason}</p>
+            </div>
+          )}
         </div>
-    );
+
+        {error && (
+          <div className="flex items-center gap-2 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 text-error-700 dark:text-error-400 px-4 py-3 rounded-lg">
+            <AlertTriangle size={18} />
+            {error}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {request.status === 'pending' && (
+          <>
+            {!action ? (
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  leftIcon={<Check size={18} />}
+                  className="flex-1"
+                  onClick={() => setAction('approve')}
+                >
+                  {t('leave.approve', 'อนุมัติ')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="lg"
+                  leftIcon={<X size={18} />}
+                  className="flex-1"
+                  onClick={() => setAction('reject')}
+                >
+                  {t('leave.reject', 'ไม่อนุมัติ')}
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                    {action === 'approve'
+                      ? t('leave.notesOptional', 'หมายเหตุ (ถ้ามี)')
+                      : t('leave.rejectReason', 'เหตุผลในการไม่อนุมัติ *')}
+                  </label>
+                  <textarea
+                    className="w-full h-24 px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={
+                      action === 'approve'
+                        ? t('leave.notesPlaceholder', 'ระบุหมายเหตุ...')
+                        : t('leave.reasonPlaceholder', 'ระบุเหตุผล...')
+                    }
+                    required={action === 'reject'}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setAction(null);
+                      setNotes('');
+                      setError(null);
+                    }}
+                    disabled={submitting}
+                  >
+                    {t('common.cancel', 'ยกเลิก')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant={action === 'approve' ? 'primary' : 'danger'}
+                    className="flex-1"
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? t('common.processing', 'กำลังดำเนินการ...')
+                      : action === 'approve'
+                        ? t('leave.confirmApprove', 'ยืนยันอนุมัติ')
+                        : t('leave.confirmReject', 'ยืนยันไม่อนุมัติ')}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </>
+        )}
+
+        {/* View-only mode for non-pending requests */}
+        {request.status !== 'pending' && (
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={onClose}>
+              {t('common.close', 'ปิด')}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
 }
 
 export default function LeavePage() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
-    const [showCalendar, setShowCalendar] = useState(false);
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
-    // Data
-    const [summary, setSummary] = useState<LeaveSummary | null>(null);
-    const [requests, setRequests] = useState<LeaveRequestWithDetails[]>([]);
-    const [totalRequests, setTotalRequests] = useState(0);
-    const [selectedRequest, setSelectedRequest] = useState<LeaveRequestWithDetails | null>(null);
+  // Data
+  const [summary, setSummary] = useState<LeaveSummary | null>(null);
+  const [requests, setRequests] = useState<LeaveRequestWithDetails[]>([]);
+  const [totalRequests, setTotalRequests] = useState(0);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequestWithDetails | null>(null);
 
-    // Filters
-    const [filters, setFilters] = useState<ListLeaveRequestsQuery>({
-        page: 1,
-        pageSize: 20,
-        status: 'pending' as LeaveRequestStatus,
+  // Filters
+  const [filters, setFilters] = useState<ListLeaveRequestsQuery>({
+    page: 1,
+    pageSize: 20,
+    status: 'pending' as LeaveRequestStatus,
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Load data
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [summaryRes, requestsRes] = await Promise.all([
+        leaveService.getLeaveSummary(),
+        leaveService.listLeaveRequests(filters),
+      ]);
+
+      setSummary(summaryRes);
+      setRequests(requestsRes.requests);
+      setTotalRequests(requestsRes.total);
+    } catch (err) {
+      console.error('Error loading leave data:', err);
+      setError(t('leave.loadError', 'ไม่สามารถโหลดข้อมูลการลาได้'));
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Handle approve
+  const handleApprove = async (id: string, notes?: string) => {
+    await leaveService.approveLeaveRequest(id, notes);
+    setSuccess(t('leave.approveSuccess', 'อนุมัติคำขอลาสำเร็จ'));
+    await loadData();
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  // Handle reject
+  const handleReject = async (id: string, notes: string) => {
+    await leaveService.rejectLeaveRequest(id, notes);
+    setSuccess(t('leave.rejectSuccess', 'ไม่อนุมัติคำขอลาสำเร็จ'));
+    await loadData();
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  // Format date
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
     });
+  };
 
-    // Load data
-    const loadData = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
+  // Handle filter changes
+  const handleFilterChange = (key: keyof ListLeaveRequestsQuery, value: string | undefined) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value || undefined,
+      page: 1,
+    }));
+  };
 
-            const [summaryRes, requestsRes] = await Promise.all([
-                leaveService.getLeaveSummary(),
-                leaveService.listLeaveRequests(filters),
-            ]);
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setFilters((prev) => ({ ...prev, page }));
+  };
 
-            setSummary(summaryRes);
-            setRequests(requestsRes.requests);
-            setTotalRequests(requestsRes.total);
-        } catch (err) {
-            console.error('Error loading leave data:', err);
-            setError('ไม่สามารถโหลดข้อมูลการลาได้');
-        } finally {
-            setLoading(false);
+  // Status options for filter
+  const statusOptions = [
+    { value: '', label: t('common.all', 'ทั้งหมด') },
+    { value: 'pending', label: t('leave.pending', 'รออนุมัติ') },
+    { value: 'approved', label: t('leave.approved', 'อนุมัติแล้ว') },
+    { value: 'rejected', label: t('leave.rejected', 'ไม่อนุมัติ') },
+    { value: 'cancelled', label: t('leave.cancelled', 'ยกเลิก') },
+  ];
+
+  // Table columns
+  const columns: ColumnDef<LeaveRequestWithDetails>[] = [
+    {
+      id: 'employee',
+      header: t('leave.employee', 'พนักงาน'),
+      cell: (request) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={request.employee?.fullName || ''} size="sm" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100 truncate">
+              {request.employee?.fullName || '-'}
+            </p>
+            <p className="text-xs text-neutral-500">{request.employee?.employeeCode}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'type',
+      header: t('leave.type', 'ประเภท'),
+      cell: (request) => (
+        <span className="text-sm text-neutral-700 dark:text-neutral-200">
+          {request.leaveType?.nameTh || request.leaveType?.name || '-'}
+        </span>
+      ),
+      hideOnMobile: true,
+    },
+    {
+      id: 'dates',
+      header: t('leave.dates', 'วันที่'),
+      cell: (request) => (
+        <span className="text-sm text-neutral-700 dark:text-neutral-200">
+          {formatDate(request.startDate)}
+          {request.startDate !== request.endDate && <> - {formatDate(request.endDate)}</>}
+        </span>
+      ),
+    },
+    {
+      id: 'days',
+      header: t('leave.days', 'วัน'),
+      width: '80px',
+      align: 'center',
+      cell: (request) => (
+        <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">{request.totalDays}</span>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('leave.status', 'สถานะ'),
+      cell: (request) => {
+        const config = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+        return (
+          <Badge variant={config.variant} size="sm">
+            {config.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      width: '100px',
+      align: 'right',
+      cell: (request) => (
+        <Button variant="ghost" size="sm" leftIcon={<Eye size={14} />} onClick={() => setSelectedRequest(request)}>
+          {request.status === 'pending' ? t('leave.review', 'พิจารณา') : t('common.view', 'ดู')}
+        </Button>
+      ),
+    },
+  ];
+
+  const totalPages = Math.ceil(totalRequests / (filters.pageSize || 20));
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title={t('leave.title', 'การจัดการลา')}
+        description={t('leave.subtitle', 'อนุมัติและจัดการคำขอลาของพนักงาน')}
+        actions={
+          <Tabs
+            activeTab={viewMode}
+            onChange={(id) => setViewMode(id as 'list' | 'calendar')}
+            variant="pills"
+            size="sm"
+          >
+            <TabList>
+              <Tab value="list" icon={<List size={16} />}>
+                {t('leave.listView', 'รายการ')}
+              </Tab>
+              <Tab value="calendar" icon={<CalendarDays size={16} />}>
+                {t('leave.calendarView', 'ปฏิทิน')}
+              </Tab>
+            </TabList>
+          </Tabs>
         }
-    }, [filters]);
+      />
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+      {/* Success/Error messages */}
+      {success && (
+        <Card variant="bordered" padding="md" className="border-success-200 bg-success-50 dark:bg-success-900/20">
+          <div className="flex items-center gap-3 text-success-700 dark:text-success-400">
+            <CheckCircle size={20} />
+            <p>{success}</p>
+          </div>
+        </Card>
+      )}
+      {error && (
+        <Card variant="bordered" padding="md" className="border-error-200 bg-error-50 dark:bg-error-900/20">
+          <div className="flex items-center gap-3 text-error-700 dark:text-error-400">
+            <AlertTriangle size={20} />
+            <p>{error}</p>
+          </div>
+        </Card>
+      )}
 
-    // Handle approve
-    const handleApprove = async (id: string, notes?: string) => {
-        await leaveService.approveLeaveRequest(id, notes);
-        setSuccess('อนุมัติคำขอลาสำเร็จ');
-        await loadData();
-        setTimeout(() => setSuccess(null), 3000);
-    };
+      {viewMode === 'calendar' ? (
+        <LeaveCalendar />
+      ) : (
+        <>
+          {/* Summary Stats */}
+          {summary && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Stat
+                label={t('leave.pendingRequests', 'รออนุมัติ')}
+                value={summary.pendingRequests}
+                icon={Hourglass}
+                variant="warning"
+              />
+              <Stat
+                label={t('leave.approvedThisMonth', 'อนุมัติเดือนนี้')}
+                value={summary.approvedThisMonth}
+                icon={CheckCircle}
+                variant="success"
+              />
+              <Stat
+                label={t('leave.onLeaveToday', 'ลาวันนี้')}
+                value={summary.employeesOnLeaveToday}
+                icon={Users}
+                variant="info"
+              />
+              <Stat
+                label={t('leave.upcomingLeaves', 'ลาสัปดาห์หน้า')}
+                value={summary.upcomingLeaves}
+                icon={CalendarCheck}
+                variant="primary"
+              />
+            </div>
+          )}
 
-    // Handle reject
-    const handleReject = async (id: string, notes: string) => {
-        await leaveService.rejectLeaveRequest(id, notes);
-        setSuccess('ไม่อนุมัติคำขอลาสำเร็จ');
-        await loadData();
-        setTimeout(() => setSuccess(null), 3000);
-    };
-
-    // Format date
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('th-TH', {
-            day: 'numeric',
-            month: 'short',
-        });
-    };
-
-    // Get status display
-    const getStatusDisplay = (status: string) => {
-        switch (status) {
-            case 'pending':
-                return { text: 'รออนุมัติ', className: 'bg-warning-100 text-warning-700' };
-            case 'approved':
-                return { text: 'อนุมัติ', className: 'bg-success-100 text-success-700' };
-            case 'rejected':
-                return { text: 'ไม่อนุมัติ', className: 'bg-error-100 text-error-700' };
-            case 'cancelled':
-                return { text: 'ยกเลิก', className: 'bg-surface-100 text-surface-600' };
-            default:
-                return { text: status, className: 'bg-surface-100 text-surface-600' };
-        }
-    };
-
-    const totalPages = Math.ceil(totalRequests / (filters.pageSize || 20));
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-surface-800">การจัดการลา</h1>
-                    <p className="text-surface-500">อนุมัติและจัดการคำขอลาของพนักงาน</p>
-                </div>
-                <div className="flex bg-surface-100 rounded-lg p-1">
-                    <button
-                        onClick={() => setShowCalendar(false)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!showCalendar
-                                ? 'bg-white text-primary-600 shadow-sm'
-                                : 'text-surface-600 hover:text-surface-800'
-                            }`}
+          {/* Filters */}
+          <Card variant="bordered" padding="md">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Quick Filters */}
+              <div className="flex items-center gap-2 flex-1">
+                {/* Status Filter */}
+                <Menu
+                  trigger={
+                    <Button variant="outline" size="md" rightIcon={<ChevronDown size={16} />}>
+                      {filters.status
+                        ? statusOptions.find((o) => o.value === filters.status)?.label
+                        : t('leave.status', 'สถานะ')}
+                    </Button>
+                  }
+                >
+                  {statusOptions.map((option) => (
+                    <MenuItem
+                      key={option.value}
+                      checked={filters.status === option.value}
+                      onClick={() => handleFilterChange('status', option.value as LeaveRequestStatus)}
                     >
-                        📋 รายการ
-                    </button>
-                    <button
-                        onClick={() => setShowCalendar(true)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${showCalendar
-                                ? 'bg-white text-primary-600 shadow-sm'
-                                : 'text-surface-600 hover:text-surface-800'
-                            }`}
-                    >
-                        📅 ปฏิทิน
-                    </button>
-                </div>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Menu>
+
+                {/* Advanced Filters Toggle */}
+                <Button
+                  variant={showFilters ? 'secondary' : 'outline'}
+                  size="md"
+                  leftIcon={<Filter size={16} />}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  {t('common.filters', 'ตัวกรอง')}
+                </Button>
+              </div>
             </div>
 
-            {/* Success/Error messages */}
-            {success && (
-                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl">
-                    ✅ {success}
+            {/* Advanced Filters (Collapsible) */}
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                      {t('leave.startDate', 'วันที่เริ่มต้น')}
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm"
+                      value={filters.startDate || ''}
+                      onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                      {t('leave.endDate', 'วันที่สิ้นสุด')}
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm"
+                      value={filters.endDate || ''}
+                      onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                      {t('leave.leaveType', 'ประเภทการลา')}
+                    </label>
+                    <select className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm">
+                      <option value="">{t('common.all', 'ทั้งหมด')}</option>
+                    </select>
+                  </div>
                 </div>
+              </div>
             )}
-            {error && (
-                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl">
-                    ⚠️ {error}
-                </div>
-            )}
+          </Card>
 
-            {showCalendar ? (
-                <LeaveCalendar />
-            ) : (
-                <>
-                    {/* Summary cards */}
-                    {summary && (
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-xl bg-warning-100 flex items-center justify-center">
-                                        <span className="text-2xl">⏳</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-warning-600">{summary.pendingRequests}</p>
-                                        <p className="text-sm text-surface-500">รออนุมัติ</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-xl bg-success-100 flex items-center justify-center">
-                                        <span className="text-2xl">✓</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-success-600">{summary.approvedThisMonth}</p>
-                                        <p className="text-sm text-surface-500">อนุมัติเดือนนี้</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
-                                        <span className="text-2xl">🏖️</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-primary-600">{summary.employeesOnLeaveToday}</p>
-                                        <p className="text-sm text-surface-500">ลาวันนี้</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-xl bg-accent-100 flex items-center justify-center">
-                                        <span className="text-2xl">📅</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-accent-600">{summary.upcomingLeaves}</p>
-                                        <p className="text-sm text-surface-500">ลาสัปดาห์หน้า</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+          {/* Requests Table */}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : (
+            <>
+              <DataTable
+                columns={columns}
+                data={requests}
+                getRowId={(request) => request.id}
+                isLoading={loading}
+                isHoverable
+                emptyMessage={t('leave.noRequests', 'ไม่พบคำขอลา')}
+              />
 
-                    {/* Filters */}
-                    <div className="card p-4">
-                        <div className="flex flex-wrap gap-4">
-                            <div className="flex-1 min-w-[200px]">
-                                <label className="block text-sm font-medium text-surface-700 mb-1">สถานะ</label>
-                                <select
-                                    className="input-base"
-                                    value={filters.status || ''}
-                                    onChange={(e) => setFilters({ ...filters, status: e.target.value as LeaveRequestStatus || undefined, page: 1 })}
-                                >
-                                    <option value="">ทั้งหมด</option>
-                                    <option value="pending">รออนุมัติ</option>
-                                    <option value="approved">อนุมัติแล้ว</option>
-                                    <option value="rejected">ไม่อนุมัติ</option>
-                                    <option value="cancelled">ยกเลิก</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-surface-700 mb-1">วันที่เริ่ม</label>
-                                <input
-                                    type="date"
-                                    className="input-base"
-                                    value={filters.startDate || ''}
-                                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value || undefined, page: 1 })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-surface-700 mb-1">วันที่สิ้นสุด</label>
-                                <input
-                                    type="date"
-                                    className="input-base"
-                                    value={filters.endDate || ''}
-                                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value || undefined, page: 1 })}
-                                />
-                            </div>
-                        </div>
-                    </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={filters.page || 1}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={totalRequests}
+                  pageSize={filters.pageSize || 20}
+                />
+              )}
+            </>
+          )}
 
-                    {/* Requests table */}
-                    <div className="card overflow-hidden">
-                        {loading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="w-8 h-8 spinner"></div>
-                            </div>
-                        ) : requests.length === 0 ? (
-                            <div className="text-center py-12">
-                                <div className="text-4xl mb-4">📋</div>
-                                <p className="text-surface-500">ไม่พบคำขอลา</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-surface-50 border-b border-surface-200">
-                                            <tr>
-                                                <th className="text-left px-4 py-3 text-sm font-medium text-surface-600">พนักงาน</th>
-                                                <th className="text-left px-4 py-3 text-sm font-medium text-surface-600">ประเภท</th>
-                                                <th className="text-left px-4 py-3 text-sm font-medium text-surface-600">วันที่</th>
-                                                <th className="text-center px-4 py-3 text-sm font-medium text-surface-600">จำนวนวัน</th>
-                                                <th className="text-center px-4 py-3 text-sm font-medium text-surface-600">สถานะ</th>
-                                                <th className="text-right px-4 py-3 text-sm font-medium text-surface-600">การดำเนินการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-surface-100">
-                                            {requests.map((request) => {
-                                                const statusDisplay = getStatusDisplay(request.status);
-                                                return (
-                                                    <tr key={request.id} className="hover:bg-surface-50">
-                                                        <td className="px-4 py-3">
-                                                            <div>
-                                                                <p className="font-medium text-surface-800">
-                                                                    {request.employee?.fullName || '-'}
-                                                                </p>
-                                                                <p className="text-sm text-surface-500">
-                                                                    {request.employee?.employeeCode}
-                                                                </p>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="text-surface-800">
-                                                                {request.leaveType?.nameTh || request.leaveType?.name || '-'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="text-surface-800">
-                                                                {formatDate(request.startDate)}
-                                                                {request.startDate !== request.endDate && (
-                                                                    <> - {formatDate(request.endDate)}</>
-                                                                )}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className="font-medium text-surface-800">
-                                                                {request.totalDays}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${statusDisplay.className}`}>
-                                                                {statusDisplay.text}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <button
-                                                                onClick={() => setSelectedRequest(request)}
-                                                                className="text-primary-600 hover:text-primary-800 font-medium text-sm"
-                                                            >
-                                                                {request.status === 'pending' ? 'พิจารณา' : 'ดูรายละเอียด'}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-between px-4 py-3 border-t border-surface-200">
-                                        <p className="text-sm text-surface-500">
-                                            แสดง {((filters.page || 1) - 1) * (filters.pageSize || 20) + 1} -{' '}
-                                            {Math.min((filters.page || 1) * (filters.pageSize || 20), totalRequests)} จาก {totalRequests} รายการ
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
-                                                disabled={(filters.page || 1) <= 1}
-                                                className="px-3 py-1 rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                ก่อนหน้า
-                                            </button>
-                                            <button
-                                                onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
-                                                disabled={(filters.page || 1) >= totalPages}
-                                                className="px-3 py-1 rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                ถัดไป
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-
-                    {/* Approval modal */}
-                    {selectedRequest && (
-                        <ApprovalModal
-                            request={selectedRequest}
-                            onClose={() => setSelectedRequest(null)}
-                            onApprove={handleApprove}
-                            onReject={handleReject}
-                        />
-                    )}
-                </>
-            )}
-        </div>
-    );
+          {/* Approval Modal */}
+          {selectedRequest && (
+            <ApprovalModal
+              request={selectedRequest}
+              onClose={() => setSelectedRequest(null)}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
 }

@@ -1,4 +1,15 @@
 import { useState, useEffect } from 'react';
+import {
+    Calendar,
+    Clock,
+    MapPin,
+    AlertCircle,
+    Link2Off,
+    Inbox,
+    RefreshCw,
+    CheckCircle2,
+    Loader2,
+} from 'lucide-react';
 import { getMyShifts } from '../../services/shift.service';
 import type { ShiftWithDetails, MyShiftsResponse } from '../../types/shift.types';
 
@@ -50,15 +61,14 @@ export default function LiffSchedulePage() {
         return (
             <div className="p-4 space-y-4 animate-fade-in">
                 <div className="text-center py-4">
-                    <h1 className="text-xl font-bold text-surface-800">📅 ตารางเวรของฉัน</h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <Calendar size={24} className="text-primary-500" />
+                        <h1 className="text-xl font-bold text-neutral-800 dark:text-white">ตารางเวรของฉัน</h1>
+                    </div>
                 </div>
-                <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-white rounded-xl p-4 shadow-sm animate-pulse">
-                            <div className="h-4 bg-surface-200 rounded w-3/4 mb-2"></div>
-                            <div className="h-3 bg-surface-200 rounded w-1/2"></div>
-                        </div>
-                    ))}
+                <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 size={32} className="text-primary-500 animate-spin mb-4" />
+                    <p className="text-neutral-500 dark:text-neutral-400">กำลังโหลด...</p>
                 </div>
             </div>
         );
@@ -69,15 +79,21 @@ export default function LiffSchedulePage() {
         return (
             <div className="p-4 space-y-4 animate-fade-in">
                 <div className="text-center py-4">
-                    <h1 className="text-xl font-bold text-surface-800">📅 ตารางเวรของฉัน</h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <Calendar size={24} className="text-primary-500" />
+                        <h1 className="text-xl font-bold text-neutral-800 dark:text-white">ตารางเวรของฉัน</h1>
+                    </div>
                 </div>
                 <div className="text-center py-12">
-                    <div className="text-6xl mb-4">⚠️</div>
-                    <p className="text-error-600">{error}</p>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-error-100 dark:bg-error-900/30 flex items-center justify-center">
+                        <AlertCircle size={32} className="text-error-500" />
+                    </div>
+                    <p className="text-error-600 dark:text-error-400">{error}</p>
                     <button
-                        className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg"
+                        className="mt-4 px-6 py-2 inline-flex items-center gap-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                         onClick={() => window.location.reload()}
                     >
+                        <RefreshCw size={16} />
                         ลองใหม่
                     </button>
                 </div>
@@ -90,12 +106,17 @@ export default function LiffSchedulePage() {
         return (
             <div className="p-4 space-y-4 animate-fade-in">
                 <div className="text-center py-4">
-                    <h1 className="text-xl font-bold text-surface-800">📅 ตารางเวรของฉัน</h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <Calendar size={24} className="text-primary-500" />
+                        <h1 className="text-xl font-bold text-neutral-800 dark:text-white">ตารางเวรของฉัน</h1>
+                    </div>
                 </div>
                 <div className="text-center py-12">
-                    <div className="text-6xl mb-4">🔗</div>
-                    <p className="text-surface-600">บัญชีของคุณยังไม่ได้เชื่อมโยงกับพนักงาน</p>
-                    <p className="text-surface-500 text-sm mt-2">กรุณาติดต่อผู้ดูแลระบบ</p>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning-100 dark:bg-warning-900/30 flex items-center justify-center">
+                        <Link2Off size={32} className="text-warning-500" />
+                    </div>
+                    <p className="text-neutral-600 dark:text-neutral-300">บัญชีของคุณยังไม่ได้เชื่อมโยงกับพนักงาน</p>
+                    <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-2">กรุณาติดต่อผู้ดูแลระบบ</p>
                 </div>
             </div>
         );
@@ -106,38 +127,42 @@ export default function LiffSchedulePage() {
     // Shift card component
     const ShiftCard = ({ shift, highlight = false }: { shift: ShiftWithDetails; highlight?: boolean }) => (
         <div
-            className={`bg-white rounded-xl p-4 shadow-sm border-l-4 ${highlight ? 'ring-2 ring-primary-200' : ''
-                }`}
+            className={`bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-200 dark:border-neutral-800 border-l-4 ${highlight ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''}`}
             style={{ borderLeftColor: shift.template?.color || '#3B82F6' }}
         >
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="font-semibold text-surface-800">
+                    <p className="font-semibold text-neutral-800 dark:text-white flex items-center gap-2 flex-wrap">
                         {formatThaiShortDate(shift.date)}
                         {isToday(shift.date) && (
-                            <span className="ml-2 px-2 py-0.5 text-xs bg-primary-100 text-primary-700 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-md font-medium">
                                 วันนี้
                             </span>
                         )}
                         {isTomorrow(shift.date) && (
-                            <span className="ml-2 px-2 py-0.5 text-xs bg-warning-100 text-warning-700 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300 rounded-md font-medium">
                                 พรุ่งนี้
                             </span>
                         )}
                     </p>
-                    <p className="text-primary-600 font-medium mt-1">
-                        ⏰ {shift.startTime} - {shift.endTime}
+                    <p className="text-primary-600 dark:text-primary-400 font-medium mt-1.5 flex items-center gap-1.5">
+                        <Clock size={14} />
+                        {shift.startTime} - {shift.endTime}
                     </p>
                     {shift.location && (
-                        <p className="text-surface-500 text-sm mt-1">📍 {shift.location}</p>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1.5 flex items-center gap-1.5">
+                            <MapPin size={14} />
+                            {shift.location}
+                        </p>
                     )}
                     {shift.template && (
-                        <p className="text-surface-400 text-xs mt-1">
+                        <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-1.5">
                             {shift.template.nameTh || shift.template.name}
                         </p>
                     )}
                 </div>
-                <span className="px-2 py-1 text-xs rounded-full bg-success-100 text-success-700">
+                <span className="px-2 py-1 text-xs rounded-md bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 font-medium flex items-center gap-1">
+                    <CheckCircle2 size={12} />
                     ประกาศแล้ว
                 </span>
             </div>
@@ -148,8 +173,11 @@ export default function LiffSchedulePage() {
         <div className="p-4 space-y-4 animate-fade-in">
             {/* Header */}
             <div className="text-center py-4">
-                <h1 className="text-xl font-bold text-surface-800">📅 ตารางเวรของฉัน</h1>
-                <p className="text-surface-500 text-sm mt-1">
+                <div className="flex items-center justify-center gap-2">
+                    <Calendar size={24} className="text-primary-500" />
+                    <h1 className="text-xl font-bold text-neutral-800 dark:text-white">ตารางเวรของฉัน</h1>
+                </div>
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">
                     {hasAnyShifts ? '2 สัปดาห์ข้างหน้า' : 'ยังไม่มีตารางเวร'}
                 </p>
             </div>
@@ -168,7 +196,7 @@ export default function LiffSchedulePage() {
             {/* Upcoming shifts */}
             {data.upcoming.length > 0 && (
                 <div className="space-y-3">
-                    <h2 className="text-sm font-semibold text-surface-600">กะที่กำลังจะมา</h2>
+                    <h2 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">กะที่กำลังจะมา</h2>
                     {data.upcoming.map((shift) => (
                         <ShiftCard key={shift.id} shift={shift} />
                     ))}
@@ -178,9 +206,11 @@ export default function LiffSchedulePage() {
             {/* No shifts */}
             {!hasAnyShifts && (
                 <div className="text-center py-12">
-                    <div className="text-6xl mb-4">📭</div>
-                    <p className="text-surface-500">ยังไม่มีตารางเวรสำหรับช่วงเวลานี้</p>
-                    <p className="text-surface-400 text-sm mt-2">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                        <Inbox size={32} className="text-neutral-400" />
+                    </div>
+                    <p className="text-neutral-500 dark:text-neutral-400">ยังไม่มีตารางเวรสำหรับช่วงเวลานี้</p>
+                    <p className="text-neutral-400 dark:text-neutral-500 text-sm mt-2">
                         ตรวจสอบกับหัวหน้างานหากมีข้อสงสัย
                     </p>
                 </div>

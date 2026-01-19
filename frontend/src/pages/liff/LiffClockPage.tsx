@@ -1,5 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+    Clock,
+    MapPin,
+    AlertCircle,
+    LogIn,
+    LogOut,
+    CheckCircle,
+    CalendarOff,
+    Timer,
+    Navigation,
+    RefreshCw,
+    Loader2,
+} from 'lucide-react';
+import {
     clockIn,
     clockOut,
     getTodayAttendance,
@@ -182,7 +195,7 @@ export default function LiffClockPage() {
             case 'early_leave':
                 return 'text-warning-600';
             default:
-                return 'text-surface-500';
+                return 'text-neutral-500';
         }
     };
 
@@ -210,8 +223,10 @@ export default function LiffClockPage() {
     if (isLoading) {
         return (
             <div className="p-4 flex flex-col items-center justify-center min-h-screen">
-                <div className="w-12 h-12 spinner" />
-                <p className="text-surface-500 mt-4">กำลังโหลด...</p>
+                <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
+                    <Loader2 size={32} className="text-primary-500 animate-spin" />
+                </div>
+                <p className="text-neutral-500 dark:text-neutral-400">กำลังโหลด...</p>
             </div>
         );
     }
@@ -220,12 +235,15 @@ export default function LiffClockPage() {
     if (error && !todayData) {
         return (
             <div className="p-4 flex flex-col items-center justify-center min-h-screen">
-                <div className="text-error-500 text-6xl mb-4">⚠️</div>
-                <p className="text-error-600 text-center">{error}</p>
+                <div className="w-16 h-16 rounded-full bg-error-100 dark:bg-error-900/30 flex items-center justify-center mb-4">
+                    <AlertCircle size={32} className="text-error-500" />
+                </div>
+                <p className="text-error-600 text-center mb-4">{error}</p>
                 <button
                     onClick={fetchTodayStatus}
-                    className="mt-4 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                 >
+                    <RefreshCw size={16} />
                     ลองใหม่
                 </button>
             </div>
@@ -238,30 +256,36 @@ export default function LiffClockPage() {
         <div className="p-4 flex flex-col items-center justify-center min-h-screen animate-fade-in">
             {/* Success message */}
             {successMessage && (
-                <div className="fixed top-4 left-4 right-4 bg-success-100 border border-success-300 text-success-800 px-4 py-3 rounded-xl shadow-lg animate-bounce-in z-50">
-                    <p className="text-center font-medium">✅ {successMessage}</p>
+                <div className="fixed top-4 left-4 right-4 bg-success-100 dark:bg-success-900/30 border border-success-300 dark:border-success-700 text-success-800 dark:text-success-200 px-4 py-3 rounded-lg shadow-lg animate-bounce-in z-50">
+                    <div className="flex items-center justify-center gap-2">
+                        <CheckCircle size={18} className="text-success-600" />
+                        <span className="font-medium">{successMessage}</span>
+                    </div>
                 </div>
             )}
 
             {/* Current shift info */}
-            <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-lg text-center mb-6">
+            <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-lg p-6 shadow-sm border border-neutral-200 dark:border-neutral-800 text-center mb-6">
                 {shift ? (
                     <>
-                        <p className="text-surface-500 text-sm">กะงานวันนี้</p>
-                        <p className="text-2xl font-bold text-surface-800 mt-1">
+                        <p className="text-neutral-500 dark:text-neutral-400 text-sm">กะงานวันนี้</p>
+                        <p className="text-2xl font-bold text-neutral-800 dark:text-white mt-1">
                             {shift.startTime} - {shift.endTime}
                         </p>
                         {shift.location && (
-                            <p className="text-surface-500 mt-2">📍 {shift.location}</p>
+                            <div className="flex items-center justify-center gap-1.5 text-neutral-500 dark:text-neutral-400 mt-2">
+                                <MapPin size={14} />
+                                <span>{shift.location}</span>
+                            </div>
                         )}
                     </>
                 ) : (
                     <>
-                        <p className="text-surface-500 text-sm">วันนี้</p>
-                        <p className="text-xl font-semibold text-surface-600 mt-1">
+                        <p className="text-neutral-500 dark:text-neutral-400 text-sm">วันนี้</p>
+                        <p className="text-xl font-semibold text-neutral-600 dark:text-neutral-300 mt-1">
                             ไม่มีกะงานที่กำหนด
                         </p>
-                        <p className="text-surface-400 text-sm mt-2">
+                        <p className="text-neutral-400 dark:text-neutral-500 text-sm mt-2">
                             คุณสามารถลงเวลาเข้าได้หากต้องการ
                         </p>
                     </>
@@ -270,26 +294,35 @@ export default function LiffClockPage() {
 
             {/* Current attendance status */}
             {attendance && (
-                <div className="w-full max-w-sm bg-surface-50 rounded-xl p-4 mb-6">
+                <div className="w-full max-w-sm bg-neutral-50 dark:bg-neutral-800 rounded-lg p-4 mb-6">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-surface-500 text-sm">เวลาเข้า</span>
-                        <span className="font-semibold">{formatTime(attendance.clockInTime)}</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-sm flex items-center gap-1.5">
+                            <LogIn size={14} />
+                            เวลาเข้า
+                        </span>
+                        <span className="font-semibold text-neutral-800 dark:text-white">{formatTime(attendance.clockInTime)}</span>
                     </div>
                     {attendance.clockOutTime && (
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-surface-500 text-sm">เวลาออก</span>
-                            <span className="font-semibold">{formatTime(attendance.clockOutTime)}</span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-sm flex items-center gap-1.5">
+                                <LogOut size={14} />
+                                เวลาออก
+                            </span>
+                            <span className="font-semibold text-neutral-800 dark:text-white">{formatTime(attendance.clockOutTime)}</span>
                         </div>
                     )}
                     <div className="flex justify-between items-center">
-                        <span className="text-surface-500 text-sm">สถานะ</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-sm">สถานะ</span>
                         <span className={`font-semibold ${getStatusColor(attendance.status)}`}>
                             {getStatusText(attendance.status)}
                         </span>
                     </div>
                     {attendance.totalHours && (
-                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-surface-200">
-                            <span className="text-surface-500 text-sm">รวมชั่วโมง</span>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                            <span className="text-neutral-500 dark:text-neutral-400 text-sm flex items-center gap-1.5">
+                                <Timer size={14} />
+                                รวมชั่วโมง
+                            </span>
                             <span className="font-semibold text-primary-600">
                                 {attendance.totalHours} ชม.
                             </span>
@@ -303,10 +336,15 @@ export default function LiffClockPage() {
                 <button
                     onClick={canClockOut ? handleClockOut : handleClockIn}
                     disabled={isClocking}
-                    className={`w-48 h-48 rounded-full flex flex-col items-center justify-center text-white font-bold text-xl shadow-xl transition-all transform hover:scale-105 active:scale-95 ${canClockOut
+                    className={`
+                        w-44 h-44 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg 
+                        shadow-xl transition-all transform hover:scale-105 active:scale-95
+                        ${canClockOut
                             ? 'bg-gradient-to-br from-error-500 to-error-600'
                             : 'bg-gradient-to-br from-success-500 to-success-600'
-                        } ${isClocking ? 'opacity-70 cursor-not-allowed' : ''} animate-pulse-glow`}
+                        } 
+                        ${isClocking ? 'opacity-70 cursor-not-allowed' : ''}
+                    `}
                     style={{
                         boxShadow: canClockOut
                             ? '0 0 40px -10px rgba(239, 68, 68, 0.5)'
@@ -314,10 +352,14 @@ export default function LiffClockPage() {
                     }}
                 >
                     {isClocking ? (
-                        <div className="w-12 h-12 spinner border-white border-t-transparent" />
+                        <Loader2 size={32} className="animate-spin" />
                     ) : (
                         <>
-                            <span className="text-4xl mb-2">{canClockOut ? '🚪' : '✋'}</span>
+                            {canClockOut ? (
+                                <LogOut size={40} className="mb-2" />
+                            ) : (
+                                <LogIn size={40} className="mb-2" />
+                            )}
                             <span>{canClockOut ? 'ลงเวลาออก' : 'ลงเวลาเข้า'}</span>
                         </>
                     )}
@@ -326,46 +368,49 @@ export default function LiffClockPage() {
 
             {/* Already clocked out message */}
             {currentStatus === 'clocked_out' && (
-                <div className="w-48 h-48 rounded-full flex flex-col items-center justify-center bg-surface-100 text-surface-500">
-                    <span className="text-4xl mb-2">✅</span>
+                <div className="w-44 h-44 rounded-full flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
+                    <CheckCircle size={40} className="mb-2 text-success-500" />
                     <span className="text-lg font-medium">เสร็จสิ้นแล้ว</span>
                 </div>
             )}
 
             {/* No shift message */}
             {currentStatus === 'no_shift' && !canClockIn && (
-                <div className="w-48 h-48 rounded-full flex flex-col items-center justify-center bg-surface-100 text-surface-500">
-                    <span className="text-4xl mb-2">📅</span>
+                <div className="w-44 h-44 rounded-full flex flex-col items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
+                    <CalendarOff size={40} className="mb-2" />
                     <span className="text-lg font-medium text-center">ไม่มีกะวันนี้</span>
                 </div>
             )}
 
             {/* Error messages */}
             {(error || locationError) && (
-                <div className="mt-6 bg-error-50 border border-error-200 rounded-xl p-4 max-w-sm w-full">
-                    <p className="text-error-700 text-center text-sm">
-                        ⚠️ {locationError || error}
-                    </p>
+                <div className="mt-6 bg-error-50 dark:bg-error-900/30 border border-error-200 dark:border-error-700 rounded-lg p-4 max-w-sm w-full">
+                    <div className="flex items-center gap-2 text-error-700 dark:text-error-300 text-sm">
+                        <AlertCircle size={16} />
+                        <span>{locationError || error}</span>
+                    </div>
                 </div>
             )}
 
             {/* Location info */}
             {location && (
                 <div className="mt-6 text-center">
-                    <p className="text-surface-400 text-xs">
-                        📍 พิกัด: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                    </p>
-                    <p className="text-surface-400 text-xs">
+                    <div className="flex items-center justify-center gap-1.5 text-neutral-400 dark:text-neutral-500 text-xs">
+                        <Navigation size={12} />
+                        <span>พิกัด: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</span>
+                    </div>
+                    <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
                         ความแม่นยำ: ±{Math.round(location.accuracy)} เมตร
                     </p>
                 </div>
             )}
 
             {/* GPS notice */}
-            <div className="mt-8 bg-primary-50 rounded-xl p-4 text-center max-w-sm">
-                <p className="text-primary-700 text-sm">
-                    📍 ระบบจะบันทึกตำแหน่ง GPS ของคุณเมื่อลงเวลา
-                </p>
+            <div className="mt-8 bg-primary-50 dark:bg-primary-900/20 rounded-lg p-4 text-center max-w-sm border border-primary-100 dark:border-primary-800">
+                <div className="flex items-center justify-center gap-2 text-primary-700 dark:text-primary-300 text-sm">
+                    <MapPin size={16} />
+                    <span>ระบบจะบันทึกตำแหน่ง GPS ของคุณเมื่อลงเวลา</span>
+                </div>
             </div>
         </div>
     );

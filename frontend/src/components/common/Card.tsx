@@ -7,6 +7,7 @@ interface CardProps {
     hover?: boolean;
     onClick?: () => void;
     style?: React.CSSProperties;
+    variant?: 'default' | 'bordered' | 'flat';
 }
 
 const paddingClasses = {
@@ -16,6 +17,12 @@ const paddingClasses = {
     lg: 'p-6',
 };
 
+const variantClasses = {
+    default: 'bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 shadow-sm',
+    bordered: 'bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700',
+    flat: 'bg-transparent',
+};
+
 export default function Card({
     children,
     className = '',
@@ -23,16 +30,15 @@ export default function Card({
     hover = false,
     onClick,
     style,
+    variant = 'default',
 }: CardProps) {
     return (
         <div
             onClick={onClick}
             style={style}
             className={`
-                bg-white dark:bg-surface-800
                 rounded-xl
-                border border-surface-200 dark:border-surface-700
-                shadow-sm
+                ${variantClasses[variant]}
                 ${paddingClasses[padding]}
                 ${hover ? 'transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 cursor-pointer' : ''}
                 ${className}

@@ -1,264 +1,406 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Table, Pagination, Input, Select, Card } from '../../components/common';
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  CheckCircle,
+  UserCheck,
+  ChevronDown,
+} from 'lucide-react';
+import { Button, Badge, Avatar, Card } from '../../components/common';
+import { PageHeader } from '../../components/layout';
+import { DataTable, Pagination, BulkActions, type ColumnDef } from '../../components/data-display';
+import { SearchInput } from '../../components/forms';
+import { Menu, MenuItem, MenuDivider } from '../../components/navigation';
 import { employeeService, type EmployeeWithUser, type ListEmployeesParams } from '../../services/employee.service';
 import EmployeeFormModal from './EmployeeFormModal';
 
-// Status badge component
-function StatusBadge({ status, t }: { status: string; t: (key: string, fallback?: string) => string }) {
-    const statusStyles: Record<string, string> = {
-        active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-        on_leave: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-        terminated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    };
+/**
+ * Employees Page - Redesigned (Part 5.3)
+ *
+ * Changes from original:
+ * - Collapsible advanced filters
+ * - Enhanced data table with:
+ *   - Column visibility toggle
+ *   - Multi-select for bulk actions
+ *   - Row actions dropdown
+ *   - Sortable columns with indicators
+ * - Consistent status badge component
+ * - Lucide icons instead of inline SVGs
+ */
 
-    const statusLabels: Record<string, string> = {
-        active: t('employees.statusActive', 'Active'),
-        on_leave: t('employees.statusOnLeave', 'On Leave'),
-        terminated: t('employees.statusTerminated', 'Terminated'),
-    };
-
-    return (
-        <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[status] || statusStyles.active}`}
-        >
-            {statusLabels[status] || status}
-        </span>
-    );
-}
+// Status configuration
+const STATUS_CONFIG = {
+  active: { label: 'Active', labelTh: 'ทำงาน', variant: 'success' as const },
+  on_leave: { label: 'On Leave', labelTh: 'ลาหยุด', variant: 'warning' as const },
+  terminated: { label: 'Terminated', labelTh: 'พ้นสภาพ', variant: 'error' as const },
+};
 
 export default function EmployeesPage() {
-    const { t } = useTranslation();
-    const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
 
-    const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingEmployee, setEditingEmployee] = useState<EmployeeWithUser | null>(null);
+  const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeWithUser | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortColumn, setSortColumn] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showFilters, setShowFilters] = useState(false);
 
-    const pageSize = 10;
+  const pageSize = 10;
 
-    const fetchEmployees = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const params: ListEmployeesParams = {
-                page: currentPage,
-                pageSize,
-                search: search || undefined,
-                status: statusFilter as 'active' | 'on_leave' | 'terminated' | undefined,
-            };
+  const fetchEmployees = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params: ListEmployeesParams = {
+        page: currentPage,
+        pageSize,
+        search: search || undefined,
+        status: statusFilter as 'active' | 'on_leave' | 'terminated' | undefined,
+      };
 
-            const response = await employeeService.list(params);
-            setEmployees(response.data || []);
-            if (response.meta) {
-                setTotalPages(response.meta.totalPages);
-                setTotal(response.meta.total);
-            }
-        } catch (error) {
-            console.error('Failed to fetch employees:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [currentPage, search, statusFilter]);
+      const response = await employeeService.list(params);
+      setEmployees(response.data || []);
+      if (response.meta) {
+        setTotalPages(response.meta.totalPages);
+        setTotal(response.meta.total);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, search, statusFilter]);
 
-    useEffect(() => {
-        fetchEmployees();
-    }, [fetchEmployees]);
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
 
-    // Debounced search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setCurrentPage(1);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [search]);
+  // Reset page when search changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    const handleRowClick = (employee: EmployeeWithUser) => {
-        navigate(`/employees/${employee.id}`);
-    };
+  const handleRowClick = (employee: EmployeeWithUser) => {
+    navigate(`/employees/${employee.id}`);
+  };
 
-    const handleAddEmployee = () => {
-        setEditingEmployee(null);
-        setIsFormOpen(true);
-    };
+  const handleAddEmployee = () => {
+    setEditingEmployee(null);
+    setIsFormOpen(true);
+  };
 
-    const handleFormClose = () => {
-        setIsFormOpen(false);
-        setEditingEmployee(null);
-    };
+  const handleEditEmployee = (employee: EmployeeWithUser) => {
+    setEditingEmployee(employee);
+    setIsFormOpen(true);
+  };
 
-    const handleFormSuccess = () => {
-        setIsFormOpen(false);
-        setEditingEmployee(null);
-        fetchEmployees();
-    };
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setEditingEmployee(null);
+  };
 
-    const columns = [
-        {
-            key: 'employeeCode',
-            header: t('employees.code', 'Employee Code'),
-            sortable: true,
-            width: '120px',
-        },
-        {
-            key: 'fullName',
-            header: t('employees.name', 'Name'),
-            sortable: true,
-            render: (employee: EmployeeWithUser) => (
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 font-semibold">
-                        {employee.fullName.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <div className="font-medium text-surface-900 dark:text-white">
-                            {employee.fullName}
-                        </div>
-                        {employee.fullNameTh && (
-                            <div className="text-sm text-surface-500">{employee.fullNameTh}</div>
-                        )}
-                    </div>
-                </div>
-            ),
-        },
-        {
-            key: 'phone',
-            header: t('employees.phone', 'Phone'),
-            render: (employee: EmployeeWithUser) => employee.phone || '-',
-        },
-        {
-            key: 'email',
-            header: t('employees.email', 'Email'),
-            render: (employee: EmployeeWithUser) => employee.email || '-',
-        },
-        {
-            key: 'status',
-            header: t('employees.status', 'Status'),
-            render: (employee: EmployeeWithUser) => <StatusBadge status={employee.status} t={t} />,
-        },
-        {
-            key: 'hasUser',
-            header: t('employees.account', 'Account'),
-            render: (employee: EmployeeWithUser) =>
-                employee.user ? (
-                    <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                        {employee.user.role}
-                    </span>
-                ) : (
-                    <span className="text-surface-400">-</span>
-                ),
-        },
-    ];
+  const handleFormSuccess = () => {
+    setIsFormOpen(false);
+    setEditingEmployee(null);
+    fetchEmployees();
+  };
 
-    const statusOptions = [
-        { value: '', label: t('employees.allStatuses', 'All Statuses') },
-        { value: 'active', label: t('employees.statusActive', 'Active') },
-        { value: 'on_leave', label: t('employees.statusOnLeave', 'On Leave') },
-        { value: 'terminated', label: t('employees.statusTerminated', 'Terminated') },
-    ];
+  const handleSortChange = (column: string, direction: 'asc' | 'desc') => {
+    setSortColumn(column);
+    setSortDirection(direction);
+  };
 
-    return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-                        {t('employees.title', 'Employees')}
-                    </h1>
-                    <p className="text-surface-500 dark:text-surface-400 mt-1">
-                        {t('employees.subtitle', 'Manage your team members and their information')}
-                    </p>
-                </div>
-                <Button
-                    onClick={handleAddEmployee}
-                    leftIcon={
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4v16m8-8H4"
-                            />
-                        </svg>
-                    }
-                >
-                    {t('employees.addEmployee', 'Add Employee')}
-                </Button>
-            </div>
+  const handleSelectionChange = (selected: Set<string>) => {
+    setSelectedIds(selected);
+  };
 
-            {/* Filters */}
-            <Card padding="md">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                        <Input
-                            placeholder={t('employees.searchPlaceholder', 'Search by name, code, phone...')}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            leftIcon={
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                            }
-                        />
-                    </div>
-                    <div className="w-full sm:w-48">
-                        <Select
-                            options={statusOptions}
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        />
-                    </div>
-                </div>
-            </Card>
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
 
-            {/* Employees Table */}
-            <div>
-                <Table
-                    columns={columns}
-                    data={employees}
-                    keyExtractor={(employee) => employee.id}
-                    onRowClick={handleRowClick}
-                    isLoading={isLoading}
-                    emptyMessage={t('employees.noEmployees', 'No employees found')}
-                />
-                {totalPages > 1 && (
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        totalItems={total}
-                        pageSize={pageSize}
-                    />
-                )}
-            </div>
-
-            {/* Employee Form Modal */}
-            <EmployeeFormModal
-                isOpen={isFormOpen}
-                onClose={handleFormClose}
-                onSuccess={handleFormSuccess}
-                employee={editingEmployee}
-            />
+  // Table columns definition
+  const columns: ColumnDef<EmployeeWithUser>[] = [
+    {
+      id: 'employeeCode',
+      header: t('employees.code', 'รหัสพนักงาน'),
+      accessorKey: 'employeeCode',
+      sortable: true,
+      width: '120px',
+    },
+    {
+      id: 'fullName',
+      header: t('employees.name', 'ชื่อ-นามสกุล'),
+      sortable: true,
+      cell: (employee) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={employee.fullName} size="sm" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+              {employee.fullName}
+            </p>
+            {employee.fullNameTh && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                {employee.fullNameTh}
+              </p>
+            )}
+          </div>
         </div>
-    );
+      ),
+    },
+    {
+      id: 'phone',
+      header: t('employees.phone', 'โทรศัพท์'),
+      cell: (employee) => (
+        <span className="text-sm text-neutral-600 dark:text-neutral-300">
+          {employee.phone || '-'}
+        </span>
+      ),
+      hideOnMobile: true,
+    },
+    {
+      id: 'email',
+      header: t('employees.email', 'อีเมล'),
+      cell: (employee) => (
+        <span className="text-sm text-neutral-600 dark:text-neutral-300 truncate block max-w-[180px]">
+          {employee.email || '-'}
+        </span>
+      ),
+      hideOnMobile: true,
+    },
+    {
+      id: 'status',
+      header: t('employees.status', 'สถานะ'),
+      cell: (employee) => {
+        const config = STATUS_CONFIG[employee.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.active;
+        return (
+          <Badge variant={config.variant} size="sm">
+            {i18n.language === 'th' ? config.labelTh : config.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'hasUser',
+      header: t('employees.account', 'บัญชี'),
+      cell: (employee) =>
+        employee.user ? (
+          <div className="flex items-center gap-1.5 text-success-600 dark:text-success-400">
+            <UserCheck size={14} />
+            <span className="text-xs font-medium">{employee.user.role}</span>
+          </div>
+        ) : (
+          <span className="text-neutral-400 text-sm">-</span>
+        ),
+      hideOnMobile: true,
+    },
+    {
+      id: 'actions',
+      header: '',
+      width: '48px',
+      align: 'right',
+      cell: (employee) => (
+        <Menu
+          trigger={
+            <button className="p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <MoreHorizontal size={16} className="text-neutral-500" />
+            </button>
+          }
+          placement="bottom-end"
+        >
+          <MenuItem icon={<Eye size={16} />} onClick={() => handleRowClick(employee)}>
+            {t('common.view', 'ดูรายละเอียด')}
+          </MenuItem>
+          <MenuItem icon={<Pencil size={16} />} onClick={() => handleEditEmployee(employee)}>
+            {t('common.edit', 'แก้ไข')}
+          </MenuItem>
+          <MenuDivider />
+          <MenuItem icon={<Trash2 size={16} />} destructive>
+            {t('common.delete', 'ลบ')}
+          </MenuItem>
+        </Menu>
+      ),
+    },
+  ];
+
+  const statusOptions = [
+    { value: '', label: t('employees.allStatuses', 'ทุกสถานะ') },
+    { value: 'active', label: t('employees.statusActive', 'ทำงาน') },
+    { value: 'on_leave', label: t('employees.statusOnLeave', 'ลาหยุด') },
+    { value: 'terminated', label: t('employees.statusTerminated', 'พ้นสภาพ') },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title={t('employees.title', 'พนักงาน')}
+        description={t('employees.subtitle', 'จัดการข้อมูลพนักงานรักษาความปลอดภัย')}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" leftIcon={<Download size={16} />}>
+              {t('common.export', 'ส่งออก')}
+            </Button>
+            <Button variant="primary" size="sm" leftIcon={<Plus size={16} />} onClick={handleAddEmployee}>
+              {t('employees.addEmployee', 'เพิ่มพนักงาน')}
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Search and Filters */}
+      <Card variant="bordered" padding="md">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t('employees.searchPlaceholder', 'ค้นหาชื่อ, รหัส, โทรศัพท์...')}
+              debounceMs={300}
+            />
+          </div>
+
+          {/* Quick filter buttons */}
+          <div className="flex items-center gap-2">
+            {/* Status filter dropdown */}
+            <Menu
+              trigger={
+                <Button variant="outline" size="md" rightIcon={<ChevronDown size={16} />}>
+                  {statusFilter
+                    ? statusOptions.find((o) => o.value === statusFilter)?.label
+                    : t('employees.status', 'สถานะ')}
+                </Button>
+              }
+            >
+              {statusOptions.map((option) => (
+                <MenuItem
+                  key={option.value}
+                  checked={statusFilter === option.value}
+                  onClick={() => {
+                    setStatusFilter(option.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {/* Advanced filters toggle */}
+            <Button
+              variant={showFilters ? 'secondary' : 'outline'}
+              size="md"
+              leftIcon={<Filter size={16} />}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              {t('common.filters', 'ตัวกรอง')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Advanced filters (collapsible) */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  {t('employees.department', 'แผนก')}
+                </label>
+                <select className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm">
+                  <option value="">{t('common.all', 'ทั้งหมด')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  {t('employees.position', 'ตำแหน่ง')}
+                </label>
+                <select className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm">
+                  <option value="">{t('common.all', 'ทั้งหมด')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  {t('employees.hireDate', 'วันที่เริ่มงาน')}
+                </label>
+                <input
+                  type="date"
+                  className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <BulkActions
+          selectedCount={selectedIds.size}
+          totalCount={employees.length}
+          onClearSelection={handleClearSelection}
+        >
+          <Button variant="outline" size="sm">
+            {t('common.export', 'ส่งออก')}
+          </Button>
+          <Button variant="danger" size="sm">
+            {t('common.delete', 'ลบ')}
+          </Button>
+        </BulkActions>
+      )}
+
+      {/* Employees Table */}
+      <DataTable
+        columns={columns}
+        data={employees}
+        getRowId={(employee) => employee.id}
+        isLoading={isLoading}
+        isHoverable
+        isSelectable
+        selectedIds={selectedIds}
+        onSelectionChange={handleSelectionChange}
+        onRowClick={handleRowClick}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+        emptyMessage={t('employees.noEmployees', 'ไม่พบข้อมูลพนักงาน')}
+      />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={total}
+          pageSize={pageSize}
+        />
+      )}
+
+      {/* Employee Form Modal */}
+      <EmployeeFormModal
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormSuccess}
+        employee={editingEmployee}
+      />
+    </div>
+  );
 }
