@@ -7,6 +7,7 @@ This document outlines the comprehensive plan to redesign the Security Guard HRM
 **Key Objectives:**
 - Minimalist, distraction-free interface
 - Professional, trustworthy, and organized appearance
+- Avatar and Line avatar
 - Consistent design system across web and LINE LIFF
 - Full dark/light mode support
 - Improved accessibility and usability
