@@ -1,99 +1,136 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
+import { ChevronDown } from 'lucide-react';
+
+type SelectSize = 'sm' | 'md' | 'lg';
 
 interface SelectOption {
-    value: string;
-    label: string;
+  value: string;
+  label: string;
+  disabled?: boolean;
 }
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-    label?: string;
-    error?: string;
-    helperText?: string;
-    options: SelectOption[];
-    placeholder?: string;
-    fullWidth?: boolean;
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
+  /** Label text */
+  label?: string;
+  /** Error message */
+  error?: string;
+  /** Helper text shown below select */
+  helperText?: string;
+  /** Options to display */
+  options: SelectOption[];
+  /** Placeholder text */
+  placeholder?: string;
+  /** Size of the select */
+  size?: SelectSize;
+  /** Make select full width */
+  fullWidth?: boolean;
+  /** Disable the select */
+  isDisabled?: boolean;
 }
+
+const sizeClasses: Record<SelectSize, string> = {
+  sm: 'h-8 pl-2.5 pr-8 text-[13px]',
+  md: 'h-10 pl-3 pr-10 text-sm',
+  lg: 'h-12 pl-3.5 pr-11 text-base',
+};
+
+const iconSizes: Record<SelectSize, number> = {
+  sm: 14,
+  md: 16,
+  lg: 18,
+};
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-    (
-        {
-            label,
-            error,
-            helperText,
-            options,
-            placeholder,
-            fullWidth = true,
-            className = '',
-            id,
-            ...props
-        },
-        ref
-    ) => {
-        const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+  (
+    {
+      label,
+      error,
+      helperText,
+      options,
+      placeholder,
+      size = 'md',
+      fullWidth = true,
+      isDisabled = false,
+      className = '',
+      id,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const generatedId = useId();
+    const selectId = id || generatedId;
+    const errorId = error ? `${selectId}-error` : undefined;
+    const helperId = helperText && !error ? `${selectId}-helper` : undefined;
 
-        return (
-            <div className={`${fullWidth ? 'w-full' : ''}`}>
-                {label && (
-                    <label
-                        htmlFor={selectId}
-                        className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5"
-                    >
-                        {label}
-                    </label>
-                )}
-                <div className="relative">
-                    <select
-                        ref={ref}
-                        id={selectId}
-                        className={`
-                            appearance-none
-                            block w-full rounded-xl border
-                            px-4 py-2.5 pr-10
-                            bg-white dark:bg-surface-800
-                            text-surface-900 dark:text-white
-                            transition-all duration-200
-                            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                            disabled:bg-surface-100 dark:disabled:bg-surface-900 disabled:cursor-not-allowed
-                            ${error ? 'border-red-500 focus:ring-red-500' : 'border-surface-300 dark:border-surface-600'}
-                            ${className}
-                        `}
-                        {...props}
-                    >
-                        {placeholder && (
-                            <option value="" disabled>
-                                {placeholder}
-                            </option>
-                        )}
-                        {options.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-surface-400">
-                        <svg
-                            className="h-5 w-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fillRule="evenodd"
-                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                    </div>
-                </div>
-                {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-                {helperText && !error && (
-                    <p className="mt-1 text-sm text-surface-500">{helperText}</p>
-                )}
-            </div>
-        );
-    }
+    const isSelectDisabled = disabled || isDisabled;
+
+    return (
+      <div className={fullWidth ? 'w-full' : ''}>
+        {label && (
+          <label
+            htmlFor={selectId}
+            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5"
+          >
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          <select
+            ref={ref}
+            id={selectId}
+            disabled={isSelectDisabled}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={errorId || helperId}
+            className={`
+              appearance-none
+              block w-full rounded
+              bg-white dark:bg-neutral-900
+              text-neutral-900 dark:text-neutral-100
+              border transition-all duration-150
+              focus:outline-none focus:ring-2 focus:ring-offset-0
+              disabled:bg-neutral-100 dark:disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed
+              ${
+                error
+                  ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20'
+                  : 'border-neutral-300 dark:border-neutral-700 focus:border-primary-500 focus:ring-primary-500/20'
+              }
+              ${sizeClasses[size]}
+              ${className}
+            `}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled className="text-neutral-400">
+                {placeholder}
+              </option>
+            )}
+            {options.map((option) => (
+              <option key={option.value} value={option.value} disabled={option.disabled}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-neutral-400 dark:text-neutral-500">
+            <ChevronDown size={iconSizes[size]} />
+          </div>
+        </div>
+        {error && (
+          <p id={errorId} className="mt-1.5 text-sm text-error-600 dark:text-error-400" role="alert">
+            {error}
+          </p>
+        )}
+        {helperText && !error && (
+          <p id={helperId} className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+            {helperText}
+          </p>
+        )}
+      </div>
+    );
+  }
 );
 
 Select.displayName = 'Select';
 
 export default Select;
+export type { SelectProps, SelectOption, SelectSize };
