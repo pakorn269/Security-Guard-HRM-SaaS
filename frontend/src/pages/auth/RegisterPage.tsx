@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterPage() {
@@ -104,7 +105,7 @@ export default function RegisterPage() {
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center shadow-lg">
-                            <span className="text-3xl">🏢</span>
+                            <Building2 size={32} className="text-white" />
                         </div>
                         <h1 className="text-2xl font-bold text-surface-800 dark:text-white">
                             {i18n.language === 'th' ? 'ลงทะเบียนบริษัท' : 'Register Company'}

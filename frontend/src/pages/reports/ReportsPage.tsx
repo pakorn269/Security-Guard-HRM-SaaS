@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+    BarChart3,
+    Palmtree,
+    AlertTriangle,
+    FileSpreadsheet,
+    Download,
+    Loader2,
+} from 'lucide-react';
 import { reportsService } from '../../services/reports.service';
 import type {
     AttendanceSummaryReport,
@@ -188,21 +196,23 @@ export default function ReportsPage() {
             <div className="flex gap-2">
                 <button
                     onClick={() => setReportType('attendance')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${reportType === 'attendance'
+                    className={`px-4 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 ${reportType === 'attendance'
                         ? 'bg-primary-600 text-white shadow-lg'
                         : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200'
                         }`}
                 >
-                    {i18n.language === 'th' ? '📊 การลงเวลา' : '📊 Attendance'}
+                    <BarChart3 size={18} />
+                    {i18n.language === 'th' ? 'การลงเวลา' : 'Attendance'}
                 </button>
                 <button
                     onClick={() => setReportType('leave')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${reportType === 'leave'
+                    className={`px-4 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 ${reportType === 'leave'
                         ? 'bg-primary-600 text-white shadow-lg'
                         : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200'
                         }`}
                 >
-                    {i18n.language === 'th' ? '🏖️ การลา' : '🏖️ Leave'}
+                    <Palmtree size={18} />
+                    {i18n.language === 'th' ? 'การลา' : 'Leave'}
                 </button>
             </div>
 
@@ -253,38 +263,43 @@ export default function ReportsPage() {
                     <button
                         onClick={handleGenerateReport}
                         disabled={loading}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                     >
                         {loading ? (
-                            <span className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
                                 {i18n.language === 'th' ? 'กำลังโหลด...' : 'Loading...'}
-                            </span>
+                            </>
                         ) : (
-                            i18n.language === 'th' ? '📊 สร้างรายงาน' : '📊 Generate Report'
+                            <>
+                                <FileSpreadsheet size={16} />
+                                {i18n.language === 'th' ? 'สร้างรายงาน' : 'Generate Report'}
+                            </>
                         )}
                     </button>
                     <button
                         onClick={handleExportCSV}
                         disabled={loading}
-                        className="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
                     >
-                        📥 {i18n.language === 'th' ? 'ส่งออก CSV' : 'Export CSV'}
+                        <Download size={16} />
+                        {i18n.language === 'th' ? 'ส่งออก CSV' : 'Export CSV'}
                     </button>
                 </div>
             </div>
 
             {/* Error message */}
             {error && (
-                <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 text-error-700 dark:text-error-400 rounded-xl p-4">
-                    ⚠️ {error}
+                <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 text-error-700 dark:text-error-400 rounded-xl p-4 flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    {error}
                 </div>
             )}
 
             {/* Loading state */}
             {loading && (
                 <div className="flex justify-center py-12">
-                    <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    <Loader2 size={48} className="text-primary-500 animate-spin" />
                 </div>
             )}
 
@@ -566,7 +581,9 @@ export default function ReportsPage() {
                 (reportType === 'leave' && !leaveReport)
             ) && (
                     <div className="bg-white dark:bg-surface-800 rounded-xl p-12 shadow-sm text-center">
-                        <div className="text-6xl mb-4">📊</div>
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                            <BarChart3 size={32} className="text-neutral-400" />
+                        </div>
                         <h3 className="text-lg font-semibold text-surface-800 dark:text-white mb-2">
                             {i18n.language === 'th' ? 'ยังไม่มีข้อมูลรายงาน' : 'No Report Data'}
                         </h3>

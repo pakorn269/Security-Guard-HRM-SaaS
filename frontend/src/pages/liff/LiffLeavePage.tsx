@@ -1,4 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+    Palmtree,
+    CheckCircle,
+    AlertTriangle,
+    Plus,
+    Clock,
+    X,
+    Loader2,
+} from 'lucide-react';
 import leaveService, {
     type LeaveBalanceWithType,
     type LeaveRequestWithDetails,
@@ -147,7 +156,7 @@ export default function LiffLeavePage() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 spinner"></div>
+                    <Loader2 size={48} className="text-primary-500 animate-spin" />
                     <p className="text-surface-500">กำลังโหลด...</p>
                 </div>
             </div>
@@ -158,25 +167,30 @@ export default function LiffLeavePage() {
         <div className="p-4 space-y-6 animate-fade-in">
             {/* Header */}
             <div className="text-center py-2">
-                <h1 className="text-xl font-bold text-surface-800">🏖️ การลา</h1>
+                <div className="flex items-center justify-center gap-2">
+                    <Palmtree size={24} className="text-primary-500" />
+                    <h1 className="text-xl font-bold text-surface-800">การลา</h1>
+                </div>
             </div>
 
             {/* Success message */}
             {success && (
-                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl animate-fade-in">
-                    ✅ {success}
+                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl animate-fade-in flex items-center gap-2">
+                    <CheckCircle size={18} />
+                    {success}
                 </div>
             )}
 
             {/* Error message */}
             {error && (
-                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl animate-fade-in">
-                    ⚠️ {error}
+                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl animate-fade-in flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    {error}
                     <button
                         onClick={() => setError(null)}
-                        className="float-right text-error-500 hover:text-error-700"
+                        className="ml-auto text-error-500 hover:text-error-700"
                     >
-                        ✕
+                        <X size={16} />
                     </button>
                 </div>
             )}
@@ -226,16 +240,18 @@ export default function LiffLeavePage() {
             {/* Request leave button */}
             <button
                 onClick={() => setShowForm(true)}
-                className="w-full btn-primary py-3 text-lg"
+                className="w-full btn-primary py-3 text-lg flex items-center justify-center gap-2"
             >
-                ➕ ขอลาใหม่
+                <Plus size={20} />
+                ขอลาใหม่
             </button>
 
             {/* Pending requests */}
             {leaveData?.pendingRequests && leaveData.pendingRequests.length > 0 && (
                 <div className="bg-warning-50 rounded-xl p-4 border border-warning-200">
-                    <h2 className="font-semibold text-warning-800 mb-3">
-                        ⏳ คำขอที่รออนุมัติ ({leaveData.pendingRequests.length})
+                    <h2 className="font-semibold text-warning-800 mb-3 flex items-center gap-2">
+                        <Clock size={18} />
+                        คำขอที่รออนุมัติ ({leaveData.pendingRequests.length})
                     </h2>
                     <div className="space-y-2">
                         {leaveData.pendingRequests.map((request: LeaveRequestWithDetails) => (
@@ -318,7 +334,7 @@ export default function LiffLeavePage() {
                                 }}
                                 className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center"
                             >
-                                ✕
+                                <X size={16} />
                             </button>
                         </div>
 
@@ -400,7 +416,7 @@ export default function LiffLeavePage() {
                             >
                                 {submitting ? (
                                     <span className="flex items-center justify-center gap-2">
-                                        <div className="w-5 h-5 spinner"></div>
+                                        <Loader2 size={20} className="animate-spin" />
                                         กำลังส่ง...
                                     </span>
                                 ) : (
