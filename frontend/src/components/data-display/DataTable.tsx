@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -391,10 +391,9 @@ export function Pagination({
                 onClick={() => onPageChange(pageNum)}
                 className={`
                   min-w-[32px] h-8 px-2 rounded text-sm font-medium transition-colors
-                  ${
-                    currentPage === pageNum
-                      ? 'bg-primary-500 text-white'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  ${currentPage === pageNum
+                    ? 'bg-primary-500 text-white'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }
                 `}
               >

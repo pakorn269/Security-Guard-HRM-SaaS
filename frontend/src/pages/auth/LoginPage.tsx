@@ -28,7 +28,7 @@ import { ThemeToggle } from '../../components/theme';
  * - Professional, minimal design
  */
 export default function LoginPage() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { login, isLoading, isAuthenticated, error, clearError } = useAuth();
   const [email, setEmail] = useState('');

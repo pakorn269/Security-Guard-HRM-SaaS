@@ -662,145 +662,204 @@ const { theme, setTheme, resolvedTheme } = useTheme();
 - 5 refactored base components ✅
 - Icon migration complete ✅
 
-### Phase 2: Layout Components (Week 2-3)
+### Phase 2: Layout Components ✅ COMPLETE
 
 **Objective:** Create consistent layout infrastructure
 
 #### Tasks:
-1. **Redesign Sidebar**
-   - New navigation with Lucide icons
-   - Collapsible behavior
-   - Active state styling
-   - User menu at bottom
+1. **Redesign Sidebar** ✅
+   - New navigation with Lucide icons ✅
+   - Collapsible behavior ✅
+   - Active state styling ✅
+   - User menu at bottom ✅ (SidebarUserMenu component added)
 
-2. **Redesign Header**
-   - Simplified design
-   - Theme toggle button
-   - Notification center
-   - User dropdown menu
+2. **Redesign Header** ✅
+   - Simplified design ✅
+   - Theme toggle button ✅
+   - Notification center ✅
+   - User dropdown menu ✅ (Enhanced with profile, settings, logout)
 
-3. **Create Layout Utilities**
-   - Container component (max-width handling)
-   - Stack component (vertical spacing)
-   - PageHeader component (breadcrumb + title + actions)
+3. **Create Layout Utilities** ✅
+   - Container component (max-width handling) ✅
+   - Stack component (vertical spacing) ✅
+   - PageHeader component (breadcrumb + title + actions) ✅
 
-4. **LIFF Layout Update**
-   - Simplified mobile header
-   - Bottom navigation component
-   - Safe area handling
+4. **LIFF Layout Update** ✅
+   - Simplified mobile header ✅ (MobileHeader component)
+   - Bottom navigation component ✅ (BottomNav with BottomAction)
+   - Safe area handling ✅
 
 **Deliverables:**
-- Redesigned `DashboardLayout`
-- Redesigned `LiffLayout`
-- 3 new layout utility components
+- Redesigned `DashboardLayout` ✅
+- Redesigned `LiffLayout` ✅
+- 3 new layout utility components ✅
 
-### Phase 3: Data Components (Week 3-4)
+**Implementation Notes:**
+- Added `SidebarUserMenu` component with user avatar, name, and logout button
+- Enhanced `Header` UserMenu with full dropdown featuring:
+  - User info section (name, email)
+  - Profile link
+  - Settings link
+  - Logout button with proper styling
+- All layout components use Lucide React icons
+- Consistent spacing and typography using design tokens
+- Full dark mode support across all layout components
+
+### Phase 3: Data Components ✅ COMPLETE
 
 **Objective:** Create enterprise-grade data display components
 
 #### Tasks:
-1. **Enhanced Table Component**
-   - Column sorting
-   - Column visibility toggle
-   - Row selection
-   - Bulk actions toolbar
-   - Loading states
-   - Empty states
+1. **Enhanced Table Component** ✅
+   - Column sorting ✅ (already implemented)
+   - Column visibility toggle ✅ (new ColumnVisibility component)
+   - Row selection ✅ (already implemented)
+   - Bulk actions toolbar ✅ (already implemented)
+   - Loading states ✅ (already implemented)
+   - Empty states ✅ (already implemented)
 
-2. **Card Variants**
-   - Default, bordered, elevated variants
-   - CardHeader, CardBody, CardFooter subcomponents
-   - Stat card variant
+2. **Card Variants** ✅
+   - Default, bordered, elevated variants ✅
+   - CardHeader, CardBody, CardFooter subcomponents ✅
+   - Stat card variant ✅ (already implemented in Stat.tsx)
 
-3. **List Components**
-   - DescriptionList for detail views
-   - ActionList for menus
-   - Timeline for activity
+3. **List Components** ✅
+   - DescriptionList for detail views ✅ (already implemented)
+   - ActionList for menus ✅ (new component)
+   - Timeline for activity ✅ (already implemented)
 
-4. **Feedback Components**
-   - Toast system update
-   - Alert component
-   - Skeleton loaders
+4. **Feedback Components** ✅
+   - Toast system update ✅ (updated to use Lucide icons)
+   - Alert component ✅ (already implemented)
+   - Skeleton loaders ✅ (enhanced with multiple variants)
 
 **Deliverables:**
-- Enhanced `DataTable` component
-- `Card` component with variants
-- 3 new list/timeline components
-- Updated feedback components
+- Enhanced `DataTable` component with ColumnVisibility ✅
+- `Card` component with variants (default, bordered, elevated) ✅
+- 3 new list/timeline components ✅
+- Updated feedback components ✅
 
-### Phase 4: Form System (Week 4-5)
+**Implementation Notes:**
+- Created `ColumnVisibility` component with `useColumnVisibility` hook
+- Created `ActionList` component for menus with group and divider support
+- Added `CardBody` subcomponent to Card
+- Updated Card variants: default (neutral bg), bordered (white bg), elevated (white + shadow)
+- Updated Toast to use Lucide icons (CheckCircle, XCircle, AlertTriangle, Info)
+- Enhanced Skeleton with variants: text, circular, rectangular, rounded
+- Added compound Skeleton components: SkeletonText, SkeletonAvatar, SkeletonCard, SkeletonTable
+- Added shimmer animation for skeleton wave effect
+
+### Phase 4: Form System ✅ COMPLETE
 
 **Objective:** Standardize form patterns
 
 #### Tasks:
-1. **Form Components**
-   - FormField wrapper (label + input + error)
-   - FormSection (grouped fields)
-   - SearchInput with debounce
+1. **Form Components** ✅
+   - FormField wrapper (label + input + error) ✅
+   - FormSection (grouped fields) ✅
+   - SearchInput with debounce ✅
+   - FormGrid (multi-column) ✅
+   - FormActions (submit/cancel) ✅
+   - Form wrapper ✅
 
-2. **Input Variants**
-   - Textarea
-   - Checkbox
-   - Radio group
-   - Switch toggle
-   - Date picker styling
-   - File upload
+2. **Input Variants** ✅
+   - Textarea ✅ (new - with auto-grow, character count)
+   - Checkbox ✅ (with indeterminate state)
+   - Radio group ✅ (RadioGroup component)
+   - Switch toggle ✅ (with label positioning)
+   - Date picker styling ✅ (new DateInput component)
+   - File upload ✅ (new - drag-drop, validation, preview)
 
-3. **Form Layouts**
-   - Horizontal form pattern
-   - Multi-column form grid
-   - Inline form pattern
+3. **Form Layouts** ✅
+   - Horizontal form pattern ✅ (FormField labelPosition='left')
+   - Multi-column form grid ✅ (FormGrid component)
+   - Inline form pattern ✅ (InlineFormField component)
 
 **Deliverables:**
-- Form field components
-- All input variants
-- Form layout utilities
+- Form field components ✅
+- All input variants ✅
+- Form layout utilities ✅
 
-### Phase 5: Page Redesigns (Week 5-8)
+**Implementation Notes:**
+- Created `Textarea` component with:
+  - Auto-grow based on content
+  - Character count display
+  - Resize options (none, vertical, horizontal, both)
+  - Min/max rows configuration
+- Created `DateInput` component with:
+  - Native date picker with styled appearance
+  - Calendar icon overlay
+  - Support for date, datetime-local, time, month, week types
+- Created `FileUpload` component with:
+  - Drag-and-drop support
+  - File size validation
+  - Max files limit
+  - File preview list with icons
+  - Remove file functionality
+- All form components use consistent:
+  - Size variants (sm, md, lg)
+  - Error state handling
+  - Helper text support
+  - Required field indicators
+  - Dark mode support
+
+
+### Phase 5: Page Redesigns ✅ COMPLETE
 
 **Objective:** Apply new design system to all pages
 
 #### Order of Implementation:
 
-1. **Auth Pages** (Week 5)
-   - Login page redesign
-   - Register page redesign
+1. **Auth Pages** ✅
+   - Login page redesign ✅
+   - Register page redesign ✅
 
-2. **Dashboard** (Week 5-6)
-   - Stats cards
-   - Widgets redesign
-   - Quick actions
+2. **Dashboard** ✅
+   - Stats cards ✅ (using StatCard/StatGroup)
+   - Widgets redesign ✅
+   - Quick actions ✅
 
-3. **Employee Management** (Week 6)
-   - List view with new table
-   - Detail view
-   - Form modals
+3. **Employee Management** ✅
+   - List view with new table ✅ (DataTable component)
+   - Detail view ✅
+   - Form modals ✅
 
-4. **Schedule/Shifts** (Week 6-7)
-   - Calendar redesign
-   - Shift cards
-   - Template management
+4. **Schedule/Shifts** ✅
+   - Calendar redesign ✅
+   - Shift cards ✅
+   - Template management ✅
 
-5. **Attendance** (Week 7)
-   - List view
-   - Detail view
-   - Map integration
+5. **Attendance** ✅
+   - List view ✅
+   - Detail view ✅
+   - Map integration ✅
 
-6. **Leave Management** (Week 7-8)
-   - Balance dashboard
-   - Request flow
-   - Approval queue
+6. **Leave Management** ✅
+   - Balance dashboard ✅
+   - Request flow ✅
+   - Approval queue ✅
 
-7. **Reports** (Week 8)
-   - Report cards
-   - Chart styling
-   - Export UI
+7. **Reports** ✅
+   - Report cards ✅
+   - Chart styling ✅
+   - Export UI ✅
 
-8. **LIFF Pages** (Week 8)
-   - Clock page
-   - Schedule page
-   - Leave page
-   - Profile page
+8. **LIFF Pages** ✅
+   - Clock page ✅
+   - Schedule page ✅
+   - Leave page ✅
+   - Profile page ✅
+
+**Implementation Notes:**
+All pages already redesigned using:
+- Lucide React icons (no emoji/inline SVG)
+- Semantic color palette (neutral, primary, success, error, warning, info)
+- Dark mode support throughout
+- Component library (DataTable, StatCard, Card, Badge, Button, PageHeader, etc.)
+- Consistent spacing and typography
+- Mobile-first responsive design
+- Proper accessibility attributes (ARIA, keyboard navigation)
+
 
 ### Phase 6: Polish & Testing (Week 8-9)
 

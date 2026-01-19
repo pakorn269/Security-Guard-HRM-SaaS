@@ -18,9 +18,9 @@ export type { AvatarProps, AvatarGroupProps, AvatarSize } from './Avatar';
 
 export { default as Modal, ModalFooter } from './Modal';
 export { default as Table, Pagination } from './Table';
-export { default as Card, CardHeader, CardFooter } from './Card';
+export { default as Card, CardHeader, CardBody, CardFooter } from './Card';
 export { default as Toast, ToastContainer, useToast } from './Toast';
-export { default as LoadingSpinner, PageLoader, Skeleton } from './LoadingSpinner';
+export { default as LoadingSpinner, PageLoader, Skeleton, SkeletonText, SkeletonAvatar, SkeletonCard, SkeletonTableRow, SkeletonTable } from './LoadingSpinner';
 export { default as LanguageSwitcher } from './LanguageSwitcher';
 export { default as NotificationBell } from './NotificationBell';
 export { ErrorBoundary } from './ErrorBoundary';
