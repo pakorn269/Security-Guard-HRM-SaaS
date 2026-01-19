@@ -6,7 +6,13 @@
       "Bash(npm exec -- node -e \"import\\(''bcryptjs''\\).then\\(bcrypt => { const hash = bcrypt.default.hashSync\\(''admin123'', 12\\); console.log\\(''admin123:'', hash\\); const hash2 = bcrypt.default.hashSync\\(''manager123'', 12\\); console.log\\(''manager123:'', hash2\\); }\\)\")",
       "Bash(npm install)",
       "Bash(curl:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx typescript:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(npm exec tsc:*)",
+      "Bash(npm exec:*)"
     ]
   }
 }

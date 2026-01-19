@@ -4,102 +4,122 @@
 @import 'tailwindcss';
 
 /* ============================================
-   CUSTOM THEME FOR SECURITY GUARD HRM
+   SECURITY GUARD HRM - CORPORATE DESIGN SYSTEM
+   Version: 2.0 - "Clean, Functional & Corporate"
    ============================================ */
+
 @theme {
-  /* Primary Colors - Deep Blue */
-  --color-primary-50: oklch(0.97 0.01 250);
-  --color-primary-100: oklch(0.93 0.03 250);
-  --color-primary-200: oklch(0.86 0.06 250);
-  --color-primary-300: oklch(0.76 0.09 250);
-  --color-primary-400: oklch(0.64 0.12 250);
-  --color-primary-500: oklch(0.53 0.14 250);
-  --color-primary-600: oklch(0.45 0.13 250);
-  --color-primary-700: oklch(0.38 0.11 250);
-  --color-primary-800: oklch(0.32 0.09 250);
-  --color-primary-900: oklch(0.27 0.07 250);
-  --color-primary-950: oklch(0.18 0.05 250);
+  /* ==========================================
+     PRIMARY COLORS - Corporate Blue (Low Saturation)
+     ========================================== */
+  --color-primary-25: oklch(0.985 0.005 240);
+  --color-primary-50: oklch(0.97 0.01 240);
+  --color-primary-100: oklch(0.94 0.02 240);
+  --color-primary-200: oklch(0.88 0.04 240);
+  --color-primary-300: oklch(0.78 0.06 240);
+  --color-primary-400: oklch(0.65 0.08 240);
+  --color-primary-500: oklch(0.50 0.10 240);
+  --color-primary-600: oklch(0.42 0.10 240);
+  --color-primary-700: oklch(0.35 0.09 240);
+  --color-primary-800: oklch(0.28 0.07 240);
+  --color-primary-900: oklch(0.22 0.05 240);
+  --color-primary-950: oklch(0.15 0.03 240);
 
-  /* Secondary Colors - Teal */
-  --color-secondary-50: oklch(0.97 0.02 180);
-  --color-secondary-100: oklch(0.93 0.04 180);
-  --color-secondary-200: oklch(0.86 0.08 180);
-  --color-secondary-300: oklch(0.76 0.12 180);
-  --color-secondary-400: oklch(0.64 0.15 180);
-  --color-secondary-500: oklch(0.52 0.14 180);
-  --color-secondary-600: oklch(0.44 0.12 180);
-  --color-secondary-700: oklch(0.37 0.10 180);
-  --color-secondary-800: oklch(0.31 0.08 180);
-  --color-secondary-900: oklch(0.26 0.06 180);
-  --color-secondary-950: oklch(0.17 0.04 180);
+  /* ==========================================
+     NEUTRAL COLORS - Cool Gray (Surfaces & Text)
+     ========================================== */
+  --color-neutral-25: oklch(0.99 0.002 240);
+  --color-neutral-50: oklch(0.98 0.003 240);
+  --color-neutral-100: oklch(0.96 0.004 240);
+  --color-neutral-200: oklch(0.92 0.006 240);
+  --color-neutral-300: oklch(0.87 0.008 240);
+  --color-neutral-400: oklch(0.70 0.010 240);
+  --color-neutral-500: oklch(0.55 0.010 240);
+  --color-neutral-600: oklch(0.45 0.010 240);
+  --color-neutral-700: oklch(0.35 0.008 240);
+  --color-neutral-800: oklch(0.25 0.006 240);
+  --color-neutral-900: oklch(0.18 0.004 240);
+  --color-neutral-950: oklch(0.12 0.003 240);
 
-  /* Surface Colors - Improved Contrast */
-  --color-surface-50: oklch(0.98 0.00 0);
-  --color-surface-100: oklch(0.96 0.00 0);
-  --color-surface-200: oklch(0.93 0.00 0);
-  --color-surface-300: oklch(0.88 0.00 0);
-  --color-surface-400: oklch(0.75 0.00 0);
-  --color-surface-500: oklch(0.55 0.00 0);
-  --color-surface-600: oklch(0.40 0.00 0);
-  --color-surface-700: oklch(0.30 0.01 250);
-  --color-surface-800: oklch(0.35 0.02 250);
-  /* Lighter for card contrast */
-  --color-surface-900: oklch(0.15 0.02 250);
-  /* Darker for depth */
-  --color-surface-950: oklch(0.10 0.02 250);
+  /* ==========================================
+     SEMANTIC COLORS - Status Indicators
+     ========================================== */
+  /* Success - Corporate Green */
+  --color-success-50: oklch(0.97 0.02 145);
+  --color-success-100: oklch(0.93 0.04 145);
+  --color-success-200: oklch(0.87 0.07 145);
+  --color-success-300: oklch(0.78 0.10 145);
+  --color-success-400: oklch(0.68 0.12 145);
+  --color-success-500: oklch(0.55 0.14 145);
+  --color-success-600: oklch(0.48 0.13 145);
+  --color-success-700: oklch(0.40 0.11 145);
+  --color-success-800: oklch(0.33 0.09 145);
+  --color-success-900: oklch(0.27 0.07 145);
 
-  /* Accent/Status Colors */
-  --color-accent-50: oklch(0.98 0.02 60);
-  --color-accent-100: oklch(0.95 0.05 60);
-  --color-accent-200: oklch(0.90 0.10 55);
-  --color-accent-300: oklch(0.83 0.15 50);
-  --color-accent-400: oklch(0.75 0.18 45);
-  --color-accent-500: oklch(0.67 0.20 40);
-  --color-accent-600: oklch(0.58 0.18 35);
-  --color-accent-700: oklch(0.48 0.15 35);
-  --color-accent-800: oklch(0.40 0.12 35);
-  --color-accent-900: oklch(0.33 0.09 35);
-  --color-accent-950: oklch(0.22 0.06 35);
-
-  --color-success-50: oklch(0.97 0.02 150);
-  --color-success-100: oklch(0.93 0.05 150);
-  --color-success-200: oklch(0.86 0.10 150);
-  --color-success-300: oklch(0.76 0.15 150);
-  --color-success-400: oklch(0.64 0.18 150);
-  --color-success-500: oklch(0.52 0.16 150);
-  --color-success-600: oklch(0.44 0.14 150);
-  --color-success-700: oklch(0.37 0.11 150);
-  --color-success-800: oklch(0.31 0.09 150);
-  --color-success-900: oklch(0.26 0.06 150);
-
+  /* Warning - Amber */
   --color-warning-50: oklch(0.98 0.02 85);
-  --color-warning-100: oklch(0.95 0.05 85);
-  --color-warning-200: oklch(0.90 0.10 85);
-  --color-warning-300: oklch(0.84 0.15 85);
-  --color-warning-400: oklch(0.77 0.18 85);
-  --color-warning-500: oklch(0.70 0.18 85);
-  --color-warning-600: oklch(0.60 0.15 85);
-  --color-warning-700: oklch(0.50 0.12 85);
-  --color-warning-800: oklch(0.42 0.09 85);
-  --color-warning-900: oklch(0.35 0.06 85);
+  --color-warning-100: oklch(0.94 0.05 85);
+  --color-warning-200: oklch(0.89 0.08 85);
+  --color-warning-300: oklch(0.82 0.12 85);
+  --color-warning-400: oklch(0.78 0.14 85);
+  --color-warning-500: oklch(0.75 0.15 85);
+  --color-warning-600: oklch(0.65 0.14 85);
+  --color-warning-700: oklch(0.55 0.12 85);
+  --color-warning-800: oklch(0.45 0.10 85);
+  --color-warning-900: oklch(0.38 0.08 85);
 
+  /* Error - Red */
   --color-error-50: oklch(0.97 0.02 25);
   --color-error-100: oklch(0.93 0.05 25);
-  --color-error-200: oklch(0.86 0.10 25);
-  --color-error-300: oklch(0.76 0.15 25);
-  --color-error-400: oklch(0.64 0.18 25);
+  --color-error-200: oklch(0.87 0.08 25);
+  --color-error-300: oklch(0.78 0.12 25);
+  --color-error-400: oklch(0.68 0.15 25);
   --color-error-500: oklch(0.55 0.18 25);
-  --color-error-600: oklch(0.47 0.16 25);
-  --color-error-700: oklch(0.40 0.13 25);
-  --color-error-800: oklch(0.34 0.10 25);
-  --color-error-900: oklch(0.28 0.07 25);
+  --color-error-600: oklch(0.48 0.17 25);
+  --color-error-700: oklch(0.40 0.15 25);
+  --color-error-800: oklch(0.33 0.12 25);
+  --color-error-900: oklch(0.27 0.09 25);
 
-  /* Fonts */
-  --font-heading: 'Kanit', system-ui, sans-serif;
-  --font-sans: 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
+  /* Info - Light Blue */
+  --color-info-50: oklch(0.97 0.02 220);
+  --color-info-100: oklch(0.93 0.04 220);
+  --color-info-200: oklch(0.87 0.06 220);
+  --color-info-300: oklch(0.78 0.09 220);
+  --color-info-400: oklch(0.68 0.11 220);
+  --color-info-500: oklch(0.60 0.12 220);
+  --color-info-600: oklch(0.52 0.11 220);
+  --color-info-700: oklch(0.45 0.10 220);
+  --color-info-800: oklch(0.38 0.08 220);
+  --color-info-900: oklch(0.32 0.06 220);
+
+  /* ==========================================
+     DARK MODE SURFACE COLORS
+     ========================================== */
+  --color-dark-bg: oklch(0.13 0.01 240);
+  --color-dark-surface: oklch(0.18 0.01 240);
+  --color-dark-elevated: oklch(0.22 0.01 240);
+  --color-dark-border: oklch(0.28 0.01 240);
+
+  /* ==========================================
+     TYPOGRAPHY
+     ========================================== */
+  --font-heading: 'Kanit', system-ui, -apple-system, sans-serif;
+  --font-sans: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Font Sizes */
+  /* Enterprise-Optimized Type Scale */
+  --text-display: 2.25rem;   /* 36px - Page titles */
+  --text-h1: 1.75rem;        /* 28px - Section headers */
+  --text-h2: 1.375rem;       /* 22px - Card titles */
+  --text-h3: 1.125rem;       /* 18px - Subsections */
+  --text-h4: 1rem;           /* 16px - Widget titles */
+  --text-body-lg: 1rem;      /* 16px - Emphasized body */
+  --text-body: 0.875rem;     /* 14px - Default body */
+  --text-body-sm: 0.8125rem; /* 13px - Secondary info */
+  --text-caption: 0.75rem;   /* 12px - Labels, hints */
+  --text-overline: 0.6875rem;/* 11px - Overline labels */
+
+  /* Legacy size support */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -111,27 +131,64 @@
   --text-5xl: 3rem;
   --text-6xl: 3.75rem;
 
-  /* Border Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  /* ==========================================
+     SPACING SYSTEM (4px base unit)
+     ========================================== */
+  --space-0: 0;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ==========================================
+     BORDER RADIUS (Corporate - Less Rounded)
+     ========================================== */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* ==========================================
+     SHADOWS (Subtle, Professional)
+     ========================================== */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.06), 0 8px 10px rgba(0, 0, 0, 0.04);
   --shadow-glow: 0 0 20px -5px var(--color-primary-500);
 
-  /* Animations */
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-slide-up: slide-up 0.3s ease-out;
-  --animate-slide-down: slide-down 0.3s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
-  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  /* Focus Ring */
+  --shadow-focus: 0 0 0 3px oklch(0.50 0.10 240 / 0.25);
+
+  /* Dark Mode Shadows */
+  --shadow-dark-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-dark-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-dark-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-dark-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+
+  /* ==========================================
+     ANIMATIONS
+     ========================================== */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.2s ease-out;
+  --animate-slide-down: slide-down 0.2s ease-out;
+  --animate-scale-in: scale-in 0.15s ease-out;
+  --animate-spin: spin 1s linear infinite;
 }
 
 /* ============================================
@@ -143,6 +200,14 @@
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/kanit-v17-latin_thai-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Kanit';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/kanit-v17-latin_thai-600.woff2') format('woff2');
 }
 
 @font-face {
@@ -161,11 +226,17 @@
   src: url('/fonts/ibm-plex-sans-thai-looped-v12-latin_thai-regular.woff2') format('woff2');
 }
 
+@font-face {
+  font-family: 'IBM Plex Sans Thai Looped';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-thai-looped-v12-latin_thai-500.woff2') format('woff2');
+}
+
 /* ============================================
    GLOBAL STYLES
    ============================================ */
-/* Default reset is handled by Tailwind Preflight */
-
 html,
 body,
 #root {
@@ -179,15 +250,16 @@ html {
 
 body {
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: var(--text-body);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  @apply bg-surface-50 text-surface-900;
+  @apply bg-neutral-25 text-neutral-800;
 }
 
 /* ============================================
    TYPOGRAPHY - HEADINGS (Kanit)
+   Enterprise-Optimized Scale
    ============================================ */
 h1,
 h2,
@@ -197,78 +269,64 @@ h5,
 h6,
 .heading {
   font-family: var(--font-heading);
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1.25;
   letter-spacing: -0.01em;
-  @apply text-surface-900;
+  @apply text-neutral-900;
 }
 
 h1,
 .h1 {
-  font-size: var(--text-4xl);
-  line-height: 1.1;
+  font-size: var(--text-display);
+  line-height: 1.2;
 }
 
 h2,
 .h2 {
-  font-size: var(--text-3xl);
+  font-size: var(--text-h1);
+  line-height: 1.25;
 }
 
 h3,
 .h3 {
-  font-size: var(--text-2xl);
+  font-size: var(--text-h2);
+  line-height: 1.3;
 }
 
 h4,
 .h4 {
-  font-size: var(--text-xl);
+  font-size: var(--text-h3);
+  line-height: 1.35;
 }
 
 h5,
 .h5 {
-  font-size: var(--text-lg);
+  font-size: var(--text-h4);
+  line-height: 1.4;
 }
 
 h6,
 .h6 {
-  font-size: var(--text-base);
+  font-size: var(--text-body);
   font-weight: 600;
+  line-height: 1.4;
 }
 
 /* Responsive heading sizes */
 @media (min-width: 768px) {
-
   h1,
   .h1 {
-    font-size: var(--text-5xl);
+    font-size: calc(var(--text-display) * 1.15);
   }
 
   h2,
   .h2 {
-    font-size: var(--text-4xl);
-  }
-
-  h3,
-  .h3 {
-    font-size: var(--text-3xl);
-  }
-}
-
-@media (min-width: 1024px) {
-
-  h1,
-  .h1 {
-    font-size: var(--text-6xl);
-  }
-
-  h2,
-  .h2 {
-    font-size: var(--text-5xl);
+    font-size: calc(var(--text-h1) * 1.1);
   }
 }
 
 /* ============================================
-   TYPOGRAPHY - BODY TEXT (IBM Plex Sans Thai Looped)
+   TYPOGRAPHY - BODY TEXT
    ============================================ */
 p,
 span,
@@ -281,6 +339,40 @@ a {
   font-family: var(--font-sans);
 }
 
+/* Text size utilities */
+.text-display {
+  font-size: var(--text-display);
+  line-height: 1.2;
+}
+
+.text-body-lg {
+  font-size: var(--text-body-lg);
+  line-height: 1.5;
+}
+
+.text-body {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.text-body-sm {
+  font-size: var(--text-body-sm);
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-size: var(--text-caption);
+  line-height: 1.4;
+}
+
+.text-overline {
+  font-size: var(--text-overline);
+  font-weight: 500;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* Data-critical text - ensure maximum readability */
 .data-text,
 .customer-name,
@@ -289,46 +381,44 @@ a {
   font-family: var(--font-sans);
   letter-spacing: 0.01em;
   font-feature-settings: 'tnum' 1;
-  /* Tabular numbers for alignment */
 }
 
 /* ============================================
-   FORM ELEMENTS (IBM Plex Sans Thai Looped for readability)
+   FORM ELEMENTS
    ============================================ */
 input,
 textarea,
 select,
 button {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--text-body);
 }
 
 input::placeholder,
 textarea::placeholder {
   font-family: var(--font-sans);
-  @apply text-surface-400;
+  @apply text-neutral-400;
 }
 
 /* ============================================
-   DATA TABLES (IBM Plex Sans Thai Looped for accuracy)
+   DATA TABLES
    ============================================ */
 table {
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-body);
 }
 
 th {
   font-family: var(--font-heading);
   font-weight: 600;
-  text-transform: uppercase;
-  font-size: var(--text-xs);
-  letter-spacing: 0.05em;
-  @apply text-surface-600;
+  font-size: var(--text-caption);
+  letter-spacing: 0.03em;
+  @apply text-neutral-600;
 }
 
 td {
   font-family: var(--font-sans);
-  @apply text-surface-800;
+  @apply text-neutral-700;
 }
 
 /* Numeric data in tables - tabular figures for alignment */
@@ -341,34 +431,34 @@ td[data-type="phone"],
 }
 
 /* ============================================
-   DARK MODE
+   DARK MODE - System Preference
    ============================================ */
 @media (prefers-color-scheme: dark) {
   body {
-    @apply bg-surface-950 text-surface-100;
+    @apply bg-neutral-950 text-neutral-100;
+    background-color: var(--color-dark-bg);
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  .heading {
+  h1, h2, h3, h4, h5, h6, .heading {
     @apply text-white;
   }
 
   th {
-    @apply text-surface-400;
+    @apply text-neutral-400;
   }
 
   td {
-    @apply text-surface-200;
+    @apply text-neutral-200;
   }
 }
 
-.dark body {
-  @apply bg-surface-950 text-surface-100;
+/* ============================================
+   DARK MODE - Class-based Toggle
+   ============================================ */
+.dark body,
+.dark {
+  @apply bg-neutral-950 text-neutral-100;
+  background-color: var(--color-dark-bg);
 }
 
 .dark h1,
@@ -381,43 +471,62 @@ td[data-type="phone"],
   @apply text-white;
 }
 
+.dark th {
+  @apply text-neutral-400;
+}
+
+.dark td {
+  @apply text-neutral-200;
+}
+
 /* ============================================
    CUSTOM SCROLLBAR
    ============================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-surface-100;
+  @apply bg-neutral-100;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-surface-400 rounded-full;
+  @apply bg-neutral-300 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-surface-500;
+  @apply bg-neutral-400;
 }
 
 .dark ::-webkit-scrollbar-track {
-  @apply bg-surface-800;
+  background-color: var(--color-dark-surface);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  @apply bg-surface-600;
+  @apply bg-neutral-600;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) var(--color-neutral-100);
+}
+
+.dark * {
+  scrollbar-color: var(--color-neutral-600) var(--color-dark-surface);
 }
 
 /* ============================================
    FOCUS & SELECTION STYLES
    ============================================ */
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-primary-500;
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
 }
 
 ::selection {
-  @apply bg-primary-500/30;
+  background-color: oklch(0.50 0.10 240 / 0.25);
 }
 
 /* ============================================
@@ -433,6 +542,10 @@ td[data-type="phone"],
   font-family: var(--font-sans);
 }
 
+.font-mono {
+  font-family: var(--font-mono);
+}
+
 .font-data {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -441,52 +554,383 @@ td[data-type="phone"],
 /* Glass effect */
 .glass {
   backdrop-filter: blur(12px) saturate(180%);
-  @apply bg-white/70;
+  @apply bg-white/80;
 }
 
 .dark .glass {
-  @apply bg-surface-900/70;
+  background-color: oklch(0.18 0.01 240 / 0.80);
 }
 
 /* Text gradient */
 .text-gradient {
-  @apply bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
 }
 
 /* Card hover effect */
 .card-hover {
-  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
 }
 
-/* Button styles */
-.btn-primary {
+/* ============================================
+   BUTTON UTILITIES
+   Note: These are CSS utility classes, not meant for @apply
+   ============================================ */
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.btn-ghost,
+.btn-danger,
+.btn-link {
   font-family: var(--font-sans);
-  @apply bg-primary-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-primary-600 active:bg-primary-700 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-outline:disabled,
+.btn-ghost:disabled,
+.btn-danger:disabled,
+.btn-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--color-primary-500);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-600);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: var(--color-primary-700);
 }
 
 .btn-secondary {
-  font-family: var(--font-sans);
-  @apply bg-secondary-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-secondary-600 active:bg-secondary-700 focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2;
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-neutral-200);
+}
+
+.dark .btn-secondary {
+  background-color: var(--color-dark-elevated);
+  color: var(--color-neutral-200);
+}
+
+.dark .btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-neutral-700);
 }
 
 .btn-outline {
-  font-family: var(--font-sans);
-  @apply border-2 border-primary-500 text-primary-500 font-medium px-4 py-2 rounded-lg transition-all duration-150 hover:bg-primary-500 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  background-color: transparent;
+  border: 1px solid var(--color-primary-300);
+  color: var(--color-primary-600);
 }
 
-/* Input styles */
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--color-primary-50);
+}
+
+.dark .btn-outline {
+  border-color: var(--color-primary-700);
+  color: var(--color-primary-400);
+}
+
+.dark .btn-outline:hover:not(:disabled) {
+  background-color: var(--color-primary-950);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-neutral-600);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-neutral-100);
+}
+
+.dark .btn-ghost {
+  color: var(--color-neutral-400);
+}
+
+.dark .btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-dark-elevated);
+}
+
+.btn-danger {
+  background-color: var(--color-error-500);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--color-error-600);
+}
+
+.btn-danger:active:not(:disabled) {
+  background-color: var(--color-error-700);
+}
+
+.btn-link {
+  background-color: transparent;
+  color: var(--color-primary-600);
+  text-underline-offset: 2px;
+}
+
+.btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+/* Button sizes */
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--text-body-sm);
+}
+
+.btn-md {
+  height: 40px;
+  padding: 0 16px;
+  font-size: var(--text-body);
+}
+
+.btn-lg {
+  height: 48px;
+  padding: 0 20px;
+  font-size: var(--text-body-lg);
+}
+
+/* ============================================
+   INPUT UTILITIES
+   ============================================ */
 .input-base {
   font-family: var(--font-sans);
-  @apply w-full px-4 py-2 rounded-lg border border-surface-300 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-150 placeholder:text-surface-400;
+  font-size: var(--text-body);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-neutral-300);
+  background-color: white;
+  transition: all 150ms ease;
+  @apply w-full placeholder:text-neutral-400;
+}
+
+.input-base:focus {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 2px oklch(0.50 0.10 240 / 0.15);
+  outline: none;
+}
+
+.input-base:disabled {
+  @apply bg-neutral-100 text-neutral-500 cursor-not-allowed;
+}
+
+.input-base.input-error {
+  border-color: var(--color-error-500);
+}
+
+.input-base.input-error:focus {
+  box-shadow: 0 0 0 2px oklch(0.55 0.18 25 / 0.15);
 }
 
 .dark .input-base {
-  @apply border-surface-600 bg-surface-800 placeholder:text-surface-500;
+  background-color: var(--color-dark-surface);
+  border-color: var(--color-dark-border);
+  @apply text-neutral-100 placeholder:text-neutral-500;
 }
 
-/* Loading Spinner */
+.dark .input-base:focus {
+  border-color: var(--color-primary-400);
+}
+
+/* Input sizes */
+.input-sm {
+  height: 32px;
+  padding: 8px 10px;
+  font-size: var(--text-body-sm);
+}
+
+.input-md {
+  height: 40px;
+  padding: 10px 12px;
+  font-size: var(--text-body);
+}
+
+.input-lg {
+  height: 48px;
+  padding: 12px 14px;
+  font-size: var(--text-body-lg);
+}
+
+/* ============================================
+   CARD UTILITIES
+   ============================================ */
+.card {
+  border-radius: var(--radius-md);
+  @apply bg-white;
+}
+
+.card-bordered {
+  border: 1px solid var(--color-neutral-200);
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .card {
+  background-color: var(--color-dark-surface);
+}
+
+.dark .card-bordered {
+  border-color: var(--color-dark-border);
+}
+
+.dark .card-elevated {
+  box-shadow: var(--shadow-dark-sm);
+}
+
+/* Card padding variants */
+.card-padding-none {
+  padding: 0;
+}
+
+.card-padding-sm {
+  padding: 12px;
+}
+
+.card-padding-md {
+  padding: 20px;
+}
+
+.card-padding-lg {
+  padding: 24px;
+}
+
+/* ============================================
+   BADGE UTILITIES
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+.badge-primary {
+  @apply bg-primary-100 text-primary-700;
+}
+
+.badge-success {
+  @apply bg-success-100 text-success-700;
+}
+
+.badge-warning {
+  @apply bg-warning-100 text-warning-700;
+}
+
+.badge-error {
+  @apply bg-error-100 text-error-700;
+}
+
+.badge-info {
+  @apply bg-info-100 text-info-700;
+}
+
+.badge-neutral {
+  @apply bg-neutral-100 text-neutral-700;
+}
+
+.dark .badge-primary {
+  @apply bg-primary-900 text-primary-300;
+}
+
+.dark .badge-success {
+  @apply bg-success-900 text-success-300;
+}
+
+.dark .badge-warning {
+  @apply bg-warning-900 text-warning-300;
+}
+
+.dark .badge-error {
+  @apply bg-error-900 text-error-300;
+}
+
+.dark .badge-info {
+  @apply bg-info-900 text-info-300;
+}
+
+.dark .badge-neutral {
+  @apply bg-neutral-800 text-neutral-300;
+}
+
+/* ============================================
+   ICON SIZE UTILITIES
+   ============================================ */
+.icon-xs {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-md {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-lg {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-xl {
+  width: 32px;
+  height: 32px;
+}
+
+.icon-2xl {
+  width: 48px;
+  height: 48px;
+}
+
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
 .spinner {
   @apply animate-spin rounded-full border-2 border-primary-500 border-t-transparent;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.spinner-md {
+  width: 24px;
+  height: 24px;
+}
+
+.spinner-lg {
+  width: 32px;
+  height: 32px;
 }
 
 /* ============================================
@@ -519,6 +963,14 @@ td[data-type="phone"],
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
   }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
 }
 
 /* Touch-friendly tap targets */
@@ -546,24 +998,23 @@ td[data-type="phone"],
 
 /* Mobile table styles */
 @media (max-width: 640px) {
-
   .mobile-table th,
   .mobile-table td {
     @apply px-3 py-2 text-sm;
   }
 
   .mobile-table th {
-    @apply text-xs;
+    font-size: var(--text-caption);
   }
 }
 
-/* Mobile card grid */
+/* Mobile card stack */
 @media (max-width: 640px) {
   .mobile-stack {
     @apply flex flex-col gap-3;
   }
 
-  .mobile-stack>* {
+  .mobile-stack > * {
     @apply w-full;
   }
 }
@@ -581,12 +1032,12 @@ td[data-type="phone"],
 /* Responsive text utilities */
 @media (max-width: 640px) {
   .text-responsive-sm {
-    font-size: 0.875rem;
+    font-size: var(--text-body-sm);
     line-height: 1.4;
   }
 
   .text-responsive-base {
-    font-size: 0.9375rem;
+    font-size: var(--text-body);
     line-height: 1.5;
   }
 }
@@ -604,7 +1055,13 @@ td[data-type="phone"],
 
 /* Sticky bottom actions for mobile */
 .sticky-bottom-mobile {
-  @apply fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-surface-800 border-t border-surface-200 dark:border-surface-700 z-30;
+  @apply fixed bottom-0 left-0 right-0 p-4 bg-white z-30;
+  border-top: 1px solid var(--color-neutral-200);
+}
+
+.dark .sticky-bottom-mobile {
+  background-color: var(--color-dark-surface);
+  border-color: var(--color-dark-border);
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {
@@ -615,7 +1072,6 @@ td[data-type="phone"],
 
 /* Improve touch response */
 @media (hover: none) and (pointer: coarse) {
-
   button,
   a,
   input[type="submit"],
@@ -626,29 +1082,28 @@ td[data-type="phone"],
   button:active,
   a:active,
   .touchable:active {
-    opacity: 0.7;
+    opacity: 0.8;
     transform: scale(0.98);
   }
 }
 
 /* Mobile-first responsive spacing */
 @media (max-width: 640px) {
-  .space-y-mobile>*+* {
-    margin-top: 0.75rem;
+  .space-y-mobile > * + * {
+    margin-top: 12px;
   }
 
   .gap-mobile {
-    gap: 0.75rem;
+    gap: 12px;
   }
 
   .p-mobile {
-    padding: 1rem;
+    padding: 16px;
   }
 }
 
 /* Prevent zoom on input focus for iOS */
 @media screen and (max-width: 640px) {
-
   input[type="text"],
   input[type="email"],
   input[type="tel"],
@@ -663,7 +1118,13 @@ td[data-type="phone"],
 
 /* Bottom navigation support */
 .bottom-nav {
-  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-800 border-t border-surface-200 dark:border-surface-700 z-50;
+  @apply fixed bottom-0 left-0 right-0 bg-white z-50;
+  border-top: 1px solid var(--color-neutral-200);
+}
+
+.dark .bottom-nav {
+  background-color: var(--color-dark-surface);
+  border-color: var(--color-dark-border);
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {
@@ -683,17 +1144,85 @@ td[data-type="phone"],
   }
 }
 
-/* Slide-in from bottom animation for mobile */
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes slide-in-bottom {
   from {
     opacity: 0;
     transform: translateY(100%);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
 }
 
 .animate-slide-in-bottom {
@@ -702,7 +1231,7 @@ td[data-type="phone"],
 
 /* Pull-to-refresh indicator styles */
 .pull-indicator {
-  @apply flex items-center justify-center py-4 text-surface-500;
+  @apply flex items-center justify-center py-4 text-neutral-500;
 }
 
 /* Landscape mode adjustments */
@@ -712,6 +1241,39 @@ td[data-type="phone"],
   }
 
   .landscape-compact h1 {
-    font-size: 1.25rem;
+    font-size: var(--text-h2);
   }
 }
+
+/* ============================================
+   LEGACY SUPPORT - Surface to Neutral Migration
+   These aliases ensure backward compatibility
+   ============================================ */
+.bg-surface-50 { @apply bg-neutral-50; }
+.bg-surface-100 { @apply bg-neutral-100; }
+.bg-surface-200 { @apply bg-neutral-200; }
+.bg-surface-300 { @apply bg-neutral-300; }
+.bg-surface-400 { @apply bg-neutral-400; }
+.bg-surface-500 { @apply bg-neutral-500; }
+.bg-surface-600 { @apply bg-neutral-600; }
+.bg-surface-700 { @apply bg-neutral-700; }
+.bg-surface-800 { @apply bg-neutral-800; }
+.bg-surface-900 { @apply bg-neutral-900; }
+.bg-surface-950 { @apply bg-neutral-950; }
+
+.text-surface-50 { @apply text-neutral-50; }
+.text-surface-100 { @apply text-neutral-100; }
+.text-surface-200 { @apply text-neutral-200; }
+.text-surface-300 { @apply text-neutral-300; }
+.text-surface-400 { @apply text-neutral-400; }
+.text-surface-500 { @apply text-neutral-500; }
+.text-surface-600 { @apply text-neutral-600; }
+.text-surface-700 { @apply text-neutral-700; }
+.text-surface-800 { @apply text-neutral-800; }
+.text-surface-900 { @apply text-neutral-900; }
+.text-surface-950 { @apply text-neutral-950; }
+
+.border-surface-200 { @apply border-neutral-200; }
+.border-surface-300 { @apply border-neutral-300; }
+.border-surface-600 { @apply border-neutral-600; }
+.border-surface-700 { @apply border-neutral-700; }
