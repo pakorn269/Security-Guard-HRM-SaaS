@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import liff from '@line/liff';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * LIFF Layout (Mobile)
@@ -14,6 +15,7 @@ import liff from '@line/liff';
  * - Padding: 16px horizontal
  */
 export default function LiffLayout() {
+  const { lineLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +23,8 @@ export default function LiffLayout() {
     const initLiff = async () => {
       try {
         const liffId = import.meta.env.VITE_LIFF_ID;
+        console.log('Initializing LIFF with ID:', liffId);
+
         if (!liffId) {
           throw new Error('LIFF ID not configured');
         }
@@ -28,9 +32,27 @@ export default function LiffLayout() {
         await liff.init({ liffId });
 
         if (!liff.isLoggedIn()) {
+          console.log('LIFF not logged in, calling login...');
           liff.login();
           return;
         }
+
+        const idToken = liff.getIDToken();
+        console.log('LIFF ID Token retrieved:', idToken ? 'Yes' : 'No');
+
+        if (!idToken) {
+          throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้ (ID Token missing)');
+        }
+
+        // Always attempt to login/verify with backend
+        console.log('Attempting backend login with LINE...');
+        const success = await lineLogin(idToken, liffId);
+
+        if (!success) {
+          throw new Error('ไม่สามารถเข้าสู่ระบบ Backend ได้ (Login failed)');
+        }
+
+        console.log('Backend login success');
 
         setIsLoading(false);
       } catch (err) {
@@ -41,7 +63,7 @@ export default function LiffLayout() {
     };
 
     initLiff();
-  }, []);
+  }, [lineLogin]);
 
   // Loading state
   if (isLoading) {
