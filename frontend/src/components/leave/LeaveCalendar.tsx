@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Calendar, X, ChevronLeft, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
 import leaveService, { type LeaveCalendarEntry } from '../../services/leave.service';
 
 interface LeaveCalendarProps {
@@ -143,13 +144,14 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
             <div className="bg-gradient-primary p-4 text-white">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold">📅 ปฏิทินการลา</h2>
+                        <Calendar size={24} />
+                        <h2 className="text-xl font-bold">ปฏิทินการลา</h2>
                         {onClose && (
                             <button
                                 onClick={onClose}
                                 className="ml-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
                             >
-                                ✕
+                                <X size={16} />
                             </button>
                         )}
                     </div>
@@ -168,26 +170,27 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                     onClick={goToPreviousMonth}
                     className="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
                 >
-                    ◀
+                    <ChevronLeft size={20} />
                 </button>
                 <h3 className="text-lg font-semibold text-surface-800">{monthName}</h3>
                 <button
                     onClick={goToNextMonth}
                     className="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
                 >
-                    ▶
+                    <ChevronRight size={20} />
                 </button>
             </div>
 
             {error && (
-                <div className="m-4 bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl">
-                    ⚠️ {error}
+                <div className="m-4 bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    {error}
                 </div>
             )}
 
             {loading ? (
                 <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 spinner"></div>
+                    <Loader2 size={32} className="text-primary-500 animate-spin" />
                 </div>
             ) : (
                 <div className="p-4">

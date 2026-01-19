@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+    Building2,
+    Clock,
+    Bell,
+    Palmtree,
+    CheckCircle,
+    AlertTriangle,
+    Save,
+    Loader2,
+    Lightbulb,
+} from 'lucide-react';
 import api from '../../services/api';
 
 interface CompanySettings {
@@ -139,11 +150,11 @@ export default function SettingsPage() {
         }
     };
 
-    const tabs: { id: SettingsTab; label: string; icon: string }[] = [
-        { id: 'profile', label: i18n.language === 'th' ? 'ข้อมูลบริษัท' : 'Company Profile', icon: '🏢' },
-        { id: 'attendance', label: i18n.language === 'th' ? 'การลงเวลา' : 'Attendance', icon: '⏰' },
-        { id: 'notifications', label: i18n.language === 'th' ? 'การแจ้งเตือน' : 'Notifications', icon: '🔔' },
-        { id: 'leave', label: i18n.language === 'th' ? 'การลา' : 'Leave', icon: '🏖️' },
+    const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+        { id: 'profile', label: i18n.language === 'th' ? 'ข้อมูลบริษัท' : 'Company Profile', icon: <Building2 size={20} /> },
+        { id: 'attendance', label: i18n.language === 'th' ? 'การลงเวลา' : 'Attendance', icon: <Clock size={20} /> },
+        { id: 'notifications', label: i18n.language === 'th' ? 'การแจ้งเตือน' : 'Notifications', icon: <Bell size={20} /> },
+        { id: 'leave', label: i18n.language === 'th' ? 'การลา' : 'Leave', icon: <Palmtree size={20} /> },
     ];
 
     const months = [
@@ -164,7 +175,7 @@ export default function SettingsPage() {
     if (loading) {
         return (
             <div className="flex justify-center py-12">
-                <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                <Loader2 size={48} className="text-primary-500 animate-spin" />
             </div>
         );
     }
@@ -184,12 +195,14 @@ export default function SettingsPage() {
             {/* Success/Error messages */}
             {success && (
                 <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 text-success-700 dark:text-success-400 rounded-xl p-4 flex items-center gap-2">
-                    ✅ {success}
+                    <CheckCircle size={18} />
+                    {success}
                 </div>
             )}
             {error && (
                 <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 text-error-700 dark:text-error-400 rounded-xl p-4 flex items-center gap-2">
-                    ⚠️ {error}
+                    <AlertTriangle size={18} />
+                    {error}
                 </div>
             )}
 
@@ -206,7 +219,7 @@ export default function SettingsPage() {
                                         : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-700'
                                     }`}
                             >
-                                <span className="text-xl">{tab.icon}</span>
+                                {tab.icon}
                                 <span className="font-medium">{tab.label}</span>
                             </button>
                         ))}
@@ -285,7 +298,7 @@ export default function SettingsPage() {
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            i18n.language === 'th' ? '💾 บันทึก' : '💾 Save'
+                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
                                         )}
                                     </button>
                                 </div>
@@ -389,7 +402,7 @@ export default function SettingsPage() {
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            i18n.language === 'th' ? '💾 บันทึก' : '💾 Save'
+                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
                                         )}
                                     </button>
                                 </div>
@@ -523,7 +536,7 @@ export default function SettingsPage() {
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            i18n.language === 'th' ? '💾 บันทึก' : '💾 Save'
+                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
                                         )}
                                     </button>
                                 </div>
@@ -561,9 +574,10 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
+                                <div className="p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 flex items-start gap-2">
+                                    <Lightbulb size={18} className="flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-primary-700 dark:text-primary-300">
-                                        💡 {i18n.language === 'th'
+                                        {i18n.language === 'th'
                                             ? 'สำหรับการจัดการประเภทการลาและโควต้า กรุณาไปที่หน้า การลา > ประเภทการลา'
                                             : 'For managing leave types and quotas, please go to Leave > Leave Types'}
                                     </p>
@@ -581,7 +595,7 @@ export default function SettingsPage() {
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            i18n.language === 'th' ? '💾 บันทึก' : '💾 Save'
+                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
                                         )}
                                     </button>
                                 </div>

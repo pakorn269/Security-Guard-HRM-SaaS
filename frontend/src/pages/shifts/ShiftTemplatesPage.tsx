@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    Clock,
+    Timer,
+    Coffee,
+    Plus,
+    Pencil,
+    Trash2,
+    CheckCircle,
+    Circle,
+} from 'lucide-react';
+import {
     listShiftTemplates,
     createShiftTemplate,
     updateShiftTemplate,
@@ -181,31 +191,36 @@ export default function ShiftTemplatesPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">
-                        ⏰ {t('shiftTemplates.title', 'รูปแบบกะ')}
+                    <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100 flex items-center gap-2">
+                        <Clock size={28} className="text-primary-500" />
+                        {t('shiftTemplates.title', 'รูปแบบกะ')}
                     </h1>
                     <p className="text-surface-500 mt-1">
                         {t('shiftTemplates.subtitle', 'จัดการรูปแบบกะสำหรับการจัดตาราง')}
                     </p>
                 </div>
 
-                <Button onClick={openCreateModal}>
-                    ➕ สร้างรูปแบบกะใหม่
+                <Button onClick={openCreateModal} className="inline-flex items-center gap-2">
+                    <Plus size={18} />
+                    สร้างรูปแบบกะใหม่
                 </Button>
             </div>
 
             {/* Templates Grid */}
             {templates.length === 0 ? (
                 <Card className="p-12 text-center">
-                    <div className="text-6xl mb-4">⏰</div>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                        <Clock size={32} className="text-neutral-400" />
+                    </div>
                     <h2 className="text-xl font-semibold text-surface-700 dark:text-surface-200 mb-2">
                         ยังไม่มีรูปแบบกะ
                     </h2>
                     <p className="text-surface-500 mb-4">
                         สร้างรูปแบบกะเพื่อใช้ในการจัดตารางได้เร็วขึ้น
                     </p>
-                    <Button onClick={openCreateModal}>
-                        ➕ สร้างรูปแบบกะแรก
+                    <Button onClick={openCreateModal} className="inline-flex items-center gap-2">
+                        <Plus size={18} />
+                        สร้างรูปแบบกะแรก
                     </Button>
                 </Card>
             ) : (
@@ -234,7 +249,7 @@ export default function ShiftTemplatesPage() {
 
                             <div className="space-y-2 mb-4">
                                 <div className="flex items-center gap-2 text-surface-600 dark:text-surface-300">
-                                    <span>🕐</span>
+                                    <Clock size={16} />
                                     <span className="font-medium">
                                         {template.startTime} - {template.endTime}
                                     </span>
@@ -245,14 +260,14 @@ export default function ShiftTemplatesPage() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-surface-500">
-                                    <span>⏱️</span>
+                                    <Timer size={14} />
                                     <span>
                                         {calculateDuration(template.startTime, template.endTime, template.isOvernight)}
                                     </span>
                                 </div>
                                 {template.breakMinutes > 0 && (
                                     <div className="flex items-center gap-2 text-sm text-surface-500">
-                                        <span>☕</span>
+                                        <Coffee size={14} />
                                         <span>พัก {template.breakMinutes} นาที</span>
                                     </div>
                                 )}
@@ -260,13 +275,13 @@ export default function ShiftTemplatesPage() {
 
                             <div className="flex items-center justify-between pt-3 border-t border-surface-200 dark:border-surface-700">
                                 <button
-                                    className={`text-sm px-3 py-1 rounded-full transition-colors ${template.isActive
+                                    className={`text-sm px-3 py-1 rounded-full transition-colors inline-flex items-center gap-1 ${template.isActive
                                         ? 'bg-success-100 text-success-700 hover:bg-success-200'
                                         : 'bg-surface-100 text-surface-500 hover:bg-surface-200'
                                         }`}
                                     onClick={() => handleToggleActive(template)}
                                 >
-                                    {template.isActive ? '✓ ใช้งาน' : '○ ปิดใช้งาน'}
+                                    {template.isActive ? <><CheckCircle size={14} /> ใช้งาน</> : <><Circle size={14} /> ปิดใช้งาน</>}
                                 </button>
 
                                 <div className="flex items-center gap-1">
@@ -274,13 +289,13 @@ export default function ShiftTemplatesPage() {
                                         className="p-2 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                                         onClick={() => openEditModal(template)}
                                     >
-                                        ✏️
+                                        <Pencil size={16} />
                                     </button>
                                     <button
                                         className="p-2 text-surface-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-colors"
                                         onClick={() => handleDelete(template.id)}
                                     >
-                                        🗑️
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>

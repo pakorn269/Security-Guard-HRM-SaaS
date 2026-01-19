@@ -1,4 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+    CheckCircle,
+    AlertTriangle,
+    ClipboardList,
+    Calendar,
+    Hand,
+    Paperclip,
+    Pencil,
+    Trash2,
+    Plus,
+    X,
+    Banknote,
+    XCircle,
+} from 'lucide-react';
 import leaveService, {
     type CreateLeaveTypeRequest,
     type UpdateLeaveTypeRequest,
@@ -99,7 +113,7 @@ function LeaveTypeFormModal({
                             onClick={onClose}
                             className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center hover:bg-surface-200"
                         >
-                            ✕
+                            <X size={16} />
                         </button>
                     </div>
 
@@ -343,13 +357,15 @@ export default function LeaveTypesPage() {
 
             {/* Success/Error messages */}
             {success && (
-                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl">
-                    ✅ {success}
+                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl flex items-center gap-2">
+                    <CheckCircle size={18} />
+                    {success}
                 </div>
             )}
             {error && (
-                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl">
-                    ⚠️ {error}
+                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    {error}
                 </div>
             )}
 
@@ -403,16 +419,19 @@ export default function LeaveTypesPage() {
                     </div>
                 ) : leaveTypes.length === 0 ? (
                     <div className="card text-center py-12">
-                        <div className="text-4xl mb-4">📋</div>
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                            <ClipboardList size={32} className="text-neutral-400" />
+                        </div>
                         <p className="text-surface-500 mb-4">ยังไม่มีประเภทการลา</p>
                         <button
                             onClick={() => {
                                 setEditingType(null);
                                 setShowForm(true);
                             }}
-                            className="btn-primary"
+                            className="btn-primary inline-flex items-center gap-2"
                         >
-                            + เพิ่มประเภทการลา
+                            <Plus size={16} />
+                            เพิ่มประเภทการลา
                         </button>
                     </div>
                 ) : (
@@ -441,23 +460,26 @@ export default function LeaveTypesPage() {
                                             <p className="text-sm text-surface-500 mb-2">{type.description}</p>
                                         )}
                                         <div className="flex flex-wrap gap-2 text-sm">
-                                            <span className={`px-2 py-1 rounded-full ${type.isPaid
+                                            <span className={`px-2 py-1 rounded-full inline-flex items-center gap-1 ${type.isPaid
                                                 ? 'bg-success-100 text-success-700'
                                                 : 'bg-surface-100 text-surface-600'
                                                 }`}>
-                                                {type.isPaid ? '💰 ได้เงินเดือน' : '❌ ไม่ได้เงินเดือน'}
+                                                {type.isPaid ? <><Banknote size={14} /> ได้เงินเดือน</> : <><XCircle size={14} /> ไม่ได้เงินเดือน</>}
                                             </span>
-                                            <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
-                                                📅 {type.maxDaysPerYear ? `${type.maxDaysPerYear} วัน/ปี` : 'ไม่จำกัด'}
+                                            <span className="bg-primary-100 text-primary-700 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                                                <Calendar size={14} />
+                                                {type.maxDaysPerYear ? `${type.maxDaysPerYear} วัน/ปี` : 'ไม่จำกัด'}
                                             </span>
                                             {type.requiresApproval && (
-                                                <span className="bg-warning-100 text-warning-700 px-2 py-1 rounded-full">
-                                                    ✋ ต้องรออนุมัติ
+                                                <span className="bg-warning-100 text-warning-700 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                                                    <Hand size={14} />
+                                                    ต้องรออนุมัติ
                                                 </span>
                                             )}
                                             {type.requiresDocument && (
-                                                <span className="bg-accent-100 text-accent-700 px-2 py-1 rounded-full">
-                                                    📎 ต้องแนบเอกสาร
+                                                <span className="bg-accent-100 text-accent-700 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                                                    <Paperclip size={14} />
+                                                    ต้องแนบเอกสาร
                                                 </span>
                                             )}
                                         </div>
@@ -471,14 +493,14 @@ export default function LeaveTypesPage() {
                                             className="p-2 rounded-lg text-surface-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                                             title="แก้ไข"
                                         >
-                                            ✏️
+                                            <Pencil size={16} />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(type.id, type.nameTh || type.name)}
                                             className="p-2 rounded-lg text-surface-500 hover:text-error-600 hover:bg-error-50 transition-colors"
                                             title="ลบ"
                                         >
-                                            🗑️
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>

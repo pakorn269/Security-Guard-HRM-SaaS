@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MapPin, AlertTriangle, Pencil } from 'lucide-react';
 import { Modal, Button, Input } from '../../components/common';
 import {
     adjustAttendance,
@@ -238,7 +239,10 @@ export default function AttendanceDetailModal({
                         {/* GPS Locations */}
                         {(attendance.clockInLatitude || attendance.clockOutLatitude) && (
                             <div className="bg-surface-50 rounded-xl p-4 space-y-2">
-                                <p className="text-sm font-medium text-surface-700">📍 ตำแหน่ง GPS</p>
+                                <p className="text-sm font-medium text-surface-700 flex items-center gap-2">
+                                    <MapPin size={16} />
+                                    ตำแหน่ง GPS
+                                </p>
                                 {attendance.clockInLatitude && (
                                     <p className="text-xs text-surface-500">
                                         เข้า: {attendance.clockInLatitude?.toFixed(6)}, {attendance.clockInLongitude?.toFixed(6)}
@@ -265,7 +269,10 @@ export default function AttendanceDetailModal({
                         {/* Adjustment Info */}
                         {attendance.adjustedBy && (
                             <div className="bg-warning-50 rounded-xl p-4">
-                                <p className="text-sm text-warning-700">⚠️ มีการแก้ไขข้อมูล</p>
+                                <p className="text-sm text-warning-700 flex items-center gap-2">
+                                    <AlertTriangle size={16} />
+                                    มีการแก้ไขข้อมูล
+                                </p>
                                 {attendance.adjustmentReason && (
                                     <p className="text-sm text-warning-800 mt-1">
                                         เหตุผล: {attendance.adjustmentReason}
@@ -300,8 +307,9 @@ export default function AttendanceDetailModal({
                             <Button variant="outline" onClick={onClose}>
                                 ปิด
                             </Button>
-                            <Button variant="primary" onClick={() => setIsEditing(true)}>
-                                ✏️ แก้ไข
+                            <Button variant="primary" onClick={() => setIsEditing(true)} className="inline-flex items-center gap-2">
+                                <Pencil size={16} />
+                                แก้ไข
                             </Button>
                         </>
                     )}
