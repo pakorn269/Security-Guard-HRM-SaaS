@@ -1,0 +1,33 @@
+# Server Configuration
+NODE_ENV=development
+PORT=3001
+API_VERSION=v1
+
+# Supabase Configuration (replace with your own values)
+SUPABASE_URL=https://hermnyepqdzeytodcqev.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhlcm1ueWVwcWR6ZXl0b2RjcWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NTYzNTUsImV4cCI6MjA4NDIzMjM1NX0.WB3NVBR-qNmVXs0PHcMuAfuLnHX94Y76t0njS_FaiLM
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhlcm1ueWVwcWR6ZXl0b2RjcWV2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODY1NjM1NSwiZXhwIjoyMDg0MjMyMzU1fQ.BTVHX6OSSfBz8Fp0omaCXCI966gkz-ymfttuAvAGofs
+
+# JWT Configuration (CHANGE THIS FOR PRODUCTION!)
+JWT_SECRET=dev-secret-key-replace-in-production-min-32-chars
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# LINE Configuration (optional for development)
+LINE_CHANNEL_ID=2008914344
+LINE_CHANNEL_SECRET=df9e3da1bc8bc7feb7a2617ced436566
+# LINE Channel access token (long-lived)
+LINE_CHANNEL_ACCESS_TOKEN=yoj9AEgmWuN1L9vkRcKXFQOtzjun4CdjHedpZcC7TYOxt3TvjvnRyLYTbcFr1gujC61P+0qQlBfwjzqMhFbKKb2OyB60I0IFg4JAp+pWsU40Eio4sLkvQqE5bPcZAGdgitnDjc0WGpGaajplx+iXrQdB04t89/1O/w1cDnyilFU=
+
+# LIFF App IDs (optional for development)
+LIFF_SCHEDULE_ID=2008914377-86hStTZc
+LIFF_CLOCK_ID=2008914377-NDoaNvUa
+LIFF_LEAVE_ID=2008914377-ecuSztvj
+LIFF_PROFILE_ID=2008914377-cfLUyP31
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
