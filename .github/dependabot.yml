@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # For npm (Node.js) dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"  # Location of package.json
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+  - package-ecosystem: "npm"
+    directory: "/frontend"  # If you have a separate frontend
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+  # For GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
