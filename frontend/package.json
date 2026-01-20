@@ -3,6 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "^1.29.0",
+    "lightningcss-linux-x64-musl": "^1.29.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
