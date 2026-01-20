@@ -35,8 +35,8 @@ export default function Tooltip({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
@@ -129,25 +129,26 @@ export default function Tooltip({
   }, []);
 
   // Clone the child element to add event handlers and ref
+  const childProps = children.props as Record<string, unknown>;
   const trigger = React.cloneElement(children, {
     ref: triggerRef,
     onMouseEnter: (e: React.MouseEvent) => {
       show();
-      children.props.onMouseEnter?.(e);
+      (childProps.onMouseEnter as ((e: React.MouseEvent) => void) | undefined)?.(e);
     },
     onMouseLeave: (e: React.MouseEvent) => {
       hide();
-      children.props.onMouseLeave?.(e);
+      (childProps.onMouseLeave as ((e: React.MouseEvent) => void) | undefined)?.(e);
     },
     onFocus: (e: React.FocusEvent) => {
       show();
-      children.props.onFocus?.(e);
+      (childProps.onFocus as ((e: React.FocusEvent) => void) | undefined)?.(e);
     },
     onBlur: (e: React.FocusEvent) => {
       hide();
-      children.props.onBlur?.(e);
+      (childProps.onBlur as ((e: React.FocusEvent) => void) | undefined)?.(e);
     },
-  });
+  } as React.HTMLAttributes<HTMLElement>);
 
   const arrowClasses: Record<TooltipPlacement, string> = {
     top: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-full border-l-transparent border-r-transparent border-b-transparent',

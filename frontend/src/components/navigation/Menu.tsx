@@ -121,16 +121,17 @@ export default function Menu({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, setIsOpen]);
 
+  const triggerProps = trigger.props as Record<string, unknown>;
   const triggerElement = React.cloneElement(trigger, {
     ref: triggerRef,
     onClick: (e: React.MouseEvent) => {
       e.preventDefault();
       setIsOpen(!isOpen);
-      trigger.props.onClick?.(e);
+      (triggerProps.onClick as ((e: React.MouseEvent) => void) | undefined)?.(e);
     },
     'aria-expanded': isOpen,
     'aria-haspopup': true,
-  });
+  } as React.HTMLAttributes<HTMLElement>);
 
   return (
     <>
@@ -154,8 +155,8 @@ export default function Menu({
             {React.Children.map(children, (child) =>
               React.isValidElement(child)
                 ? React.cloneElement(child, {
-                    onClose: () => setIsOpen(false),
-                  } as Partial<MenuItemProps>)
+                  onClose: () => setIsOpen(false),
+                } as Partial<MenuItemProps>)
                 : child
             )}
           </div>,
@@ -215,10 +216,9 @@ export function MenuItem({
         w-full flex items-center gap-2 px-3 py-2
         text-sm text-left
         transition-colors
-        ${
-          destructive
-            ? 'text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-950/30'
-            : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+        ${destructive
+          ? 'text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-950/30'
+          : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700'
         }
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent
         ${className}

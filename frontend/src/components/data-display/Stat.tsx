@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 type StatSize = 'sm' | 'md' | 'lg';
 type TrendDirection = 'up' | 'down' | 'neutral';
+type StatVariant = 'default' | 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 interface StatProps {
   /** Stat label/title */
@@ -23,6 +24,8 @@ interface StatProps {
   helpText?: string;
   /** Size variant */
   size?: StatSize;
+  /** Color variant for icon background */
+  variant?: StatVariant;
   /** Icon position */
   iconPosition?: 'left' | 'top';
   /** Additional CSS classes */
@@ -77,6 +80,7 @@ export default function Stat({
   trendValue: propTrendValue,
   helpText,
   size = 'md',
+  variant = 'default',
   iconPosition = 'left',
   className = '',
 }: StatProps) {
@@ -90,7 +94,18 @@ export default function Stat({
     neutral: 'text-neutral-500 dark:text-neutral-400',
   };
 
+  const iconVariantColors: Record<StatVariant, { bg: string; text: string }> = {
+    default: { bg: 'bg-primary-100 dark:bg-primary-900/30', text: 'text-primary-600 dark:text-primary-400' },
+    primary: { bg: 'bg-primary-100 dark:bg-primary-900/30', text: 'text-primary-600 dark:text-primary-400' },
+    success: { bg: 'bg-success-100 dark:bg-success-900/30', text: 'text-success-600 dark:text-success-400' },
+    warning: { bg: 'bg-warning-100 dark:bg-warning-900/30', text: 'text-warning-600 dark:text-warning-400' },
+    error: { bg: 'bg-error-100 dark:bg-error-900/30', text: 'text-error-600 dark:text-error-400' },
+    info: { bg: 'bg-info-100 dark:bg-info-900/30', text: 'text-info-600 dark:text-info-400' },
+    neutral: { bg: 'bg-neutral-100 dark:bg-neutral-800', text: 'text-neutral-600 dark:text-neutral-400' },
+  };
+
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+  const iconColors = iconVariantColors[variant];
 
   return (
     <div
@@ -106,8 +121,8 @@ export default function Stat({
             ${sizeConfig.icon}
             flex items-center justify-center flex-shrink-0
             rounded-lg
-            bg-primary-100 dark:bg-primary-900/30
-            text-primary-600 dark:text-primary-400
+            ${iconColors.bg}
+            ${iconColors.text}
             ${iconPosition === 'top' ? 'mb-3' : ''}
           `}
         >
@@ -193,20 +208,20 @@ export function StatGroup({ children, columns = 4, className = '' }: StatGroupPr
 
 // Stat Card variant with background
 interface StatCardProps extends StatProps {
-  /** Card variant */
-  variant?: 'default' | 'bordered' | 'elevated';
+  /** Card style variant */
+  cardVariant?: 'default' | 'bordered' | 'elevated';
 }
 
-export function StatCard({ variant = 'default', className = '', ...props }: StatCardProps) {
-  const variantClasses: Record<string, string> = {
+export function StatCard({ cardVariant = 'default', variant, className = '', ...props }: StatCardProps) {
+  const cardVariantClasses: Record<string, string> = {
     default: 'bg-neutral-50 dark:bg-neutral-900',
     bordered: 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800',
     elevated: 'bg-white dark:bg-neutral-900 shadow-sm',
   };
 
   return (
-    <div className={`rounded-md p-5 ${variantClasses[variant]} ${className}`}>
-      <Stat {...props} />
+    <div className={`rounded-md p-5 ${cardVariantClasses[cardVariant]} ${className}`}>
+      <Stat {...props} variant={variant} />
     </div>
   );
 }

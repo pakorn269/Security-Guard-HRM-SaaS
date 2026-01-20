@@ -4,6 +4,12 @@
 @import 'tailwindcss';
 
 /* ============================================
+   DARK MODE CONFIGURATION - Class-based toggle
+   This enables dark: variants to work with the .dark class
+   ============================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================
    SECURITY GUARD HRM - CORPORATE DESIGN SYSTEM
    Version: 2.0 - "Clean, Functional & Corporate"
    ============================================ */
@@ -1209,6 +1215,15 @@ td[data-type="phone"],
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
@@ -1227,6 +1242,10 @@ td[data-type="phone"],
 
 .animate-slide-in-bottom {
   animation: slide-in-bottom 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
 }
 
 /* Pull-to-refresh indicator styles */
