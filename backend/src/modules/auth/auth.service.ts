@@ -374,99 +374,91 @@ class AuthService {
             };
         }
 
-        // New LINE user - in development mode, auto-create a guard account
-        if (env.NODE_ENV === 'development') {
-            logger.info('Development mode: auto-creating guard user for LINE', {
-                lineUserId: lineUser.sub,
-                name: lineUser.name,
-            });
+        // New LINE user - auto-create a guard account
+        logger.info('Auto-creating guard user for LINE', {
+            lineUserId: lineUser.sub,
+            name: lineUser.name,
+        });
 
-            // Get the first company for development (or use a default company)
-            const { data: company } = await supabaseAdmin
-                .from('companies')
-                .select('id')
-                .limit(1)
-                .single();
+        // Get the first company (or use a default company)
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .limit(1)
+            .single();
 
-            if (!company) {
-                throw new NotFoundError(
-                    'Company',
-                    'ไม่พบข้อมูลบริษัท กรุณาสร้างบริษัทก่อน'
-                );
-            }
-
-            // Create a new guard user
-            const { data: newUser, error: createError } = await supabaseAdmin
-                .from('users')
-                .insert({
-                    company_id: company.id,
-                    email: `line_${lineUser.sub}@guard.local`,
-                    role: 'guard',
-                    line_user_id: lineUser.sub,
-                    line_display_name: lineUser.name,
-                    line_picture_url: lineUser.picture,
-                    is_active: true,
-                    language: 'th',
-                })
-                .select()
-                .single();
-
-            if (createError || !newUser) {
-                logger.error('Failed to create guard user', createError);
-                throw new Error('Failed to create user account');
-            }
-
-            // Create an employee record for the guard
-            const { data: newEmployee } = await supabaseAdmin
-                .from('employees')
-                .insert({
-                    company_id: company.id,
-                    user_id: newUser.id,
-                    employee_code: `GUARD-${lineUser.sub.slice(-6).toUpperCase()}`,
-                    full_name: lineUser.name || 'LINE User',
-                    status: 'active',
-                    hire_date: new Date().toISOString().split('T')[0],
-                })
-                .select()
-                .single();
-
-            // Update user with employee_id
-            if (newEmployee) {
-                await supabaseAdmin
-                    .from('users')
-                    .update({ employee_id: newEmployee.id })
-                    .eq('id', newUser.id);
-            }
-
-            const tokens = this.generateTokens({
-                userId: newUser.id,
-                companyId: company.id,
-                role: 'guard',
-                email: newUser.email,
-                employeeId: newEmployee?.id,
-                lineUserId: lineUser.sub,
-            });
-
-            logger.info('Created new guard user via LINE', {
-                userId: newUser.id,
-                employeeId: newEmployee?.id,
-                lineUserId: lineUser.sub,
-            });
-
-            return {
-                user: this.mapToAuthUser({
-                    ...newUser,
-                    employee_id: newEmployee?.id,
-                }),
-                tokens,
-            };
+        if (!company) {
+            throw new NotFoundError(
+                'Company',
+                'ไม่พบข้อมูลบริษัท กรุณาสร้างบริษัทก่อน'
+            );
         }
 
-        // Production mode - require admin to link account
-        throw new NotFoundError(
-            'User',
-            'ไม่พบบัญชีผู้ใช้ กรุณาติดต่อผู้ดูแลระบบเพื่อเชื่อมต่อบัญชี LINE'
-        );
+        // Create a new guard user
+        const { data: newUser, error: createError } = await supabaseAdmin
+            .from('users')
+            .insert({
+                company_id: company.id,
+                email: `line_${lineUser.sub}@guard.local`,
+                role: 'guard',
+                line_user_id: lineUser.sub,
+                line_display_name: lineUser.name,
+                line_picture_url: lineUser.picture,
+                is_active: true,
+                language: 'th',
+            })
+            .select()
+            .single();
+
+        if (createError || !newUser) {
+            logger.error('Failed to create guard user', createError);
+            throw new Error('Failed to create user account');
+        }
+
+        // Create an employee record for the guard
+        const { data: newEmployee } = await supabaseAdmin
+            .from('employees')
+            .insert({
+                company_id: company.id,
+                user_id: newUser.id,
+                employee_code: `GUARD-${lineUser.sub.slice(-6).toUpperCase()}`,
+                full_name: lineUser.name || 'LINE User',
+                status: 'active',
+                hire_date: new Date().toISOString().split('T')[0],
+            })
+            .select()
+            .single();
+
+        // Update user with employee_id
+        if (newEmployee) {
+            await supabaseAdmin
+                .from('users')
+                .update({ employee_id: newEmployee.id })
+                .eq('id', newUser.id);
+        }
+
+        const tokens = this.generateTokens({
+            userId: newUser.id,
+            companyId: company.id,
+            role: 'guard',
+            email: newUser.email,
+            employeeId: newEmployee?.id,
+            lineUserId: lineUser.sub,
+        });
+
+        logger.info('Created new guard user via LINE', {
+            userId: newUser.id,
+            employeeId: newEmployee?.id,
+            lineUserId: lineUser.sub,
+        });
+
+        return {
+            user: this.mapToAuthUser({
+                ...newUser,
+                employee_id: newEmployee?.id,
+            }),
+            tokens,
+        };
     }
 
     // Verify LINE ID Token

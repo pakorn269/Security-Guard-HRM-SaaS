@@ -12,7 +12,8 @@
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(node_modules/.bin/tsc:*)",
       "Bash(npm exec tsc:*)",
-      "Bash(npm exec:*)"
+      "Bash(npm exec:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
