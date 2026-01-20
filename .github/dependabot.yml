@@ -1,18 +1,94 @@
 version: 2
 updates:
-  # For npm (Node.js) dependencies
+  # Backend npm dependencies
   - package-ecosystem: "npm"
-    directory: "/backend"  # Location of package.json
+    directory: "/backend"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # Group all minor and patch updates together
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group TypeScript-related packages
+      typescript:
+        patterns:
+          - "@typescript-eslint/*"
+          - "typescript"
+          - "@types/*"
+      # Group testing packages
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+
+  # Frontend npm dependencies
   - package-ecosystem: "npm"
-    directory: "/frontend"  # If you have a separate frontend
+    directory: "/frontend"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
     open-pull-requests-limit: 10
-  # For GitHub Actions
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # Group all minor and patch updates together
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group TypeScript-related packages
+      typescript:
+        patterns:
+          - "@typescript-eslint/*"
+          - "typescript"
+          - "typescript-eslint"
+          - "@types/*"
+      # Group React packages
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Group testing packages
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@testing-library/*"
+          - "jsdom"
+      # Group ESLint packages
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    groups:
+      actions:
+        patterns:
+          - "*"
