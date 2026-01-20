@@ -4,6 +4,12 @@
 @import 'tailwindcss';
 
 /* ============================================
+   DARK MODE CONFIGURATION - Class-based toggle
+   This enables dark: variants to work with the .dark class
+   ============================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================
    SECURITY GUARD HRM - CORPORATE DESIGN SYSTEM
    Version: 2.0 - "Clean, Functional & Corporate"
    ============================================ */
