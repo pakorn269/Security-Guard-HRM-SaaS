@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 type DividerOrientation = 'horizontal' | 'vertical';
 type DividerVariant = 'solid' | 'dashed' | 'dotted';

@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+
+# Build output (Vercel builds fresh)
+dist
+
+# Development files
+*.log
+.env.local
+.env.development
+
+# Tests
+tests
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git

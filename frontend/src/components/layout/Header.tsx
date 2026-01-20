@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu, Globe, Search } from 'lucide-react';
+import { Menu, Globe, Search, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import NotificationBell from '../common/NotificationBell';
 import Avatar from '../common/Avatar';
 import { ThemeToggle } from '../theme';
@@ -133,33 +133,156 @@ export default function Header({
   );
 }
 
-// User Menu Component
+// User Menu Component with Dropdown
 interface UserMenuProps {
   user?: {
     name?: string;
     avatar?: string;
+    email?: string;
   };
 }
 
 function UserMenu({ user }: UserMenuProps) {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
   const userName = user?.name || 'User';
+  const userEmail = user?.email || '';
   const userAvatar = user?.avatar;
 
+  // Close menu on outside click
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close on escape
+  React.useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
+  const handleLogout = () => {
+    // TODO: Implement actual logout logic
+    console.log('Logout clicked');
+    setIsOpen(false);
+  };
+
   return (
-    <button
+    <div ref={menuRef} className="relative">
+      {/* Trigger button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="
+          flex items-center gap-2 p-1 rounded-md
+          hover:bg-neutral-100 dark:hover:bg-neutral-800
+          transition-colors
+        "
+        aria-label="User menu"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+      >
+        <Avatar name={userName} src={userAvatar} size="sm" />
+        <span className="hidden lg:block text-sm font-medium text-neutral-700 dark:text-neutral-300 max-w-[120px] truncate">
+          {userName}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`hidden lg:block text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div
+          className="
+            absolute right-0 mt-2 z-50
+            w-56 py-1
+            bg-white dark:bg-neutral-900
+            border border-neutral-200 dark:border-neutral-800
+            rounded-md shadow-lg
+            animate-scale-in origin-top-right
+          "
+        >
+          {/* User info header */}
+          <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+            <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+              {userName}
+            </p>
+            {userEmail && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                {userEmail}
+              </p>
+            )}
+          </div>
+
+          {/* Menu items */}
+          <div className="py-1">
+            <MenuLink to="/settings/profile" icon={User} onClick={() => setIsOpen(false)}>
+              {t('settings.profile')}
+            </MenuLink>
+            <MenuLink to="/settings" icon={Settings} onClick={() => setIsOpen(false)}>
+              {t('navigation.settings')}
+            </MenuLink>
+          </div>
+
+          {/* Logout */}
+          <div className="border-t border-neutral-200 dark:border-neutral-800 py-1">
+            <button
+              onClick={handleLogout}
+              className="
+                w-full flex items-center gap-3 px-4 py-2
+                text-sm text-error-600 dark:text-error-400
+                hover:bg-neutral-50 dark:hover:bg-neutral-800
+                transition-colors
+              "
+            >
+              <LogOut size={16} />
+              {t('auth.logout')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Menu Link Component
+interface MenuLinkProps {
+  to: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+function MenuLink({ to, icon: Icon, children, onClick }: MenuLinkProps) {
+  return (
+    <a
+      href={to}
+      onClick={onClick}
       className="
-        flex items-center gap-2 p-1 rounded-md
-        hover:bg-neutral-100 dark:hover:bg-neutral-800
+        flex items-center gap-3 px-4 py-2
+        text-sm text-neutral-700 dark:text-neutral-300
+        hover:bg-neutral-50 dark:hover:bg-neutral-800
         transition-colors
       "
-      aria-label="User menu"
     >
-      <Avatar name={userName} src={userAvatar} size="sm" />
-      <span className="hidden lg:block text-sm font-medium text-neutral-700 dark:text-neutral-300 max-w-[120px] truncate">
-        {userName}
-      </span>
-    </button>
+      <Icon size={16} className="text-neutral-400 dark:text-neutral-500" />
+      {children}
+    </a>
   );
 }
 
 export type { HeaderProps };
+
