@@ -7,7 +7,7 @@ This document explains how to set up separate development and production environ
 | Environment | Branch | URL | LIFF Channel |
 |-------------|--------|-----|--------------|
 | **Production** | `main` | `security-guard-hrm-saa-s-frontend.vercel.app` | Security Guard HRM |
-| **Development** | `develop` | `security-guard-hrm-saa-s-frontend-git-develop-*.vercel.app` | Security Guard HRM (Dev) |
+| **Development** | `develop` | `security-guard-hrm-dev.vercel.app` ✅ | Security Guard HRM (Dev) |
 
 ---
 
@@ -23,17 +23,21 @@ Channel: **Security Guard HRM** (Channel ID: `2008914377`)
 | HRM Clock In | `2008914377-NDoaNvUa` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/clock` | Full |
 
 ---
-## Development LIFF Apps
+## Development LIFF Apps ✅ CREATED
 
-Channel: **Security Guard HRM (Dev)** (Create new channel)
+Channel: **Security Guard HRM (Dev)** (Channel ID: `2008935318`)
 
 | LIFF App | LIFF ID | Endpoint URL | Size |
 |----------|---------|--------------|------|
-| HRM Profile (Dev) | `TODO` | `https://[preview-url]/liff/profile` | Tall |
-| HRM Leave (Dev) | `TODO` | `https://[preview-url]/liff/leave` | Tall |
-| HRM Schedule (Dev) | `TODO` | `https://[preview-url]/liff/schedule` | Tall |
-| HRM Clock In (Dev) | `TODO` | `https://[preview-url]/liff/clock` | Full |
-| **HRM Link (Dev)** | `TODO` | `https://[preview-url]/liff/link` | Full |
+| HRM Profile (Dev) | `2008935318-Cq576ySz` | `https://security-guard-hrm-dev.vercel.app/liff/profile` | Tall |
+| HRM Leave (Dev) | `2008935318-VxXFjA5g` | `https://security-guard-hrm-dev.vercel.app/liff/leave` | Tall |
+| HRM Schedule (Dev) | `2008935318-50xDJLPB` | `https://security-guard-hrm-dev.vercel.app/liff/schedule` | Tall |
+| HRM Clock In (Dev) | `2008935318-2hSCjYJb` | `https://security-guard-hrm-dev.vercel.app/liff/clock` | Full |
+| **HRM Link (Dev)** | `2008935318-5va76yB9` | `https://security-guard-hrm-dev.vercel.app/liff/link` | Full |
+
+### Test URLs (Open in LINE app)
+- Clock: `https://liff.line.me/2008935318-2hSCjYJb`
+- Link: `https://liff.line.me/2008935318-5va76yB9`
 
 ---
 
@@ -61,9 +65,9 @@ Configure in Vercel Dashboard → Settings → Environment Variables:
 
 | Branch | Deployment Type | URL |
 |--------|-----------------|-----|
-| `main` | Production | `your-app.vercel.app` |
-| `develop` | Preview | `your-app-git-develop-*.vercel.app` |
-| `feature/*` | Preview | `your-app-git-feature-*-*.vercel.app` |
+| `main` | Production | `security-guard-hrm-saa-s-frontend.vercel.app` |
+| `develop` | Preview | `security-guard-hrm-dev.vercel.app` ✅ |
+| `feature/*` | Preview | Auto-generated unique URL |
 
 ---
 
