@@ -1,8 +1,16 @@
 import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
+import {
+  LayoutDashboard,
+  Users,
+  Clock,
+  Calendar,
+  Palmtree,
+} from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import BottomNav, { type BottomNavItem } from './BottomNav';
 
 /**
  * Admin Dashboard Layout
@@ -18,13 +26,25 @@ export default function DashboardLayout() {
   const { t } = useTranslation();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMobileNav, setIsMobileNav] = useState(false); // For bottom nav (< 768px)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Bottom navigation items for mobile
+  const bottomNavItems: BottomNavItem[] = [
+    { path: '/', label: t('navigation.dashboard', 'แดชบอร์ด'), icon: LayoutDashboard },
+    { path: '/employees', label: t('navigation.employees', 'พนักงาน'), icon: Users },
+    { path: '/attendance', label: t('navigation.attendance', 'ลงเวลา'), icon: Clock },
+    { path: '/schedule', label: t('navigation.schedule', 'ตารางเวร'), icon: Calendar },
+    { path: '/leave', label: t('navigation.leave', 'ลา'), icon: Palmtree },
+  ];
 
   // Handle responsive behavior
   useEffect(() => {
     const checkViewport = () => {
       const mobile = window.innerWidth < 1024;
+      const mobileNav = window.innerWidth < 768;
       setIsMobile(mobile);
+      setIsMobileNav(mobileNav);
 
       // Auto-collapse sidebar on tablet, auto-expand on desktop
       if (window.innerWidth >= 1024) {
@@ -105,12 +125,17 @@ export default function DashboardLayout() {
         />
 
         {/* Page content - scrollable */}
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 overflow-auto ${isMobileNav ? 'pb-16' : ''}`}>
           {/* Content container with max-width and centered */}
           <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
+
+        {/* Mobile bottom navigation - only on screens < 768px */}
+        {isMobileNav && (
+          <BottomNav items={bottomNavItems} />
+        )}
       </div>
     </div>
   );

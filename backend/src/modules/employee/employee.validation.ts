@@ -55,7 +55,10 @@ export const listEmployeesQuerySchema = z.object({
     page: z.coerce.number().int().positive().optional().default(1),
     pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
     search: z.string().optional(),
-    status: z.enum(['active', 'on_leave', 'terminated']).optional(),
+    status: z.preprocess(
+        (val) => (val === '' ? undefined : val),
+        z.enum(['active', 'on_leave', 'terminated']).optional()
+    ),
     hasUser: z.enum(['true', 'false']).optional().transform((val) => val === 'true'),
 });
 
