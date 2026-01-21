@@ -1,6 +1,75 @@
-import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Outlet, useLocation, Navigate, NavLink } from 'react-router-dom';
+import { AlertCircle, RefreshCw, Loader2, Clock, Calendar, Palmtree, User, type LucideIcon } from 'lucide-react';
 import { LiffAuthProvider, useLiffAuth } from '../../context/LiffAuthContext';
+
+// LIFF Bottom Navigation Items
+interface LiffNavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const liffNavItems: LiffNavItem[] = [
+  { path: '/liff/clock', label: 'ลงเวลา', icon: Clock },
+  { path: '/liff/schedule', label: 'ตารางเวร', icon: Calendar },
+  { path: '/liff/leave', label: 'ลา', icon: Palmtree },
+  { path: '/liff/profile', label: 'โปรไฟล์', icon: User },
+];
+
+// LIFF Bottom Navigation Component
+function LiffBottomNav() {
+  return (
+    <nav
+      className="
+        fixed bottom-0 left-0 right-0 z-40
+        bg-white dark:bg-neutral-900
+        border-t border-neutral-200 dark:border-neutral-800
+        safe-area-bottom
+      "
+    >
+      <div className="flex items-center justify-around h-14">
+        {liffNavItems.map((item) => (
+          <LiffNavItem key={item.path} item={item} />
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// LIFF Navigation Item
+function LiffNavItem({ item }: { item: LiffNavItem }) {
+  const Icon = item.icon;
+
+  return (
+    <NavLink
+      to={item.path}
+      className={({ isActive }) =>
+        `
+          flex flex-col items-center justify-center
+          min-w-[64px] h-full px-2
+          transition-colors touch-target
+          ${isActive
+          ? 'text-primary-600 dark:text-primary-400'
+          : 'text-neutral-500 dark:text-neutral-400'
+        }
+        `
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon
+            size={22}
+            className={isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}
+            aria-hidden="true"
+          />
+          <span className="mt-0.5 text-[10px] font-medium truncate max-w-full">
+            {item.label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 /**
  * LIFF Layout (Mobile)
@@ -121,13 +190,20 @@ function LiffLayoutContent() {
     return <Navigate to="/liff/clock" replace />;
   }
 
+  // Determine if we should show bottom navigation
+  // Show when linked and not on linking pages
+  const showBottomNav = status === 'linked' && !isLinkingPage;
+
   // Main layout (linked users or on linking pages)
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 no-overscroll">
       {/* Main content with safe area padding */}
-      <div className="safe-area-inset min-h-screen flex flex-col">
+      <div className={`safe-area-inset min-h-screen flex flex-col ${showBottomNav ? 'pb-14' : ''}`}>
         <Outlet />
       </div>
+
+      {/* Bottom navigation for linked users */}
+      {showBottomNav && <LiffBottomNav />}
     </div>
   );
 }
