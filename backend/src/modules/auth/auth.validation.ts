@@ -54,9 +54,49 @@ export const linkLineSchema = z.object({
     liffId: z.string().min(1, 'LIFF ID is required'),
 });
 
+// ============================================================
+// LIFF Account Linking Validation Schemas
+// ============================================================
+
+// LINE verify validation schema (same as linkLine)
+export const lineVerifySchema = z.object({
+    idToken: z.string().min(1, 'ID token is required / กรุณาระบุ ID token'),
+    liffId: z.string().min(1, 'LIFF ID is required / กรุณาระบุ LIFF ID'),
+});
+
+// Link employee validation schema (for guards)
+export const linkEmployeeSchema = z.object({
+    idToken: z.string().min(1, 'ID token is required / กรุณาระบุ ID token'),
+    liffId: z.string().min(1, 'LIFF ID is required / กรุณาระบุ LIFF ID'),
+    employeeCode: z
+        .string()
+        .min(1, 'Employee code is required / กรุณาระบุรหัสพนักงาน')
+        .max(50),
+    phone: z
+        .string()
+        .min(9, 'Phone number must be at least 9 digits / เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก')
+        .max(20)
+        .regex(/^[0-9]+$/, 'Phone number must contain only digits / เบอร์โทรศัพท์ต้องเป็นตัวเลขเท่านั้น'),
+    companySlug: z
+        .string()
+        .min(1, 'Company is required / กรุณาเลือกบริษัท')
+        .max(100),
+});
+
+// Link credentials validation schema (for managers/admins)
+export const linkCredentialsSchema = z.object({
+    idToken: z.string().min(1, 'ID token is required / กรุณาระบุ ID token'),
+    liffId: z.string().min(1, 'LIFF ID is required / กรุณาระบุ LIFF ID'),
+    email: z.string().email('Invalid email format / รูปแบบอีเมลไม่ถูกต้อง'),
+    password: z.string().min(1, 'Password is required / กรุณากรอกรหัสผ่าน'),
+});
+
 // Type exports
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type LineLoginInput = z.infer<typeof lineLoginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type LinkLineInput = z.infer<typeof linkLineSchema>;
+export type LineVerifyInput = z.infer<typeof lineVerifySchema>;
+export type LinkEmployeeInput = z.infer<typeof linkEmployeeSchema>;
+export type LinkCredentialsInput = z.infer<typeof linkCredentialsSchema>;

@@ -74,3 +74,55 @@ export interface LineIdTokenPayload {
     picture?: string;
     email?: string;
 }
+
+// ============================================================
+// LIFF Account Linking Types
+// ============================================================
+
+// LINE verify request
+export interface LineVerifyRequest {
+    idToken: string;
+    liffId: string;
+}
+
+// LINE verify response (user linked)
+export interface LineVerifyLinkedResponse {
+    isLinked: true;
+    user: AuthUser;
+    tokens: TokenPair;
+}
+
+// LINE verify response (user not linked)
+export interface LineVerifyNotLinkedResponse {
+    isLinked: false;
+    lineProfile: {
+        userId: string;
+        displayName: string | null;
+        pictureUrl: string | null;
+    };
+}
+
+export type LineVerifyResponse = LineVerifyLinkedResponse | LineVerifyNotLinkedResponse;
+
+// Link employee request (for guards)
+export interface LinkEmployeeRequest {
+    idToken: string;
+    liffId: string;
+    employeeCode: string;
+    phone: string;
+    companySlug: string;
+}
+
+// Link credentials request (for managers/admins)
+export interface LinkCredentialsRequest {
+    idToken: string;
+    liffId: string;
+    email: string;
+    password: string;
+}
+
+// Link response (success)
+export interface LinkResponse {
+    user: AuthUser;
+    tokens: TokenPair;
+}

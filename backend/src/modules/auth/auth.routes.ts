@@ -15,4 +15,16 @@ router.post('/logout', authController.logout);
 router.get('/me', authMiddleware, authController.me);
 router.post('/link-line', authMiddleware, authController.linkLine);
 
+// ============================================================
+// LIFF Account Linking Routes
+// ============================================================
+
+// Public routes - for LIFF first-time user flow
+router.post('/line/verify', authController.lineVerify);
+router.post('/line/link-employee', authController.linkEmployee);
+router.post('/line/link-credentials', authController.linkCredentials);
+
+// Protected route - requires authentication
+router.post('/line/unlink', authMiddleware, authController.unlinkLineAccount);
+
 export default router;

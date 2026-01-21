@@ -1,8 +1,6 @@
-import { Outlet } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
-import liff from '@line/liff';
-import { useAuth } from '../../context/AuthContext';
+import { LiffAuthProvider, useLiffAuth } from '../../context/LiffAuthContext';
 
 /**
  * LIFF Layout (Mobile)
@@ -13,57 +11,21 @@ import { useAuth } from '../../context/AuthContext';
  * - Bottom action: Fixed, safe-area-bottom padding
  * - Touch targets: Minimum 44x44px
  * - Padding: 16px horizontal
+ * 
+ * Account Linking Flow:
+ * 1. Initialize LIFF SDK
+ * 2. Verify LINE token with backend
+ * 3. If not linked → redirect to /liff/link
+ * 4. If linked → show normal content
  */
-export default function LiffLayout() {
-  const { lineLogin } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initLiff = async () => {
-      try {
-        const liffId = import.meta.env.VITE_LIFF_ID;
-        console.log('Initializing LIFF with ID:', liffId);
+// Inner component that uses LiffAuthContext
+function LiffLayoutContent() {
+  const location = useLocation();
+  const { status, error, retry, isLoading, needsLinking } = useLiffAuth();
 
-        if (!liffId) {
-          throw new Error('LIFF ID not configured');
-        }
-
-        await liff.init({ liffId });
-
-        if (!liff.isLoggedIn()) {
-          console.log('LIFF not logged in, calling login...');
-          liff.login();
-          return;
-        }
-
-        const idToken = liff.getIDToken();
-        console.log('LIFF ID Token retrieved:', idToken ? 'Yes' : 'No');
-
-        if (!idToken) {
-          throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้ (ID Token missing)');
-        }
-
-        // Always attempt to login/verify with backend
-        console.log('Attempting backend login with LINE...');
-        const success = await lineLogin(idToken, liffId);
-
-        if (!success) {
-          throw new Error('ไม่สามารถเข้าสู่ระบบ Backend ได้ (Login failed)');
-        }
-
-        console.log('Backend login success');
-
-        setIsLoading(false);
-      } catch (err) {
-        console.error('LIFF initialization failed', err);
-        setError(err instanceof Error ? err.message : 'LIFF initialization failed');
-        setIsLoading(false);
-      }
-    };
-
-    initLiff();
-  }, [lineLogin]);
+  // Check if we're on a linking page
+  const isLinkingPage = location.pathname.startsWith('/liff/link');
 
   // Loading state
   if (isLoading) {
@@ -89,7 +51,7 @@ export default function LiffLayout() {
   }
 
   // Error state
-  if (error) {
+  if (status === 'error' && error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 safe-area-inset">
         <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-800">
@@ -110,7 +72,7 @@ export default function LiffLayout() {
 
           {/* Retry button */}
           <button
-            onClick={() => window.location.reload()}
+            onClick={retry}
             className="
               w-full inline-flex items-center justify-center gap-2
               h-12 px-4
@@ -128,7 +90,38 @@ export default function LiffLayout() {
     );
   }
 
-  // Main layout
+  // Not logged into LINE state
+  if (status === 'not_logged_in') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 safe-area-inset">
+        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6 max-w-sm w-full border border-neutral-200 dark:border-neutral-800">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+            <Loader2 size={28} className="text-primary-500 animate-spin" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
+              กำลังเปลี่ยนเส้นทาง
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              กรุณารอสักครู่ ระบบกำลังนำท่านไปยังหน้า LINE Login
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to linking page if user is not linked and not on linking page
+  if (needsLinking && !isLinkingPage) {
+    return <Navigate to="/liff/link" replace />;
+  }
+
+  // Redirect away from linking page if already linked
+  if (status === 'linked' && isLinkingPage) {
+    return <Navigate to="/liff/clock" replace />;
+  }
+
+  // Main layout (linked users or on linking pages)
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 no-overscroll">
       {/* Main content with safe area padding */}
@@ -136,6 +129,15 @@ export default function LiffLayout() {
         <Outlet />
       </div>
     </div>
+  );
+}
+
+// Wrapper component that provides LiffAuthContext
+export default function LiffLayout() {
+  return (
+    <LiffAuthProvider>
+      <LiffLayoutContent />
+    </LiffAuthProvider>
   );
 }
 
