@@ -53,16 +53,16 @@ export default function PendingLeaveRequestsWidget() {
 
     if (loading) {
         return (
-            <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm h-full flex items-center justify-center min-h-[300px]">
+            <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm h-full flex items-center justify-center min-h-[300px]">
                 <div className="spinner w-8 h-8"></div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm h-full">
+        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm h-full">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-surface-800 dark:text-white">
+                <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
                     คำขอลารออนุมัติ
                 </h2>
                 <Link to="/leave" className="text-sm text-primary-600 hover:text-primary-700">
@@ -72,26 +72,26 @@ export default function PendingLeaveRequestsWidget() {
 
             <div className="space-y-3">
                 {requests.length === 0 ? (
-                    <div className="text-center py-8 text-surface-500">
+                    <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
                         ไม่มีคำขอลารออนุมัติ
                     </div>
                 ) : (
                     requests.map((request) => (
                         <div
                             key={request.id}
-                            className="flex items-center gap-3 p-3 rounded-lg bg-surface-50 dark:bg-surface-700"
+                            className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 dark:bg-neutral-700"
                         >
                             <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                                 {request.employee?.fullName.charAt(0) || '?'}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium text-surface-800 dark:text-white truncate">
+                                <p className="font-medium text-neutral-800 dark:text-white truncate">
                                     {request.employee?.fullName}
                                 </p>
-                                <p className="text-sm text-surface-500 truncate">
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
                                     {request.leaveType?.nameTh || request.leaveType?.name} • {request.totalDays} วัน
                                 </p>
-                                <p className="text-xs text-surface-400">
+                                <p className="text-xs text-neutral-400 dark:text-neutral-500">
                                     {new Date(request.startDate).toLocaleDateString('th-TH')} - {new Date(request.endDate).toLocaleDateString('th-TH')}
                                 </p>
                             </div>

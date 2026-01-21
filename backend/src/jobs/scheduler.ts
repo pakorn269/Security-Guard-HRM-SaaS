@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import axios from 'axios';
 import { env } from '../config/env.js';
 import logger from '../utils/logger.js';
+import { checkLicenses } from './licenseChecker.js';
 
 export const initScheduler = () => {
     logger.info('⏳ Initializing Job Scheduler...');
@@ -27,6 +28,16 @@ export const initScheduler = () => {
             });
         } catch (error) {
             logger.error('❌ Error running Shift Reminders job', error);
+        }
+    });
+
+    // Schedule License Compliance Check
+    // Run every day at midnight (0 0 * * *)
+    cron.schedule('0 0 * * *', async () => {
+        try {
+            await checkLicenses();
+        } catch (error) {
+            logger.error('❌ Error running License Compliance Check', error);
         }
     });
 

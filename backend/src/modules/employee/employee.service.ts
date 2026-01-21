@@ -39,6 +39,9 @@ class EmployeeService {
             notes: row.notes,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
+            licenseNumber: row.license_number,
+            licenseIssuedAt: row.license_issued_at,
+            licenseExpiresAt: row.license_expires_at,
         };
     }
 
@@ -270,6 +273,9 @@ class EmployeeService {
                 hire_date: data.hireDate,
                 notes: data.notes || null,
                 profile_image_url: data.profileImageUrl || null,
+                license_number: data.licenseNumber || null,
+                license_issued_at: data.licenseIssuedAt || null,
+                license_expires_at: data.licenseExpiresAt || null,
             })
             .select()
             .single();
@@ -331,6 +337,9 @@ class EmployeeService {
         if (data.notes !== undefined) updateData.notes = data.notes;
         if (data.profileImageUrl !== undefined)
             updateData.profile_image_url = data.profileImageUrl;
+        if (data.licenseNumber !== undefined) updateData.license_number = data.licenseNumber;
+        if (data.licenseIssuedAt !== undefined) updateData.license_issued_at = data.licenseIssuedAt;
+        if (data.licenseExpiresAt !== undefined) updateData.license_expires_at = data.licenseExpiresAt;
 
         const { data: employee, error } = await supabaseAdmin
             .from('employees')
@@ -458,6 +467,85 @@ class EmployeeService {
 
         return this.mapToEmployee(employee as EmployeeRow);
     }
+
+    // Find replacement guards (Recommendation Engine)
+    async findReplacements(
+        companyId: string,
+        date: string,
+        startTime: string,
+        endTime: string,
+        excludeEmployeeId?: string
+    ): Promise<Employee[]> {
+        // 1. Get all active employees
+        const { data: employees, error } = await supabaseAdmin
+            .from('employees')
+            .select('*')
+            .eq('company_id', companyId)
+            .eq('status', 'active');
+
+        if (error || !employees) return [];
+
+        // 2. Get all shifts for the whole week to calculate workload and check conflicts
+        const current = new Date(date);
+        const day = current.getDay();
+        const diff = current.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        const monday = new Date(current.setDate(diff)).toISOString().split('T')[0];
+
+        const nextMondayDate = new Date(current.setDate(diff + 7));
+        const nextMonday = nextMondayDate.toISOString().split('T')[0];
+
+        const { data: shifts } = await supabaseAdmin
+            .from('shifts')
+            .select('employee_id, date, start_time, end_time')
+            .eq('company_id', companyId)
+            .neq('status', 'cancelled')
+            .gte('date', monday)
+            .lt('date', nextMonday);
+
+        // Helper to check time overlap
+        const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+        const reqStart = toMinutes(startTime);
+        let reqEnd = toMinutes(endTime);
+        if (reqEnd < reqStart) reqEnd += 24 * 60;
+
+        const candidates = employees.filter(emp => {
+            if (emp.id === excludeEmployeeId) return false;
+
+            // Check conflicts
+            // Filter shifts that might overlap (on the same date)
+            // Note: This simplified check doesn't account for overnight overlap from previous day perfectly, 
+            // but assumes shifts are mostly contained or date-anchored correctly.
+            const empShifts = shifts?.filter(s => s.employee_id === emp.id && s.date === date) || [];
+
+            for (const s of empShifts) {
+                const sStart = toMinutes(s.start_time);
+                let sEnd = toMinutes(s.end_time);
+                if (sEnd < sStart) sEnd += 24 * 60;
+
+                // Check overlap: Start1 < End2 && Start2 < End1
+                if (reqStart < sEnd && sStart < reqEnd) return false;
+            }
+            return true;
+        });
+
+        // 3. Sort by workload (shifts count in the week)
+        const workloadMap = new Map<string, number>();
+        if (shifts) {
+            for (const s of shifts) {
+                const count = workloadMap.get(s.employee_id) || 0;
+                workloadMap.set(s.employee_id, count + 1);
+            }
+        }
+
+        candidates.sort((a, b) => {
+            const loadA = workloadMap.get(a.id) || 0;
+            const loadB = workloadMap.get(b.id) || 0;
+            return loadA - loadB; // Ascending: prefer those with less shifts
+        });
+
+        return candidates.map(row => this.mapToEmployee(row as EmployeeRow));
+    }
+
 
     // === Certification Methods ===
 

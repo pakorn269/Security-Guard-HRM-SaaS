@@ -151,27 +151,37 @@ class AttendanceService {
         }
 
         // Determine status (on_time or late)
+
+        // Fetch company settings once
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('settings')
+            .eq('id', companyId)
+            .single();
+
+        // Determine status (on_time or late) and validate geofence
         let status: AttendanceStatus = 'on_time';
-        if (shiftStartTime) {
-            const [hours, minutes] = shiftStartTime.split(':').map(Number);
-            const shiftStart = new Date(now);
-            shiftStart.setHours(hours, minutes, 0, 0);
 
-            // Check company's late threshold (default: 15 minutes)
-            const { data: company } = await supabaseAdmin
-                .from('companies')
-                .select('settings')
-                .eq('id', companyId)
-                .single();
+        if (shiftData) {
+            // Geofence Validation
+            const allowOutside = company?.settings?.allow_clock_in_outside_geofence;
+            const radius = company?.settings?.geofence_radius_meters || 500;
+            // NOTE: Skipping Strict Geofence Check for now as discussed.
 
-            const lateThreshold = company?.settings?.late_threshold_minutes ?? 15;
+            if (shiftStartTime) {
+                const [hours, minutes] = shiftStartTime.split(':').map(Number);
+                const shiftStart = new Date(now);
+                shiftStart.setHours(hours, minutes, 0, 0);
 
-            // Calculate minutes late
-            const diffMs = now.getTime() - shiftStart.getTime();
-            const minutesLate = Math.floor(diffMs / 60000);
+                const lateThreshold = company?.settings?.late_threshold_minutes ?? 15;
 
-            if (minutesLate > lateThreshold) {
-                status = 'late';
+                // Calculate minutes late
+                const diffMs = now.getTime() - shiftStart.getTime();
+                const minutesLate = Math.floor(diffMs / 60000);
+
+                if (minutesLate > lateThreshold) {
+                    status = 'late';
+                }
             }
         }
 
@@ -227,6 +237,13 @@ class AttendanceService {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
 
+        // Fetch company settings
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('settings')
+            .eq('id', companyId)
+            .single();
+
         // Find active attendance record (clocked in but not out)
         const { data: activeAttendance, error: findError } = await supabaseAdmin
             .from('attendance_logs')
@@ -255,6 +272,13 @@ class AttendanceService {
             );
         }
 
+        // Geofence Validation (Placeholder)
+        if (activeAttendance.shifts) {
+            const allowOutside = company?.settings?.allow_clock_in_outside_geofence;
+            const radius = company?.settings?.geofence_radius_meters || 500;
+            // NOTE: Skipping Strict Geofence Check for now.
+        }
+
         // Calculate total hours
         const clockInTime = new Date(activeAttendance.clock_in_time);
         const totalMs = now.getTime() - clockInTime.getTime();
@@ -270,13 +294,7 @@ class AttendanceService {
             const shiftEnd = new Date(now);
             shiftEnd.setHours(endHours, endMinutes, 0, 0);
 
-            // Get company settings
-            const { data: company } = await supabaseAdmin
-                .from('companies')
-                .select('settings')
-                .eq('id', companyId)
-                .single();
-
+            // Use fetched company settings
             const earlyLeaveThreshold = company?.settings?.early_leave_threshold_minutes ?? 15;
 
             // Calculate minutes early

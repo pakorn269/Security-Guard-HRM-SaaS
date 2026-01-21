@@ -34,7 +34,7 @@ Channel: **Security Guard HRM (Dev)** (Channel ID: `2008935318`)
 | HRM Leave (Dev) | `2008935318-VxXFjA5g` | `https://security-guard-hrm-dev.vercel.app/liff/leave` | Tall |
 | HRM Schedule (Dev) | `2008935318-50xDJLPB` | `https://security-guard-hrm-dev.vercel.app/liff/schedule` | Tall |
 | HRM Clock In (Dev) | `2008935318-2hSCjYJb` | `https://security-guard-hrm-dev.vercel.app/liff/clock` | Full |
-| **HRM Link (Dev)** | `2008935318-5va76yB9` | `https://security-guard-hrm-dev.vercel.app/liff/link` | Full |
+| HRM Link (Dev) | `2008935318-5va76yB9` | `https://security-guard-hrm-dev.vercel.app/liff/link` | Full |
 
 ### Test URLs (Open in LINE app)
 - Clock: `https://liff.line.me/2008935318-2hSCjYJb`

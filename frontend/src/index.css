@@ -48,6 +48,22 @@
   --color-neutral-950: oklch(0.12 0.003 240);
 
   /* ==========================================
+     SURFACE COLORS - Alias for Neutral (Fixes Mixed Theme)
+     ========================================== */
+  --color-surface-25: var(--color-neutral-25);
+  --color-surface-50: var(--color-neutral-50);
+  --color-surface-100: var(--color-neutral-100);
+  --color-surface-200: var(--color-neutral-200);
+  --color-surface-300: var(--color-neutral-300);
+  --color-surface-400: var(--color-neutral-400);
+  --color-surface-500: var(--color-neutral-500);
+  --color-surface-600: var(--color-neutral-600);
+  --color-surface-700: var(--color-neutral-700);
+  --color-surface-800: var(--color-neutral-800);
+  --color-surface-900: var(--color-neutral-900);
+  --color-surface-950: var(--color-neutral-950);
+
+  /* ==========================================
      SEMANTIC COLORS - Status Indicators
      ========================================== */
   /* Success - Corporate Green */
@@ -101,10 +117,13 @@
   /* ==========================================
      DARK MODE SURFACE COLORS
      ========================================== */
-  --color-dark-bg: oklch(0.13 0.01 240);
-  --color-dark-surface: oklch(0.18 0.01 240);
-  --color-dark-elevated: oklch(0.22 0.01 240);
-  --color-dark-border: oklch(0.28 0.01 240);
+  /* ==========================================
+     DARK MODE SURFACE COLORS
+     ========================================== */
+  --color-dark-bg: oklch(0.15 0.01 240);
+  --color-dark-surface: oklch(0.20 0.01 240);
+  --color-dark-elevated: oklch(0.25 0.01 240);
+  --color-dark-border: oklch(0.30 0.01 240);
 
   /* ==========================================
      TYPOGRAPHY
@@ -114,16 +133,26 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* Enterprise-Optimized Type Scale */
-  --text-display: 2.25rem;   /* 36px - Page titles */
-  --text-h1: 1.75rem;        /* 28px - Section headers */
-  --text-h2: 1.375rem;       /* 22px - Card titles */
-  --text-h3: 1.125rem;       /* 18px - Subsections */
-  --text-h4: 1rem;           /* 16px - Widget titles */
-  --text-body-lg: 1rem;      /* 16px - Emphasized body */
-  --text-body: 0.875rem;     /* 14px - Default body */
-  --text-body-sm: 0.8125rem; /* 13px - Secondary info */
-  --text-caption: 0.75rem;   /* 12px - Labels, hints */
-  --text-overline: 0.6875rem;/* 11px - Overline labels */
+  --text-display: 2.25rem;
+  /* 36px - Page titles */
+  --text-h1: 1.75rem;
+  /* 28px - Section headers */
+  --text-h2: 1.375rem;
+  /* 22px - Card titles */
+  --text-h3: 1.125rem;
+  /* 18px - Subsections */
+  --text-h4: 1rem;
+  /* 16px - Widget titles */
+  --text-body-lg: 1rem;
+  /* 16px - Emphasized body */
+  --text-body: 0.875rem;
+  /* 14px - Default body */
+  --text-body-sm: 0.8125rem;
+  /* 13px - Secondary info */
+  --text-caption: 0.75rem;
+  /* 12px - Labels, hints */
+  --text-overline: 0.6875rem;
+  /* 11px - Overline labels */
 
   /* Legacy size support */
   --text-xs: 0.75rem;
@@ -320,6 +349,7 @@ h6,
 
 /* Responsive heading sizes */
 @media (min-width: 768px) {
+
   h1,
   .h1 {
     font-size: calc(var(--text-display) * 1.15);
@@ -439,24 +469,7 @@ td[data-type="phone"],
 /* ============================================
    DARK MODE - System Preference
    ============================================ */
-@media (prefers-color-scheme: dark) {
-  body {
-    @apply bg-neutral-950 text-neutral-100;
-    background-color: var(--color-dark-bg);
-  }
 
-  h1, h2, h3, h4, h5, h6, .heading {
-    @apply text-white;
-  }
-
-  th {
-    @apply text-neutral-400;
-  }
-
-  td {
-    @apply text-neutral-200;
-  }
-}
 
 /* ============================================
    DARK MODE - Class-based Toggle
@@ -1004,6 +1017,7 @@ td[data-type="phone"],
 
 /* Mobile table styles */
 @media (max-width: 640px) {
+
   .mobile-table th,
   .mobile-table td {
     @apply px-3 py-2 text-sm;
@@ -1020,7 +1034,7 @@ td[data-type="phone"],
     @apply flex flex-col gap-3;
   }
 
-  .mobile-stack > * {
+  .mobile-stack>* {
     @apply w-full;
   }
 }
@@ -1078,6 +1092,7 @@ td[data-type="phone"],
 
 /* Improve touch response */
 @media (hover: none) and (pointer: coarse) {
+
   button,
   a,
   input[type="submit"],
@@ -1095,7 +1110,7 @@ td[data-type="phone"],
 
 /* Mobile-first responsive spacing */
 @media (max-width: 640px) {
-  .space-y-mobile > * + * {
+  .space-y-mobile>*+* {
     margin-top: 12px;
   }
 
@@ -1110,6 +1125,7 @@ td[data-type="phone"],
 
 /* Prevent zoom on input focus for iOS */
 @media screen and (max-width: 640px) {
+
   input[type="text"],
   input[type="email"],
   input[type="tel"],
@@ -1157,6 +1173,7 @@ td[data-type="phone"],
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1167,6 +1184,7 @@ td[data-type="phone"],
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1178,6 +1196,7 @@ td[data-type="phone"],
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1189,6 +1208,7 @@ td[data-type="phone"],
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1200,6 +1220,7 @@ td[data-type="phone"],
     opacity: 0;
     transform: translateY(100%);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1210,6 +1231,7 @@ td[data-type="phone"],
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -1219,6 +1241,7 @@ td[data-type="phone"],
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -1268,34 +1291,109 @@ td[data-type="phone"],
    LEGACY SUPPORT - Surface to Neutral Migration
    These aliases ensure backward compatibility
    ============================================ */
-.bg-surface-50 { @apply bg-neutral-50; }
-.bg-surface-100 { @apply bg-neutral-100; }
-.bg-surface-200 { @apply bg-neutral-200; }
-.bg-surface-300 { @apply bg-neutral-300; }
-.bg-surface-400 { @apply bg-neutral-400; }
-.bg-surface-500 { @apply bg-neutral-500; }
-.bg-surface-600 { @apply bg-neutral-600; }
-.bg-surface-700 { @apply bg-neutral-700; }
-.bg-surface-800 { @apply bg-neutral-800; }
-.bg-surface-900 { @apply bg-neutral-900; }
-.bg-surface-950 { @apply bg-neutral-950; }
+.bg-surface-50 {
+  @apply bg-neutral-50;
+}
 
-.text-surface-50 { @apply text-neutral-50; }
-.text-surface-100 { @apply text-neutral-100; }
-.text-surface-200 { @apply text-neutral-200; }
-.text-surface-300 { @apply text-neutral-300; }
-.text-surface-400 { @apply text-neutral-400; }
-.text-surface-500 { @apply text-neutral-500; }
-.text-surface-600 { @apply text-neutral-600; }
-.text-surface-700 { @apply text-neutral-700; }
-.text-surface-800 { @apply text-neutral-800; }
-.text-surface-900 { @apply text-neutral-900; }
-.text-surface-950 { @apply text-neutral-950; }
+.bg-surface-100 {
+  @apply bg-neutral-100;
+}
 
-.border-surface-200 { @apply border-neutral-200; }
-.border-surface-300 { @apply border-neutral-300; }
-.border-surface-600 { @apply border-neutral-600; }
-.border-surface-700 { @apply border-neutral-700; }
+.bg-surface-200 {
+  @apply bg-neutral-200;
+}
+
+.bg-surface-300 {
+  @apply bg-neutral-300;
+}
+
+.bg-surface-400 {
+  @apply bg-neutral-400;
+}
+
+.bg-surface-500 {
+  @apply bg-neutral-500;
+}
+
+.bg-surface-600 {
+  @apply bg-neutral-600;
+}
+
+.bg-surface-700 {
+  @apply bg-neutral-700;
+}
+
+.bg-surface-800 {
+  @apply bg-neutral-800;
+}
+
+.bg-surface-900 {
+  @apply bg-neutral-900;
+}
+
+.bg-surface-950 {
+  @apply bg-neutral-950;
+}
+
+.text-surface-50 {
+  @apply text-neutral-50;
+}
+
+.text-surface-100 {
+  @apply text-neutral-100;
+}
+
+.text-surface-200 {
+  @apply text-neutral-200;
+}
+
+.text-surface-300 {
+  @apply text-neutral-300;
+}
+
+.text-surface-400 {
+  @apply text-neutral-400;
+}
+
+.text-surface-500 {
+  @apply text-neutral-500;
+}
+
+.text-surface-600 {
+  @apply text-neutral-600;
+}
+
+.text-surface-700 {
+  @apply text-neutral-700;
+}
+
+.text-surface-800 {
+  @apply text-neutral-800;
+}
+
+.text-surface-900 {
+  @apply text-neutral-900;
+}
+
+.text-surface-950 {
+  @apply text-neutral-950;
+}
+
+.border-surface-200 {
+  @apply border-neutral-200;
+}
+
+.border-surface-300 {
+  @apply border-neutral-300;
+}
+
+.border-surface-600 {
+  @apply border-neutral-600;
+}
+
+.border-surface-700 {
+  @apply border-neutral-700;
+}
 
 /* ============================================
    MOBILE RESPONSIVE UTILITIES
@@ -1304,12 +1402,15 @@ td[data-type="phone"],
 
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Hide on small mobile screens (< 480px) */
@@ -1336,6 +1437,7 @@ td[data-type="phone"],
 /* Show only on small mobile (< 480px) */
 .show-xs {
   display: none !important;
+
   @media (max-width: 479px) {
     display: block !important;
   }
@@ -1344,6 +1446,7 @@ td[data-type="phone"],
 /* Show only on mobile (< 640px) */
 .show-mobile {
   display: none !important;
+
   @media (max-width: 639px) {
     display: block !important;
   }
@@ -1352,6 +1455,7 @@ td[data-type="phone"],
 /* Show only on tablet and smaller (< 768px) */
 .show-tablet {
   display: none !important;
+
   @media (max-width: 767px) {
     display: block !important;
   }
@@ -1360,6 +1464,7 @@ td[data-type="phone"],
 /* Flex variants for show/hide */
 .show-mobile-flex {
   display: none !important;
+
   @media (max-width: 639px) {
     display: flex !important;
   }
@@ -1367,6 +1472,7 @@ td[data-type="phone"],
 
 .show-tablet-flex {
   display: none !important;
+
   @media (max-width: 767px) {
     display: flex !important;
   }

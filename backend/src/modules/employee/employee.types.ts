@@ -1,6 +1,6 @@
 // Employee module types
 
-export type EmploymentStatus = 'active' | 'on_leave' | 'terminated';
+export type EmploymentStatus = 'active' | 'on_leave' | 'terminated' | 'suspended';
 
 // Database row type
 export interface EmployeeRow {
@@ -20,6 +20,9 @@ export interface EmployeeRow {
     status: EmploymentStatus;
     profile_image_url: string | null;
     notes: string | null;
+    license_number?: string | null;
+    license_issued_at?: string | null;
+    license_expires_at?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -42,6 +45,9 @@ export interface Employee {
     status: EmploymentStatus;
     profileImageUrl: string | null;
     notes: string | null;
+    licenseNumber?: string | null;
+    licenseIssuedAt?: string | null;
+    licenseExpiresAt?: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -69,6 +75,9 @@ export interface CreateEmployeeRequest {
     hireDate: string;
     notes?: string;
     profileImageUrl?: string;
+    licenseNumber?: string;
+    licenseIssuedAt?: string;
+    licenseExpiresAt?: string;
     // Optional: create user account with employee
     createUserAccount?: boolean;
     userRole?: 'manager' | 'guard';
@@ -89,6 +98,9 @@ export interface UpdateEmployeeRequest {
     status?: EmploymentStatus;
     notes?: string | null;
     profileImageUrl?: string | null;
+    licenseNumber?: string | null;
+    licenseIssuedAt?: string | null;
+    licenseExpiresAt?: string | null;
 }
 
 // List employees query

@@ -68,7 +68,8 @@ export class NotificationService {
             let messagePayload: any = { type: 'text', text: `${title}\n\n${message}` };
 
             // Dynamic import to avoid circular dependency
-            const { createShiftPublishedMessage, createShiftReminderMessage } = await import('./line-templates.js');
+            // Dynamic import to avoid circular dependency
+            const { createShiftPublishedMessage, createShiftReminderMessage, createShiftOfferMessage } = await import('./line-templates.js');
 
             switch (type) {
                 case 'shift_published':
@@ -86,6 +87,15 @@ export class NotificationService {
                             data.date,
                             data.timeRange,
                             data.location || '-'
+                        );
+                    }
+                    break;
+                case 'shift_offer':
+                    if (data && data.date && data.startTime && data.endTime) {
+                        messagePayload = createShiftOfferMessage(
+                            data.date,
+                            `${data.startTime} - ${data.endTime}`,
+                            data.shiftId || ''
                         );
                     }
                     break;

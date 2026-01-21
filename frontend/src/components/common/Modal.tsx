@@ -87,7 +87,7 @@ export default function Modal({
                     ref={modalRef}
                     className={`
                         relative w-full ${sizeClasses[size]}
-                        bg-white dark:bg-surface-800
+                        bg-white dark:bg-neutral-800
                         rounded-2xl shadow-2xl
                         transform transition-all
                         animate-slide-up
@@ -96,11 +96,11 @@ export default function Modal({
                 >
                     {/* Header */}
                     {(title || showCloseButton) && (
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 dark:border-surface-700">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
                             {title && (
                                 <h3
                                     id="modal-title"
-                                    className="text-lg font-semibold text-surface-900 dark:text-white"
+                                    className="text-lg font-semibold text-neutral-900 dark:text-white"
                                 >
                                     {title}
                                 </h3>
@@ -109,7 +109,7 @@ export default function Modal({
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="ml-auto p-2 rounded-lg text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+                                    className="ml-auto p-2 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                                 >
                                     <svg
                                         className="h-5 w-5"
@@ -145,7 +145,7 @@ interface ModalFooterProps {
 
 export function ModalFooter({ children }: ModalFooterProps) {
     return (
-        <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
+        <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
             {children}
         </div>
     );

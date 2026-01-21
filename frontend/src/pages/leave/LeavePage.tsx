@@ -469,25 +469,25 @@ export default function LeavePage() {
               <Stat
                 label={t('leave.pendingRequests', 'รออนุมัติ')}
                 value={summary.pendingRequests}
-                icon={Hourglass}
+                icon={<Hourglass size={20} />}
                 variant="warning"
               />
               <Stat
                 label={t('leave.approvedThisMonth', 'อนุมัติเดือนนี้')}
                 value={summary.approvedThisMonth}
-                icon={CheckCircle}
+                icon={<CheckCircle size={20} />}
                 variant="success"
               />
               <Stat
                 label={t('leave.onLeaveToday', 'ลาวันนี้')}
                 value={summary.employeesOnLeaveToday}
-                icon={Users}
+                icon={<Users size={20} />}
                 variant="info"
               />
               <Stat
                 label={t('leave.upcomingLeaves', 'ลาสัปดาห์หน้า')}
                 value={summary.upcomingLeaves}
-                icon={CalendarCheck}
+                icon={<CalendarCheck size={20} />}
                 variant="primary"
               />
             </div>
