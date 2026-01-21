@@ -23,7 +23,6 @@ Channel: **Security Guard HRM** (Channel ID: `2008914377`)
 | HRM Clock In | `2008914377-NDoaNvUa` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/clock` | Full |
 
 ---
-
 ## Development LIFF Apps
 
 Channel: **Security Guard HRM (Dev)** (Create new channel)
