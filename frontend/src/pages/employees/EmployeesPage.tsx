@@ -136,7 +136,7 @@ export default function EmployeesPage() {
     setSelectedIds(new Set());
   };
 
-  // Table columns definition
+  // Table columns definition with mobile card priorities
   const columns: ColumnDef<EmployeeWithUser>[] = [
     {
       id: 'employeeCode',
@@ -144,6 +144,7 @@ export default function EmployeesPage() {
       accessorKey: 'employeeCode',
       sortable: true,
       width: '120px',
+      cardPriority: 2,
     },
     {
       id: 'fullName',
@@ -164,6 +165,7 @@ export default function EmployeesPage() {
           </div>
         </div>
       ),
+      cardPriority: 1, // Show first in mobile card
     },
     {
       id: 'phone',
@@ -196,6 +198,7 @@ export default function EmployeesPage() {
           </Badge>
         );
       },
+      cardPriority: 3, // Show in mobile card
     },
     {
       id: 'hasUser',
@@ -248,25 +251,27 @@ export default function EmployeesPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <PageHeader
         title={t('employees.title', 'พนักงาน')}
         description={t('employees.subtitle', 'จัดการข้อมูลพนักงานรักษาความปลอดภัย')}
+        hideDescriptionOnMobile
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" leftIcon={<Download size={16} />}>
+            <Button variant="outline" size="sm" leftIcon={<Download size={16} />} className="hidden sm:inline-flex">
               {t('common.export', 'ส่งออก')}
             </Button>
             <Button variant="primary" size="sm" leftIcon={<Plus size={16} />} onClick={handleAddEmployee}>
-              {t('employees.addEmployee', 'เพิ่มพนักงาน')}
+              <span className="hidden xs:inline">{t('employees.addEmployee', 'เพิ่มพนักงาน')}</span>
+              <span className="xs:hidden">เพิ่ม</span>
             </Button>
           </div>
         }
       />
 
       {/* Search and Filters */}
-      <Card variant="bordered" padding="md">
+      <Card variant="bordered" padding="md" className="mobile-p-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -366,7 +371,7 @@ export default function EmployeesPage() {
         </BulkActions>
       )}
 
-      {/* Employees Table */}
+      {/* Employees Table with mobile card view */}
       <DataTable
         columns={columns}
         data={employees}
@@ -381,6 +386,7 @@ export default function EmployeesPage() {
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
         emptyMessage={t('employees.noEmployees', 'ไม่พบข้อมูลพนักงาน')}
+        useMobileCards
       />
 
       {/* Pagination */}

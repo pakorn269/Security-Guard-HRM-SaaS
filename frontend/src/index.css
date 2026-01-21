@@ -2,6 +2,7 @@
    TAILWIND CSS IMPORT - MUST BE FIRST!
    ============================================ */
 @import 'tailwindcss';
+@import './mobile-utilities.css';
 
 /* ============================================
    DARK MODE CONFIGURATION - Class-based toggle
@@ -281,6 +282,7 @@ body,
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -289,6 +291,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
   @apply bg-neutral-25 text-neutral-800;
 }
 
