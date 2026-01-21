@@ -197,7 +197,7 @@ export default function AttendancePage() {
     { value: 'pending', label: t('attendance.pending', 'รอดำเนินการ') },
   ];
 
-  // Table columns
+  // Table columns with mobile card priorities
   const columns: ColumnDef<AttendanceLogWithDetails>[] = [
     {
       id: 'employee',
@@ -213,6 +213,7 @@ export default function AttendancePage() {
           </div>
         </div>
       ),
+      cardPriority: 1,
     },
     {
       id: 'date',
@@ -233,6 +234,7 @@ export default function AttendancePage() {
           <LocationAccuracy accuracy={record.clockInAccuracy} />
         </div>
       ),
+      cardPriority: 2, // Show clock in time in mobile card
     },
     {
       id: 'clockOut',
@@ -284,7 +286,7 @@ export default function AttendancePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <PageHeader
         title={t('attendance.title', 'การลงเวลา')}
@@ -313,70 +315,72 @@ export default function AttendancePage() {
         }
       />
 
-      {/* Summary Stats */}
+      {/* Summary Stats - horizontal scroll on mobile */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Stat
-            label={t('attendance.expected', 'คาดว่าจะมา')}
-            value={summary.expectedToWork}
-            icon={<Users size={20} />}
-            variant="primary"
-          />
-          <Stat
-            label={t('attendance.clockedIn', 'ลงเวลาแล้ว')}
-            value={summary.clockedIn}
-            icon={<CheckCircle size={20} />}
-            variant="success"
-          />
-          <Stat
-            label={t('attendance.onTime', 'ตรงเวลา')}
-            value={summary.onTime}
-            icon={<Clock size={20} />}
-            variant="info"
-          />
-          <Stat
-            label={t('attendance.late', 'สาย')}
-            value={summary.late}
-            icon={<AlertTriangle size={20} />}
-            variant="warning"
-          />
-          <Stat
-            label={t('attendance.noShow', 'ไม่มา')}
-            value={summary.noShow}
-            icon={<XCircle size={20} />}
-            variant="error"
-          />
-          <Stat
-            label={t('attendance.completed', 'เสร็จสิ้น')}
-            value={summary.completed}
-            icon={<Flag size={20} />}
-            variant="neutral"
-          />
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mobile-scroll-x">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 min-w-[600px] sm:min-w-0">
+            <Stat
+              label={t('attendance.expected', 'คาดว่าจะมา')}
+              value={summary.expectedToWork}
+              icon={<Users size={20} />}
+              variant="primary"
+            />
+            <Stat
+              label={t('attendance.clockedIn', 'ลงเวลาแล้ว')}
+              value={summary.clockedIn}
+              icon={<CheckCircle size={20} />}
+              variant="success"
+            />
+            <Stat
+              label={t('attendance.onTime', 'ตรงเวลา')}
+              value={summary.onTime}
+              icon={<Clock size={20} />}
+              variant="info"
+            />
+            <Stat
+              label={t('attendance.late', 'สาย')}
+              value={summary.late}
+              icon={<AlertTriangle size={20} />}
+              variant="warning"
+            />
+            <Stat
+              label={t('attendance.noShow', 'ไม่มา')}
+              value={summary.noShow}
+              icon={<XCircle size={20} />}
+              variant="error"
+            />
+            <Stat
+              label={t('attendance.completed', 'เสร็จสิ้น')}
+              value={summary.completed}
+              icon={<Flag size={20} />}
+              variant="neutral"
+            />
+          </div>
         </div>
       )}
 
       {/* Filters */}
-      <Card variant="bordered" padding="md">
+      <Card variant="bordered" padding="md" className="mobile-p-sm">
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* Date Range */}
-          <div className="flex items-center gap-2 flex-1">
+          {/* Date Range - stack on mobile */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
             <Input
               type="date"
               value={filters.startDate || ''}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="max-w-[160px]"
+              className="w-full sm:max-w-[160px]"
             />
-            <span className="text-neutral-400">-</span>
+            <span className="text-neutral-400 hidden sm:inline">-</span>
             <Input
               type="date"
               value={filters.endDate || ''}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="max-w-[160px]"
+              className="w-full sm:max-w-[160px]"
             />
           </div>
 
-          {/* Quick Filters */}
-          <div className="flex items-center gap-2">
+          {/* Quick Filters - horizontal scroll on mobile */}
+          <div className="flex items-center gap-2 overflow-x-auto mobile-scroll-x -mx-2 px-2 sm:mx-0 sm:px-0">
             {/* Employee Filter */}
             <Menu
               trigger={
@@ -488,7 +492,7 @@ export default function AttendancePage() {
       {/* Content Area */}
       {viewMode === 'list' ? (
         <>
-          {/* Attendance Table */}
+          {/* Attendance Table - with mobile card view */}
           <DataTable
             columns={columns}
             data={records}
@@ -497,6 +501,7 @@ export default function AttendancePage() {
             isHoverable
             onRowClick={handleRowClick}
             emptyMessage={t('attendance.noRecords', 'ไม่พบข้อมูลการลงเวลา')}
+            useMobileCards
           />
 
           {/* Pagination */}

@@ -359,6 +359,7 @@ export default function LeavePage() {
           </div>
         </div>
       ),
+      cardPriority: 1,
     },
     {
       id: 'type',
@@ -379,6 +380,7 @@ export default function LeavePage() {
           {request.startDate !== request.endDate && <> - {formatDate(request.endDate)}</>}
         </span>
       ),
+      cardPriority: 2,
     },
     {
       id: 'days',
@@ -400,6 +402,7 @@ export default function LeavePage() {
           </Badge>
         );
       },
+      cardPriority: 3,
     },
     {
       id: 'actions',
@@ -417,11 +420,12 @@ export default function LeavePage() {
   const totalPages = Math.ceil(totalRequests / (filters.pageSize || 20));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <PageHeader
         title={t('leave.title', 'การจัดการลา')}
         description={t('leave.subtitle', 'อนุมัติและจัดการคำขอลาของพนักงาน')}
+        hideDescriptionOnMobile
         actions={
           <Tabs
             activeTab={viewMode}
@@ -431,10 +435,10 @@ export default function LeavePage() {
           >
             <TabList>
               <Tab value="list" icon={<List size={16} />}>
-                {t('leave.listView', 'รายการ')}
+                <span className="hidden xs:inline">{t('leave.listView', 'รายการ')}</span>
               </Tab>
               <Tab value="calendar" icon={<CalendarDays size={16} />}>
-                {t('leave.calendarView', 'ปฏิทิน')}
+                <span className="hidden xs:inline">{t('leave.calendarView', 'ปฏิทิน')}</span>
               </Tab>
             </TabList>
           </Tabs>
@@ -463,41 +467,43 @@ export default function LeavePage() {
         <LeaveCalendar />
       ) : (
         <>
-          {/* Summary Stats */}
+          {/* Summary Stats - horizontal scroll on mobile */}
           {summary && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Stat
-                label={t('leave.pendingRequests', 'รออนุมัติ')}
-                value={summary.pendingRequests}
-                icon={<Hourglass size={20} />}
-                variant="warning"
-              />
-              <Stat
-                label={t('leave.approvedThisMonth', 'อนุมัติเดือนนี้')}
-                value={summary.approvedThisMonth}
-                icon={<CheckCircle size={20} />}
-                variant="success"
-              />
-              <Stat
-                label={t('leave.onLeaveToday', 'ลาวันนี้')}
-                value={summary.employeesOnLeaveToday}
-                icon={<Users size={20} />}
-                variant="info"
-              />
-              <Stat
-                label={t('leave.upcomingLeaves', 'ลาสัปดาห์หน้า')}
-                value={summary.upcomingLeaves}
-                icon={<CalendarCheck size={20} />}
-                variant="primary"
-              />
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mobile-scroll-x">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-[400px] sm:min-w-0">
+                <Stat
+                  label={t('leave.pendingRequests', 'รออนุมัติ')}
+                  value={summary.pendingRequests}
+                  icon={<Hourglass size={20} />}
+                  variant="warning"
+                />
+                <Stat
+                  label={t('leave.approvedThisMonth', 'อนุมัติเดือนนี้')}
+                  value={summary.approvedThisMonth}
+                  icon={<CheckCircle size={20} />}
+                  variant="success"
+                />
+                <Stat
+                  label={t('leave.onLeaveToday', 'ลาวันนี้')}
+                  value={summary.employeesOnLeaveToday}
+                  icon={<Users size={20} />}
+                  variant="info"
+                />
+                <Stat
+                  label={t('leave.upcomingLeaves', 'ลาสัปดาห์หน้า')}
+                  value={summary.upcomingLeaves}
+                  icon={<CalendarCheck size={20} />}
+                  variant="primary"
+                />
+              </div>
             </div>
           )}
 
           {/* Filters */}
-          <Card variant="bordered" padding="md">
+          <Card variant="bordered" padding="md" className="mobile-p-sm">
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* Quick Filters */}
-              <div className="flex items-center gap-2 flex-1">
+              {/* Quick Filters - horizontal scroll on mobile */}
+              <div className="flex items-center gap-2 flex-1 overflow-x-auto mobile-scroll-x -mx-2 px-2 sm:mx-0 sm:px-0">
                 {/* Status Filter */}
                 <Menu
                   trigger={
@@ -584,6 +590,7 @@ export default function LeavePage() {
                 isLoading={loading}
                 isHoverable
                 emptyMessage={t('leave.noRequests', 'ไม่พบคำขอลา')}
+                useMobileCards
               />
 
               {/* Pagination */}

@@ -1,0 +1,50 @@
+/* ============================================
+   MOBILE RESPONSIVE UTILITIES
+   ============================================ */
+
+/* Horizontal scrolling for mobile tables/cards */
+.mobile-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE 10+ */
+}
+
+.mobile-scroll-x::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Touch target size optimization */
+.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Safe area for iPhone X+ */
+.safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile card view optimizations */
+@media (max-width: 640px) {
+    .mobile-p-sm {
+        padding: 1rem !important;
+    }
+
+    .mobile-text-sm {
+        font-size: 0.875rem !important;
+    }
+}

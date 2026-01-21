@@ -181,13 +181,13 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 sm:space-y-6 animate-fade-in">
             {/* Page header */}
             <div>
-                <h1 className="text-2xl font-bold text-surface-800 dark:text-white">
+                <h1 className="text-xl sm:text-2xl font-bold text-surface-800 dark:text-white">
                     {i18n.language === 'th' ? 'ตั้งค่า' : 'Settings'}
                 </h1>
-                <p className="text-surface-500 mt-1">
+                <p className="text-sm sm:text-base text-surface-500 mt-1 hidden sm:block">
                     {i18n.language === 'th' ? 'จัดการการตั้งค่าระบบและบริษัท' : 'Manage system and company settings'}
                 </p>
             </div>
@@ -206,9 +206,29 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            <div className="flex flex-col lg:flex-row gap-6">
-                {/* Sidebar tabs */}
-                <div className="lg:w-64 flex-shrink-0">
+            {/* Main layout */}
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 min-w-0">
+                {/* Mobile: Horizontal scrollable tabs - full bleed */}
+                <div className="lg:hidden overflow-x-auto mobile-scroll-x w-[calc(100%+2rem)] -mx-4 px-4">
+                    <div className="flex gap-2 pb-1">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all flex-shrink-0 touch-target ${activeTab === tab.id
+                                    ? 'bg-primary-500 text-white shadow-sm'
+                                    : 'bg-white dark:bg-surface-800 text-surface-600 dark:text-surface-400 border border-surface-200 dark:border-surface-700'
+                                    }`}
+                            >
+                                {tab.icon}
+                                <span className="font-medium text-sm whitespace-nowrap">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Desktop: Sidebar tabs */}
+                <div className="hidden lg:block lg:w-64 flex-shrink-0">
                     <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-2">
                         {tabs.map((tab) => (
                             <button
@@ -227,8 +247,8 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Content area */}
-                <div className="flex-1">
-                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-6">
+                <div className="flex-1 min-w-0">
+                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-4 sm:p-6">
                         {/* Company Profile */}
                         {activeTab === 'profile' && profile && (
                             <div className="space-y-6">
@@ -273,7 +293,7 @@ export default function SettingsPage() {
                                         />
                                     </div>
 
-                                    <div className="md:col-span-2">
+                                    <div className="md:col-span-2 pb-16 sm:pb-0">
                                         <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                                             {i18n.language === 'th' ? 'ที่อยู่' : 'Address'}
                                         </label>
@@ -286,19 +306,22 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end pt-4 border-t border-surface-200 dark:border-surface-700">
+                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 
+                                    fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveProfile}
                                         disabled={saving}
-                                        className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                        className="w-full sm:w-auto px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                                     >
                                         {saving ? (
-                                            <span className="flex items-center gap-2">
+                                            <span className="flex items-center justify-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}
+                                            </span>
                                         )}
                                     </button>
                                 </div>
@@ -382,7 +405,7 @@ export default function SettingsPage() {
                                             onChange={(e) => setSettings({ ...settings, autoClockOutHours: Number(e.target.value) })}
                                             className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
-                                        <p className="mt-1 text-sm text-surface-500">
+                                        <p className="mt-1 text-sm text-surface-500 pb-16 sm:pb-0">
                                             {i18n.language === 'th'
                                                 ? 'ลงเวลาออกอัตโนมัติหลังจากลงเวลาเข้ากี่ชั่วโมง'
                                                 : 'Auto clock-out after how many hours from clock-in'}
@@ -390,19 +413,21 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end pt-4 border-t border-surface-200 dark:border-surface-700">
+                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}
-                                        className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                        className="w-full sm:w-auto px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                                     >
                                         {saving ? (
-                                            <span className="flex items-center gap-2">
+                                            <span className="flex items-center justify-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}
+                                            </span>
                                         )}
                                     </button>
                                 </div>
@@ -495,7 +520,7 @@ export default function SettingsPage() {
                                         </label>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700 mb-16 sm:mb-0">
                                         <div>
                                             <p className="font-medium text-surface-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนการลงเวลา' : 'Attendance Alerts'}
@@ -524,19 +549,21 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end pt-4 border-t border-surface-200 dark:border-surface-700">
+                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}
-                                        className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                        className="w-full sm:w-auto px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                                     >
                                         {saving ? (
-                                            <span className="flex items-center gap-2">
+                                            <span className="flex items-center justify-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}
+                                            </span>
                                         )}
                                     </button>
                                 </div>
@@ -574,7 +601,7 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 flex items-start gap-2">
+                                <div className="p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 flex items-start gap-2 mb-16 sm:mb-0">
                                     <Lightbulb size={18} className="flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-primary-700 dark:text-primary-300">
                                         {i18n.language === 'th'
@@ -583,19 +610,21 @@ export default function SettingsPage() {
                                     </p>
                                 </div>
 
-                                <div className="flex justify-end pt-4 border-t border-surface-200 dark:border-surface-700">
+                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}
-                                        className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                        className="w-full sm:w-auto px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                                     >
                                         {saving ? (
-                                            <span className="flex items-center gap-2">
+                                            <span className="flex items-center justify-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                                 {i18n.language === 'th' ? 'กำลังบันทึก...' : 'Saving...'}
                                             </span>
                                         ) : (
-                                            <><Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}</>
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Save size={16} /> {i18n.language === 'th' ? 'บันทึก' : 'Save'}
+                                            </span>
                                         )}
                                     </button>
                                 </div>
