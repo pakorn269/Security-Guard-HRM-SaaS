@@ -403,8 +403,8 @@ export default function DataTable<T extends object>({
                   onClick={() => onRowClick?.(item)}
                   className={`
                     bg-white dark:bg-neutral-900
-                    ${isStriped && index % 2 === 1 ? 'bg-neutral-25 dark:bg-neutral-900/50' : ''}
-                    ${isHoverable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50' : ''}
+                    ${isStriped && index % 2 === 1 ? 'bg-neutral-25 dark:bg-white/5' : ''}
+                    ${isHoverable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''}
                     ${isSelected ? 'bg-primary-50 dark:bg-primary-950/30' : ''}
                     ${onRowClick ? 'cursor-pointer' : ''}
                     transition-colors

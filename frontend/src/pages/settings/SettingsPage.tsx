@@ -215,8 +215,8 @@ export default function SettingsPage() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full px-4 py-3 rounded-lg text-left flex items-center gap-3 transition-all ${activeTab === tab.id
-                                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                                        : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-700'
+                                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-700'
                                     }`}
                             >
                                 {tab.icon}
@@ -417,7 +417,7 @@ export default function SettingsPage() {
                                 </h2>
 
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-surface-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
                                         <div>
                                             <p className="font-medium text-surface-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนก่อนกะงาน' : 'Shift Reminder'}
@@ -467,7 +467,7 @@ export default function SettingsPage() {
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-surface-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
                                         <div>
                                             <p className="font-medium text-surface-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนสถานะการลา' : 'Leave Status Change'}
@@ -495,7 +495,7 @@ export default function SettingsPage() {
                                         </label>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-surface-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
                                         <div>
                                             <p className="font-medium text-surface-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนการลงเวลา' : 'Attendance Alerts'}

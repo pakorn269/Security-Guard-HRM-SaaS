@@ -12,7 +12,20 @@ import {
   Trash2,
   CalendarDays,
   LayoutGrid,
+  GripHorizontal,
 } from 'lucide-react';
+import {
+  DndContext,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import {
   listShiftTemplates,
   listShifts,
@@ -88,6 +101,112 @@ const SHIFT_STATUS_CONFIG = {
   published: { label: 'ประกาศแล้ว', variant: 'success' as const },
 };
 
+// Draggable Shift Component
+interface DraggableShiftProps {
+  shift: ShiftWithDetails;
+  onClick: (shift: ShiftWithDetails) => void;
+  statusConfig: typeof SHIFT_STATUS_CONFIG[keyof typeof SHIFT_STATUS_CONFIG];
+}
+
+const DraggableShift = ({ shift, onClick, statusConfig }: DraggableShiftProps) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: shift.id,
+    data: shift,
+  });
+
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 'auto',
+  } : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        p-2 rounded-md text-xs cursor-grab active:cursor-grabbing transition-all
+        hover:shadow-sm hover:scale-[1.01] relative group
+        ${shift.status === 'published'
+          ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800'
+          : 'bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800'
+        }
+      `}
+      {...listeners}
+      {...attributes}
+    >
+      <div
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(shift);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <GripHorizontal size={14} className="text-neutral-400" />
+      </div>
+
+      <div style={{
+        borderLeftWidth: '3px',
+        borderLeftColor: shift.template?.color || '#3B82F6',
+        height: '100%',
+        paddingLeft: '6px',
+        marginLeft: '-6px'
+      }}
+      >
+        {/* Time */}
+        <div className="flex items-center gap-1 font-medium text-neutral-700 dark:text-neutral-200">
+          <Clock size={12} />
+          {shift.startTime} - {shift.endTime}
+        </div>
+
+        {/* Location */}
+        {shift.location && (
+          <div className="flex items-center gap-1 mt-1 text-neutral-500 dark:text-neutral-400 truncate">
+            <MapPin size={10} />
+            <span className="truncate">{shift.location}</span>
+          </div>
+        )}
+
+        {/* Status badge */}
+        <div className="mt-1.5">
+          <Badge variant={statusConfig.variant} size="sm">
+            {statusConfig.label}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Droppable Cell Component
+interface DroppableCellProps {
+  date: string;
+  employeeId: string;
+  children: React.ReactNode;
+  isToday: boolean;
+}
+
+const DroppableCell = ({ date, employeeId, children, isToday }: DroppableCellProps) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${date}::${employeeId}`,
+    data: { date, employeeId },
+  });
+
+  return (
+    <td
+      ref={setNodeRef}
+      className={`p-2 min-h-[90px] align-top transition-colors ${isOver ? 'bg-primary-100/50 dark:bg-primary-900/40 ring-2 ring-inset ring-primary-400' : ''
+        } ${isToday ? 'bg-primary-50/30 dark:bg-primary-900/10' : ''
+        }`}
+    >
+      <div className="space-y-1.5 h-full min-h-[80px]">
+        {children}
+      </div>
+    </td>
+  );
+};
+
 export default function SchedulePage() {
   const { t } = useTranslation();
 
@@ -105,6 +224,22 @@ export default function SchedulePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [editingShift, setEditingShift] = useState<ShiftWithDetails | null>(null);
+  const [activeDragShift, setActiveDragShift] = useState<ShiftWithDetails | null>(null);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
   // Form state for create/edit
   const [formData, setFormData] = useState<CreateShiftRequest>({
@@ -318,6 +453,51 @@ export default function SchedulePage() {
     setShowCopyModal(true);
   };
 
+  // Drag and Drop Handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveDragShift(active.data.current as ShiftWithDetails);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragShift(null);
+
+    if (!over) return;
+
+    const shift = active.data.current as ShiftWithDetails;
+    const [targetDate, targetEmployeeId] = (over.id as string).split('::');
+
+    // If dropped on same day and same employee, do nothing
+    if (shift.date === targetDate && shift.employeeId === targetEmployeeId) {
+      return;
+    }
+
+    // Confirm reschedule if employee changes
+    if (shift.employeeId !== targetEmployeeId && !confirm(t('schedule.confirmReassign', 'Assign this shift to another employee?'))) {
+      return;
+    }
+
+    // Optimistic update (optional, but let's just use loading state for now or simple toast)
+    try {
+      // Don't modify start/end times, just the date and employee
+
+      // Calculate new start/end times if we needed to preserve "time of day" but here we just keep the string HH:mm
+      // Use existing HH:mm
+
+      await updateShift(shift.id, {
+        date: targetDate,
+        employeeId: targetEmployeeId,
+      });
+
+      toast.success(t('schedule.rescheduleSuccess', 'Moved shift successfully'));
+      loadData(); // Refresh data
+    } catch (error) {
+      console.error('Failed to reschedule:', error);
+      toast.error(t('schedule.rescheduleError', 'Failed to move shift'));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -406,123 +586,90 @@ export default function SchedulePage() {
       </Card>
 
       {/* Calendar Grid */}
-      <Card variant="bordered" padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            {/* Header */}
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-800/50">
-                <th className="p-3 text-left text-sm font-medium text-neutral-600 dark:text-neutral-300 border-b border-r border-neutral-200 dark:border-neutral-700 w-52 sticky left-0 bg-neutral-50 dark:bg-neutral-800/50 z-10">
-                  {t('schedule.employee', 'พนักงาน')}
-                </th>
-                {weekDays.map((day) => (
-                  <th
-                    key={formatDate(day)}
-                    className={`p-3 text-center border-b border-neutral-200 dark:border-neutral-700 min-w-[130px] ${
-                      isToday(day) ? 'bg-primary-50 dark:bg-primary-900/20' : ''
-                    }`}
-                  >
-                    <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
-                      {getDayName(day)}
-                    </div>
-                    <div
-                      className={`text-base font-semibold mt-0.5 ${
-                        isToday(day) ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-800 dark:text-neutral-100'
-                      }`}
-                    >
-                      {formatDisplayDate(day)}
-                    </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <Card variant="bordered" padding="none">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              {/* Header */}
+              <thead>
+                <tr className="bg-neutral-50 dark:bg-neutral-800/50">
+                  <th className="p-3 text-left text-sm font-medium text-neutral-600 dark:text-neutral-300 border-b border-r border-neutral-200 dark:border-neutral-700 w-52 sticky left-0 bg-neutral-50 dark:bg-neutral-800/50 z-10">
+                    {t('schedule.employee', 'พนักงาน')}
                   </th>
-                ))}
-              </tr>
-            </thead>
-
-            {/* Body */}
-            <tbody>
-              {employees.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-12 text-center">
-                    <div className="flex flex-col items-center gap-3 text-neutral-500">
-                      <Calendar size={40} className="text-neutral-300" />
-                      <p>{t('schedule.noEmployees', 'ไม่พบพนักงาน กรุณาเพิ่มพนักงานก่อน')}</p>
-                    </div>
-                  </td>
+                  {weekDays.map((day) => (
+                    <th
+                      key={formatDate(day)}
+                      className={`p-3 text-center border-b border-neutral-200 dark:border-neutral-700 min-w-[130px] ${isToday(day) ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                        }`}
+                    >
+                      <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+                        {getDayName(day)}
+                      </div>
+                      <div
+                        className={`text-base font-semibold mt-0.5 ${isToday(day) ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-800 dark:text-neutral-100'
+                          }`}
+                      >
+                        {formatDisplayDate(day)}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                employees.map((employee) => (
-                  <tr
-                    key={employee.id}
-                    className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30"
-                  >
-                    {/* Employee Cell */}
-                    <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 sticky left-0 bg-white dark:bg-neutral-900 z-10">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={employee.fullName} size="sm" />
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-neutral-800 dark:text-neutral-100 truncate">
-                            {employee.fullName}
-                          </div>
-                          <div className="text-xs text-neutral-500">{employee.employeeCode}</div>
-                        </div>
+              </thead>
+
+              {/* Body */}
+              <tbody>
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-12 text-center">
+                      <div className="flex flex-col items-center gap-3 text-neutral-500">
+                        <Calendar size={40} className="text-neutral-300" />
+                        <p>{t('schedule.noEmployees', 'ไม่พบพนักงาน กรุณาเพิ่มพนักงานก่อน')}</p>
                       </div>
                     </td>
+                  </tr>
+                ) : (
+                  employees.map((employee) => (
+                    <tr
+                      key={employee.id}
+                      className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30"
+                    >
+                      {/* Employee Cell */}
+                      <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 sticky left-0 bg-white dark:bg-neutral-900 z-10">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={employee.fullName} size="sm" />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-neutral-800 dark:text-neutral-100 truncate">
+                              {employee.fullName}
+                            </div>
+                            <div className="text-xs text-neutral-500">{employee.employeeCode}</div>
+                          </div>
+                        </div>
+                      </td>
 
-                    {/* Day Cells */}
-                    {weekDays.map((day) => {
-                      const dateStr = formatDate(day);
-                      const cellShifts = getShiftsForCell(dateStr, employee.id);
+                      {/* Day Cells */}
+                      {weekDays.map((day) => {
+                        const dateStr = formatDate(day);
+                        const cellShifts = getShiftsForCell(dateStr, employee.id);
 
-                      return (
-                        <td
-                          key={dateStr}
-                          className={`p-2 min-h-[90px] align-top ${
-                            isToday(day) ? 'bg-primary-50/30 dark:bg-primary-900/10' : ''
-                          }`}
-                        >
-                          <div className="space-y-1.5">
-                            {cellShifts.map((shift) => {
-                              const statusConfig = SHIFT_STATUS_CONFIG[shift.status as keyof typeof SHIFT_STATUS_CONFIG];
-                              return (
-                                <div
-                                  key={shift.id}
-                                  className={`
-                                    p-2 rounded-md text-xs cursor-pointer transition-all
-                                    hover:shadow-sm hover:scale-[1.01]
-                                    ${
-                                      shift.status === 'published'
-                                        ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800'
-                                        : 'bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800'
-                                    }
-                                  `}
-                                  style={{
-                                    borderLeftWidth: '3px',
-                                    borderLeftColor: shift.template?.color || '#3B82F6',
-                                  }}
-                                  onClick={() => openEditModal(shift)}
-                                >
-                                  {/* Time */}
-                                  <div className="flex items-center gap-1 font-medium text-neutral-700 dark:text-neutral-200">
-                                    <Clock size={12} />
-                                    {shift.startTime} - {shift.endTime}
-                                  </div>
-
-                                  {/* Location */}
-                                  {shift.location && (
-                                    <div className="flex items-center gap-1 mt-1 text-neutral-500 dark:text-neutral-400 truncate">
-                                      <MapPin size={10} />
-                                      <span className="truncate">{shift.location}</span>
-                                    </div>
-                                  )}
-
-                                  {/* Status badge */}
-                                  <div className="mt-1.5">
-                                    <Badge variant={statusConfig.variant} size="sm">
-                                      {statusConfig.label}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        return (
+                          <DroppableCell
+                            key={dateStr}
+                            date={dateStr}
+                            employeeId={employee.id}
+                            isToday={isToday(day)}
+                          >
+                            {cellShifts.map((shift) => (
+                              <DraggableShift
+                                key={shift.id}
+                                shift={shift}
+                                onClick={openEditModal}
+                                statusConfig={SHIFT_STATUS_CONFIG[shift.status as keyof typeof SHIFT_STATUS_CONFIG]}
+                              />
+                            ))}
 
                             {/* Add shift button */}
                             <button
@@ -537,17 +684,46 @@ export default function SchedulePage() {
                             >
                               <Plus size={16} className="mx-auto" />
                             </button>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                          </DroppableCell>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <DragOverlay>
+          {activeDragShift ? (
+            <div
+              className={`
+               p-2 rounded-md text-xs shadow-lg opacity-80 rotate-3 scale-105 cursor-grabbing w-[120px] bg-white dark:bg-neutral-800
+               ${activeDragShift.status === 'published'
+                  ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800'
+                  : 'bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800'
+                }
+             `}
+              style={{
+                borderLeftWidth: '3px',
+                borderLeftColor: activeDragShift.template?.color || '#3B82F6',
+              }}
+            >
+              <div className="flex items-center gap-1 font-medium text-neutral-900 dark:text-neutral-100">
+                <Clock size={12} />
+                {activeDragShift.startTime} - {activeDragShift.endTime}
+              </div>
+              {activeDragShift.location && (
+                <div className="flex items-center gap-1 mt-1 text-neutral-600 dark:text-neutral-400 truncate">
+                  <MapPin size={10} />
+                  <span className="truncate">{activeDragShift.location}</span>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Legend */}
       <div className="flex items-center gap-6 text-sm text-neutral-500">

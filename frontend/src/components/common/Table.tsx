@@ -39,7 +39,7 @@ export default function Table<T extends object>({
 
     if (isLoading) {
         return (
-            <div className="w-full overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700">
+            <div className="w-full overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700">
                 <div className="p-8 flex items-center justify-center">
                     <div className="w-8 h-8 spinner" />
                 </div>
@@ -48,18 +48,18 @@ export default function Table<T extends object>({
     }
 
     return (
-        <div className="w-full overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700 shadow-sm">
+        <div className="w-full overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-surface-50 dark:bg-surface-800">
+                    <thead className="bg-neutral-50 dark:bg-neutral-900">
                         <tr>
                             {columns.map((column) => (
                                 <th
                                     key={column.key}
                                     className={`
                                         px-4 py-3 text-left text-sm font-semibold
-                                        text-surface-700 dark:text-surface-300
-                                        ${column.sortable ? 'cursor-pointer select-none hover:bg-surface-100 dark:hover:bg-surface-700' : ''}
+                                        text-neutral-700 dark:text-neutral-300
+                                        ${column.sortable ? 'cursor-pointer select-none hover:bg-neutral-100 dark:hover:bg-neutral-800' : ''}
                                     `}
                                     style={{ width: column.width }}
                                     onClick={() => handleSort(column)}
@@ -86,12 +86,12 @@ export default function Table<T extends object>({
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-surface-200 dark:divide-surface-700">
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                         {data.length === 0 ? (
                             <tr>
                                 <td
                                     colSpan={columns.length}
-                                    className="px-4 py-8 text-center text-surface-500 dark:text-surface-400"
+                                    className="px-4 py-8 text-center text-neutral-500 dark:text-neutral-400"
                                 >
                                     {emptyMessage}
                                 </td>
@@ -102,15 +102,15 @@ export default function Table<T extends object>({
                                     key={keyExtractor(item)}
                                     onClick={() => onRowClick?.(item)}
                                     className={`
-                                        bg-white dark:bg-surface-900
-                                        ${onRowClick ? 'cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800' : ''}
+                                        bg-white dark:bg-neutral-900
+                                        ${onRowClick ? 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''}
                                         transition-colors
                                     `}
                                 >
                                     {columns.map((column) => (
                                         <td
                                             key={column.key}
-                                            className="px-4 py-3 text-sm text-surface-700 dark:text-surface-300"
+                                            className="px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300"
                                         >
                                             {column.render
                                                 ? column.render(item)
@@ -150,7 +150,7 @@ export function Pagination({
 
     return (
         <div className="flex items-center justify-between px-4 py-3">
-            <div className="text-sm text-surface-600 dark:text-surface-400">
+            <div className="text-sm text-neutral-600 dark:text-neutral-400">
                 {totalItems ? (
                     <>
                         Showing <span className="font-medium">{startItem}</span> to{' '}
@@ -169,9 +169,9 @@ export function Pagination({
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="px-3 py-1 rounded-lg text-sm font-medium
-                        bg-surface-100 dark:bg-surface-700
-                        text-surface-600 dark:text-surface-300
-                        hover:bg-surface-200 dark:hover:bg-surface-600
+                        bg-neutral-100 dark:bg-neutral-800
+                        text-neutral-600 dark:text-neutral-300
+                        hover:bg-neutral-200 dark:hover:bg-neutral-700
                         disabled:opacity-50 disabled:cursor-not-allowed
                         transition-colors"
                 >
@@ -181,9 +181,9 @@ export function Pagination({
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 rounded-lg text-sm font-medium
-                        bg-surface-100 dark:bg-surface-700
-                        text-surface-600 dark:text-surface-300
-                        hover:bg-surface-200 dark:hover:bg-surface-600
+                        bg-neutral-100 dark:bg-neutral-800
+                        text-neutral-600 dark:text-neutral-300
+                        hover:bg-neutral-200 dark:hover:bg-neutral-700
                         disabled:opacity-50 disabled:cursor-not-allowed
                         transition-colors"
                 >

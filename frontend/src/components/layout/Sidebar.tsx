@@ -12,6 +12,7 @@ import {
   ChevronRight,
   X,
   LogOut,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { path: '/', labelKey: 'navigation.dashboard', icon: LayoutDashboard, end: true },
   { path: '/employees', labelKey: 'navigation.employees', icon: Users },
+  { path: '/sites', labelKey: 'navigation.sites', icon: MapPin },
   { path: '/schedule', labelKey: 'navigation.schedule', icon: Calendar },
   { path: '/attendance', labelKey: 'navigation.attendance', icon: Clock },
   { path: '/leave', labelKey: 'navigation.leave', icon: CalendarOff },

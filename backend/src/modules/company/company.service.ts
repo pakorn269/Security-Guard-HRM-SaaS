@@ -28,10 +28,15 @@ class CompanyService {
                 clockInBeforeShiftMinutes: row.settings.clock_in_before_shift_minutes || 30,
                 leaveResetMonth: row.settings.leave_reset_month || 1,
                 defaultLanguage: (row.settings.default_language as 'th' | 'en') || 'th',
+                allowClockInOutsideGeofence: row.settings.allow_clock_in_outside_geofence !== undefined ? row.settings.allow_clock_in_outside_geofence : false,
+                geofenceRadiusMeters: row.settings.geofence_radius_meters || 500,
             },
             isActive: row.is_active,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
+            licenseNumber: row.license_number,
+            licenseIssuedAt: row.license_issued_at,
+            licenseExpiresAt: row.license_expires_at,
         };
     }
 
@@ -130,6 +135,9 @@ class CompanyService {
                 address: data.address,
                 phone: data.phone,
                 email: data.email,
+                license_number: data.licenseNumber,
+                license_issued_at: data.licenseIssuedAt,
+                license_expires_at: data.licenseExpiresAt,
             })
             .select()
             .single();
@@ -155,6 +163,9 @@ class CompanyService {
         if (data.phone !== undefined) updateData.phone = data.phone;
         if (data.email !== undefined) updateData.email = data.email;
         if (data.logoUrl !== undefined) updateData.logo_url = data.logoUrl;
+        if (data.licenseNumber !== undefined) updateData.license_number = data.licenseNumber;
+        if (data.licenseIssuedAt !== undefined) updateData.license_issued_at = data.licenseIssuedAt;
+        if (data.licenseExpiresAt !== undefined) updateData.license_expires_at = data.licenseExpiresAt;
 
         const { data: company, error } = await supabaseAdmin
             .from('companies')
@@ -197,6 +208,8 @@ class CompanyService {
             clock_in_before_shift_minutes: data.clockInBeforeShiftMinutes ?? current.settings.clockInBeforeShiftMinutes,
             leave_reset_month: data.leaveResetMonth ?? current.settings.leaveResetMonth,
             default_language: data.defaultLanguage ?? current.settings.defaultLanguage,
+            allow_clock_in_outside_geofence: data.allowClockInOutsideGeofence ?? current.settings.allowClockInOutsideGeofence,
+            geofence_radius_meters: data.geofenceRadiusMeters ?? current.settings.geofenceRadiusMeters,
         };
 
         const { data: company, error } = await supabaseAdmin

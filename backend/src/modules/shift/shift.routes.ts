@@ -39,11 +39,18 @@ router.post('/bulk', requireManager, shiftController.bulkCreate);
 router.post('/publish', requireManager, shiftController.publish);
 router.post('/copy', requireManager, shiftController.copyShifts);
 
+// Candidates (Must be before /:id)
+router.get('/candidates', requireManager, shiftController.getReplacementCandidates);
+
 // Shift CRUD
 router.get('/', shiftController.list);
 router.post('/', requireManager, shiftController.create);
 router.get('/:id', shiftController.getById);
 router.put('/:id', requireManager, shiftController.update);
 router.delete('/:id', requireManager, shiftController.delete);
+
+// Substitution
+router.post('/:id/offer-replacement', requireManager, shiftController.offerReplacement);
+router.post('/:id/claim', shiftController.claim);
 
 export default router;

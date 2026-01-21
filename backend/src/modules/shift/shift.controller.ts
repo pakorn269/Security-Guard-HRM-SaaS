@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { shiftService } from './shift.service.js';
+import { employeeService } from '../employee/employee.service.js';
 import {
     createShiftTemplateSchema,
     updateShiftTemplateSchema,
@@ -300,6 +301,107 @@ class ShiftController {
             await shiftService.delete(id, req.user.companyId);
 
             return res.json(success(null, 'Shift deleted', 'ลบกะสำเร็จ'));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /shifts/candidates - Get replacement candidates
+    async getReplacementCandidates(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const { date, startTime, endTime, excludeEmployeeId } = req.query;
+
+            if (!date || !startTime || !endTime) {
+                throw new BadRequestError('Date, startTime, and endTime are required');
+            }
+
+            const candidates = await employeeService.findReplacements(
+                req.user.companyId,
+                date as string,
+                startTime as string,
+                endTime as string,
+                excludeEmployeeId as string
+            );
+
+            return res.json(success(candidates, 'Candidates retrieved'));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /shifts/:id/offer-replacement
+    async offerReplacement(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const shiftId = req.params.id as string;
+            const { candidateIds } = req.body;
+
+            if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length === 0) {
+                throw new BadRequestError('candidateIds (string[]) is required');
+            }
+
+            // Get shift details for message
+            const shift = await shiftService.getByIdWithDetails(shiftId, req.user.companyId);
+
+            // Import NotificationService dynamically
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+            const { supabaseAdmin } = await import('../../config/supabase.js');
+
+            // Fetch user IDs for these employees
+            const { data: users } = await supabaseAdmin
+                .from('users')
+                .select('id, employee_id')
+                .in('employee_id', candidateIds);
+
+            if (users) {
+                for (const user of users) {
+                    await NotificationService.createNotification({
+                        companyId: req.user.companyId,
+                        userId: user.id,
+                        type: 'shift_offer',
+                        title: 'Shift Replacement Offer',
+                        titleTh: 'เสนอแทนกะงาน',
+                        message: `You have been offered a shift replacement on ${shift.date} (${shift.startTime} - ${shift.endTime}).`,
+                        messageTh: `คุณได้รับข้อเสนอให้แทนกะงานในวันที่ ${shift.date} (${shift.startTime} - ${shift.endTime})`,
+                        data: {
+                            shiftId: shift.id,
+                            date: shift.date,
+                            startTime: shift.startTime,
+                            endTime: shift.endTime,
+                            action: 'claim_shift' // for frontend to show button
+                        },
+                        channels: ['in_app', 'line']
+                    });
+                }
+            }
+
+            return res.json(success(null, 'Replacement offers sent', 'ส่งข้อเสนอเรียบร้อยแล้ว'));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /shifts/:id/claim
+    async claim(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+            if (!req.user?.employeeId || !req.user?.userId) {
+                throw new BadRequestError('User/Employee required');
+            }
+
+            const shiftId = req.params.id as string;
+            const shift = await shiftService.claim(shiftId, req.user.companyId, req.user.employeeId);
+
+            return res.json(success(shift, 'Shift claimed successfully', 'รับแทนกะสำเร็จ'));
         } catch (error) {
             next(error);
         }

@@ -24,6 +24,7 @@ import {
 } from './modules/leave/index.js';
 import { notificationRoutes } from './modules/notifications/index.js';
 import { reportRoutes } from './modules/reports/index.js';
+import sitesRoutes from './modules/sites/index.js';
 
 // Create Express app
 const app: Application = express();
@@ -114,9 +115,14 @@ apiRouter.use('/leave-requests', leaveRequestRoutes);
 apiRouter.use('/leave-balances', leaveBalanceRoutes);
 apiRouter.use('/leave', leaveRoutes);
 
+
 // Sprint 6: Notifications & Reports
 apiRouter.use('/notifications', notificationRoutes);
 apiRouter.use('/reports', reportRoutes);
+
+// Sites & Zones
+// Sites & Zones
+apiRouter.use('/sites', sitesRoutes);
 
 // API root info
 apiRouter.get('/', (_req, res) => {

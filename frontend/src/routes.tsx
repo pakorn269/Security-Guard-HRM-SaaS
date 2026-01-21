@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/common';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -25,6 +26,7 @@ const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'));
 
 // Sprint 6: Reports & Settings pages
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const SitesPage = lazy(() => import('./pages/sites/SitesPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 // Layouts
@@ -75,7 +77,11 @@ const routes: RouteObject[] = [
     // Dashboard routes (admin/manager)
     {
         path: '/',
-        element: withSuspense(DashboardLayout),
+        element: (
+            <ProtectedRoute>
+                {withSuspense(DashboardLayout)}
+            </ProtectedRoute>
+        ),
         errorElement: <ErrorBoundary />,
         children: [
             {
@@ -122,6 +128,10 @@ const routes: RouteObject[] = [
             {
                 path: 'reports',
                 element: withSuspense(ReportsPage),
+            },
+            {
+                path: 'sites',
+                element: withSuspense(SitesPage),
             },
             {
                 path: 'settings',

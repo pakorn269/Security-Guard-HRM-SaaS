@@ -8,6 +8,9 @@ export interface Company {
     address?: string;
     phone?: string;
     email?: string;
+    licenseNumber?: string;
+    licenseIssuedAt?: string;
+    licenseExpiresAt?: string;
     settings: CompanySettings;
     isActive: boolean;
     createdAt: string;
@@ -21,6 +24,8 @@ export interface CompanySettings {
     clockInBeforeShiftMinutes: number;
     leaveResetMonth: number;
     defaultLanguage: 'th' | 'en';
+    allowClockInOutsideGeofence?: boolean;
+    geofenceRadiusMeters?: number;
 }
 
 export interface CreateCompanyRequest {
@@ -29,6 +34,9 @@ export interface CreateCompanyRequest {
     address?: string;
     phone?: string;
     email?: string;
+    licenseNumber?: string;
+    licenseIssuedAt?: string;
+    licenseExpiresAt?: string;
 }
 
 export interface UpdateCompanyRequest {
@@ -37,6 +45,9 @@ export interface UpdateCompanyRequest {
     phone?: string | null;
     email?: string | null;
     logoUrl?: string | null;
+    licenseNumber?: string | null;
+    licenseIssuedAt?: string | null;
+    licenseExpiresAt?: string | null;
 }
 
 export interface UpdateCompanySettingsRequest {
@@ -46,6 +57,8 @@ export interface UpdateCompanySettingsRequest {
     clockInBeforeShiftMinutes?: number;
     leaveResetMonth?: number;
     defaultLanguage?: 'th' | 'en';
+    allowClockInOutsideGeofence?: boolean;
+    geofenceRadiusMeters?: number;
 }
 
 // Database row type (snake_case)
@@ -57,6 +70,9 @@ export interface CompanyRow {
     address?: string;
     phone?: string;
     email?: string;
+    license_number?: string;
+    license_issued_at?: string;
+    license_expires_at?: string;
     settings: {
         timezone: string;
         late_threshold_minutes: number;
@@ -64,6 +80,8 @@ export interface CompanyRow {
         clock_in_before_shift_minutes: number;
         leave_reset_month: number;
         default_language: string;
+        allow_clock_in_outside_geofence?: boolean;
+        geofence_radius_meters?: number;
     };
     is_active: boolean;
     created_at: string;

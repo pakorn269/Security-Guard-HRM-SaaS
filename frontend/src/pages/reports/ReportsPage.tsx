@@ -122,8 +122,8 @@ export default function ReportsPage() {
         const maxValue = Math.max(...trendData.map(d => d.totalCount), 1);
 
         return (
-            <div className="bg-white dark:bg-surface-800 rounded-xl p-4 sm:p-6 shadow-sm">
-                <h3 className="text-base sm:text-lg font-semibold text-surface-800 dark:text-white mb-4">
+            <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 sm:p-6 shadow-sm">
+                <h3 className="text-base sm:text-lg font-semibold text-neutral-800 dark:text-white mb-4">
                     {i18n.language === 'th' ? 'แนวโน้มการลงเวลา' : 'Attendance Trend'}
                 </h3>
                 <div className="flex items-end gap-1 h-40 sm:h-48 overflow-x-auto mobile-scroll-x pb-2">
@@ -153,7 +153,7 @@ export default function ReportsPage() {
                                 )}
                             </div>
                             {idx % 5 === 0 && (
-                                <span className="text-xs text-surface-500 mt-1 -rotate-45">
+                                <span className="text-xs text-neutral-500 mt-1 -rotate-45">
                                     {day.date.slice(5)}
                                 </span>
                             )}
@@ -163,15 +163,15 @@ export default function ReportsPage() {
                 <div className="flex flex-wrap gap-2 sm:gap-4 mt-4 justify-center text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-success-400" />
-                        <span className="text-sm text-surface-600">{i18n.language === 'th' ? 'ตรงเวลา' : 'On Time'}</span>
+                        <span className="text-sm text-neutral-600">{i18n.language === 'th' ? 'ตรงเวลา' : 'On Time'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-warning-400" />
-                        <span className="text-sm text-surface-600">{i18n.language === 'th' ? 'มาสาย' : 'Late'}</span>
+                        <span className="text-sm text-neutral-600">{i18n.language === 'th' ? 'มาสาย' : 'Late'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-error-400" />
-                        <span className="text-sm text-surface-600">{i18n.language === 'th' ? 'ไม่มา' : 'Absent'}</span>
+                        <span className="text-sm text-neutral-600">{i18n.language === 'th' ? 'ไม่มา' : 'Absent'}</span>
                     </div>
                 </div>
             </div>
@@ -183,10 +183,10 @@ export default function ReportsPage() {
             {/* Page header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-800 dark:text-white">
+                    <h1 className="text-2xl font-bold text-neutral-800 dark:text-white">
                         {t('navigation.reports')}
                     </h1>
-                    <p className="text-surface-500 mt-1">
+                    <p className="text-neutral-500 mt-1">
                         {i18n.language === 'th' ? 'รายงานและสถิติการทำงาน' : 'Work reports and statistics'}
                     </p>
                 </div>
@@ -198,7 +198,7 @@ export default function ReportsPage() {
                     onClick={() => setReportType('attendance')}
                     className={`px-4 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 ${reportType === 'attendance'
                         ? 'bg-primary-600 text-white shadow-lg'
-                        : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200'
+                        : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
                         }`}
                 >
                     <BarChart3 size={18} />
@@ -208,7 +208,7 @@ export default function ReportsPage() {
                     onClick={() => setReportType('leave')}
                     className={`px-4 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 ${reportType === 'leave'
                         ? 'bg-primary-600 text-white shadow-lg'
-                        : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200'
+                        : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
                         }`}
                 >
                     <Palmtree size={18} />
@@ -217,42 +217,42 @@ export default function ReportsPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-surface-800 rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 sm:p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-end">
                     {reportType === 'attendance' ? (
                         <>
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                                     {i18n.language === 'th' ? 'วันที่เริ่มต้น' : 'Start Date'}
                                 </label>
                                 <input
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
-                                    className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white"
+                                    className="px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                                     {i18n.language === 'th' ? 'วันที่สิ้นสุด' : 'End Date'}
                                 </label>
                                 <input
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
-                                    className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white"
+                                    className="px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white"
                                 />
                             </div>
                         </>
                     ) : (
                         <div>
-                            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                                 {i18n.language === 'th' ? 'ปี' : 'Year'}
                             </label>
                             <select
                                 value={year}
                                 onChange={(e) => setYear(Number(e.target.value))}
-                                className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white"
+                                className="px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white"
                             >
                                 {[2024, 2025, 2026, 2027].map((y) => (
                                     <option key={y} value={y}>{y}</option>
@@ -311,26 +311,26 @@ export default function ReportsPage() {
                 <>
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'พนักงานทั้งหมด' : 'Total Employees'}</p>
-                            <p className="text-3xl font-bold text-surface-800 dark:text-white mt-1">
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'พนักงานทั้งหมด' : 'Total Employees'}</p>
+                            <p className="text-3xl font-bold text-neutral-800 dark:text-white mt-1">
                                 {attendanceReport.summary.totalEmployees}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'ลงเวลาตรงเวลา' : 'On Time'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'ลงเวลาตรงเวลา' : 'On Time'}</p>
                             <p className="text-3xl font-bold text-success-600 mt-1">
                                 {attendanceReport.summary.totalOnTime}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'มาสาย' : 'Late'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'มาสาย' : 'Late'}</p>
                             <p className="text-3xl font-bold text-warning-600 mt-1">
                                 {attendanceReport.summary.totalLate}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'อัตราการมาทำงาน' : 'Attendance Rate'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'อัตราการมาทำงาน' : 'Attendance Rate'}</p>
                             <p className="text-3xl font-bold text-primary-600 mt-1">
                                 {attendanceReport.summary.averageAttendanceRate}%
                             </p>
@@ -341,60 +341,60 @@ export default function ReportsPage() {
                     {renderAttendanceTrendChart()}
 
                     {/* Employee table */}
-                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-surface-200 dark:border-surface-700">
-                            <h3 className="text-lg font-semibold text-surface-800 dark:text-white">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                            <h3 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                 {i18n.language === 'th' ? 'รายละเอียดพนักงาน' : 'Employee Details'}
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-surface-50 dark:bg-surface-700">
+                                <thead className="bg-neutral-50 dark:bg-neutral-900">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'พนักงาน' : 'Employee'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'กะงาน' : 'Shifts'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ตรงเวลา' : 'On Time'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'มาสาย' : 'Late'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ไม่มา' : 'Absent'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ชั่วโมงทำงาน' : 'Hours'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'อัตรา' : 'Rate'}
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-surface-200 dark:divide-surface-700">
+                                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                                     {attendanceReport.employees.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-surface-500">
+                                            <td colSpan={7} className="px-6 py-12 text-center text-neutral-500">
                                                 {i18n.language === 'th' ? 'ไม่พบข้อมูล' : 'No data available'}
                                             </td>
                                         </tr>
                                     ) : (
                                         attendanceReport.employees.map((emp) => (
-                                            <tr key={emp.employeeId} className="hover:bg-surface-50 dark:hover:bg-surface-700/50">
+                                            <tr key={emp.employeeId} className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50">
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-medium text-surface-800 dark:text-white">
+                                                        <p className="font-medium text-neutral-800 dark:text-white">
                                                             {emp.employeeName}
                                                         </p>
-                                                        <p className="text-sm text-surface-500">
+                                                        <p className="text-sm text-neutral-500">
                                                             {emp.employeeCode}
                                                         </p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-surface-800 dark:text-white">
+                                                <td className="px-6 py-4 text-center text-neutral-800 dark:text-white">
                                                     {emp.totalShifts}
                                                 </td>
                                                 <td className="px-6 py-4 text-center text-success-600">
@@ -406,7 +406,7 @@ export default function ReportsPage() {
                                                 <td className="px-6 py-4 text-center text-error-600">
                                                     {emp.absentCount}
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-surface-800 dark:text-white">
+                                                <td className="px-6 py-4 text-center text-neutral-800 dark:text-white">
                                                     {emp.totalHoursWorked.toFixed(1)}h
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
@@ -429,26 +429,26 @@ export default function ReportsPage() {
                 <>
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'พนักงานทั้งหมด' : 'Total Employees'}</p>
-                            <p className="text-3xl font-bold text-surface-800 dark:text-white mt-1">
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'พนักงานทั้งหมด' : 'Total Employees'}</p>
+                            <p className="text-3xl font-bold text-neutral-800 dark:text-white mt-1">
                                 {leaveReport.summary.totalEmployees}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'วันลาที่ได้รับ' : 'Entitled Days'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'วันลาที่ได้รับ' : 'Entitled Days'}</p>
                             <p className="text-3xl font-bold text-primary-600 mt-1">
                                 {leaveReport.summary.totalEntitledDays}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'วันลาที่ใช้' : 'Used Days'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'วันลาที่ใช้' : 'Used Days'}</p>
                             <p className="text-3xl font-bold text-warning-600 mt-1">
                                 {leaveReport.summary.totalUsedDays}
                             </p>
                         </div>
-                        <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                            <p className="text-sm text-surface-500">{i18n.language === 'th' ? 'อัตราการใช้' : 'Usage Rate'}</p>
+                        <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                            <p className="text-sm text-neutral-500">{i18n.language === 'th' ? 'อัตราการใช้' : 'Usage Rate'}</p>
                             <p className="text-3xl font-bold text-success-600 mt-1">
                                 {leaveReport.summary.averageUsageRate}%
                             </p>
@@ -456,39 +456,39 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Leave type summary */}
-                    <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold text-surface-800 dark:text-white mb-4">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">
                             {i18n.language === 'th' ? 'สรุปตามประเภทการลา' : 'Summary by Leave Type'}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {leaveReport.byLeaveType.map((lt) => (
                                 <div
                                     key={lt.leaveTypeId}
-                                    className="p-4 rounded-lg bg-surface-50 dark:bg-surface-700"
+                                    className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-700"
                                 >
-                                    <p className="font-medium text-surface-800 dark:text-white">
+                                    <p className="font-medium text-neutral-800 dark:text-white">
                                         {i18n.language === 'th' ? lt.leaveTypeNameTh : lt.leaveTypeName}
                                     </p>
                                     <div className="mt-2 space-y-1 text-sm">
                                         <div className="flex justify-between">
-                                            <span className="text-surface-500">{i18n.language === 'th' ? 'ได้รับ' : 'Entitled'}</span>
-                                            <span className="font-medium text-surface-800 dark:text-white">{lt.totalEntitled} {i18n.language === 'th' ? 'วัน' : 'days'}</span>
+                                            <span className="text-neutral-500">{i18n.language === 'th' ? 'ได้รับ' : 'Entitled'}</span>
+                                            <span className="font-medium text-neutral-800 dark:text-white">{lt.totalEntitled} {i18n.language === 'th' ? 'วัน' : 'days'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-surface-500">{i18n.language === 'th' ? 'ใช้ไป' : 'Used'}</span>
+                                            <span className="text-neutral-500">{i18n.language === 'th' ? 'ใช้ไป' : 'Used'}</span>
                                             <span className="font-medium text-warning-600">{lt.totalUsed} {i18n.language === 'th' ? 'วัน' : 'days'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-surface-500">{i18n.language === 'th' ? 'รอดำเนินการ' : 'Pending'}</span>
+                                            <span className="text-neutral-500">{i18n.language === 'th' ? 'รอดำเนินการ' : 'Pending'}</span>
                                             <span className="font-medium text-primary-600">{lt.totalPending} {i18n.language === 'th' ? 'วัน' : 'days'}</span>
                                         </div>
                                     </div>
                                     <div className="mt-3">
                                         <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-surface-500">{i18n.language === 'th' ? 'อัตราการใช้' : 'Usage'}</span>
+                                            <span className="text-neutral-500">{i18n.language === 'th' ? 'อัตราการใช้' : 'Usage'}</span>
                                             <span className="font-medium">{lt.usageRate}%</span>
                                         </div>
-                                        <div className="h-2 bg-surface-200 dark:bg-surface-600 rounded-full overflow-hidden">
+                                        <div className="h-2 bg-neutral-200 dark:bg-neutral-600 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-primary-500 rounded-full transition-all"
                                                 style={{ width: `${lt.usageRate}%` }}
@@ -501,60 +501,60 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Employee leave table */}
-                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-surface-200 dark:border-surface-700">
-                            <h3 className="text-lg font-semibold text-surface-800 dark:text-white">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-neutral-200 dark:border-neutral-700">
+                            <h3 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                 {i18n.language === 'th' ? 'รายละเอียดพนักงาน' : 'Employee Details'}
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-surface-50 dark:bg-surface-700">
+                                <thead className="bg-neutral-50 dark:bg-neutral-900">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'พนักงาน' : 'Employee'}
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ประเภทการลา' : 'Leave Type'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ได้รับ' : 'Entitled'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'ใช้ไป' : 'Used'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'คงเหลือ' : 'Remaining'}
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">
                                             {i18n.language === 'th' ? 'อัตราการใช้' : 'Usage'}
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-surface-200 dark:divide-surface-700">
+                                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                                     {leaveReport.employees.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-surface-500">
+                                            <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
                                                 {i18n.language === 'th' ? 'ไม่พบข้อมูล' : 'No data available'}
                                             </td>
                                         </tr>
                                     ) : (
                                         leaveReport.employees.map((emp) => (
-                                            <tr key={`${emp.employeeId}-${emp.leaveTypeId}`} className="hover:bg-surface-50 dark:hover:bg-surface-700/50">
+                                            <tr key={`${emp.employeeId}-${emp.leaveTypeId}`} className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50">
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-medium text-surface-800 dark:text-white">
+                                                        <p className="font-medium text-neutral-800 dark:text-white">
                                                             {emp.employeeName}
                                                         </p>
-                                                        <p className="text-sm text-surface-500">
+                                                        <p className="text-sm text-neutral-500">
                                                             {emp.employeeCode}
                                                         </p>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-surface-800 dark:text-white">
+                                                <td className="px-6 py-4 text-neutral-800 dark:text-white">
                                                     {i18n.language === 'th' ? emp.leaveTypeNameTh : emp.leaveTypeName}
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-surface-800 dark:text-white">
+                                                <td className="px-6 py-4 text-center text-neutral-800 dark:text-white">
                                                     {emp.entitledDays}
                                                 </td>
                                                 <td className="px-6 py-4 text-center text-warning-600">
@@ -583,11 +583,11 @@ export default function ReportsPage() {
                 (reportType === 'attendance' && !attendanceReport) ||
                 (reportType === 'leave' && !leaveReport)
             ) && (
-                    <div className="bg-white dark:bg-surface-800 rounded-xl p-12 shadow-sm text-center">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl p-12 shadow-sm text-center">
                         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                             <BarChart3 size={32} className="text-neutral-400" />
                         </div>
-                        <h3 className="text-lg font-semibold text-surface-800 dark:text-white mb-2">
+                        <h3 className="text-lg font-semibold text-neutral-800 dark:text-white mb-2">
                             {i18n.language === 'th' ? 'ยังไม่มีข้อมูลรายงาน' : 'No Report Data'}
                         </h3>
                         <p className="text-surface-500">

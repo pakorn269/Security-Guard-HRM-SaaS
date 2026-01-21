@@ -9,7 +9,8 @@ export type NotificationType =
     | 'cert_expiring'
     | 'attendance_late'
     | 'attendance_no_show'
-    | 'system';
+    | 'system'
+    | 'shift_offer';
 
 export type NotificationChannel = 'line' | 'in_app' | 'email';
 
