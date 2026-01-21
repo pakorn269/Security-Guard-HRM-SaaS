@@ -70,7 +70,7 @@ export default function EmployeesPage() {
         page: currentPage,
         pageSize,
         search: search || undefined,
-        status: statusFilter as 'active' | 'on_leave' | 'terminated' | undefined,
+        status: statusFilter ? (statusFilter as 'active' | 'on_leave' | 'terminated') : undefined,
       };
 
       const response = await employeeService.list(params);

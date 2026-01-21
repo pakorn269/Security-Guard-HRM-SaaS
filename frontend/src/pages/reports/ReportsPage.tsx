@@ -122,11 +122,11 @@ export default function ReportsPage() {
         const maxValue = Math.max(...trendData.map(d => d.totalCount), 1);
 
         return (
-            <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-surface-800 dark:text-white mb-4">
+            <div className="bg-white dark:bg-surface-800 rounded-xl p-4 sm:p-6 shadow-sm">
+                <h3 className="text-base sm:text-lg font-semibold text-surface-800 dark:text-white mb-4">
                     {i18n.language === 'th' ? 'แนวโน้มการลงเวลา' : 'Attendance Trend'}
                 </h3>
-                <div className="flex items-end gap-1 h-48 overflow-x-auto">
+                <div className="flex items-end gap-1 h-40 sm:h-48 overflow-x-auto mobile-scroll-x pb-2">
                     {trendData.slice(-30).map((day, idx) => (
                         <div key={day.date} className="flex flex-col items-center flex-shrink-0">
                             <div
@@ -160,7 +160,7 @@ export default function ReportsPage() {
                         </div>
                     ))}
                 </div>
-                <div className="flex gap-4 mt-4 justify-center">
+                <div className="flex flex-wrap gap-2 sm:gap-4 mt-4 justify-center text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded bg-success-400" />
                         <span className="text-sm text-surface-600">{i18n.language === 'th' ? 'ตรงเวลา' : 'On Time'}</span>
@@ -179,7 +179,7 @@ export default function ReportsPage() {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 sm:space-y-6 animate-fade-in">
             {/* Page header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -193,7 +193,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Report type selector */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto mobile-scroll-x pb-1">
                 <button
                     onClick={() => setReportType('attendance')}
                     className={`px-4 py-2 rounded-lg font-medium transition-all inline-flex items-center gap-2 ${reportType === 'attendance'
@@ -217,8 +217,8 @@ export default function ReportsPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-sm">
-                <div className="flex flex-wrap gap-4 items-end">
+            <div className="bg-white dark:bg-surface-800 rounded-xl p-4 sm:p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-end">
                     {reportType === 'attendance' ? (
                         <>
                             <div>
@@ -260,31 +260,34 @@ export default function ReportsPage() {
                             </select>
                         </div>
                     )}
-                    <button
-                        onClick={handleGenerateReport}
-                        disabled={loading}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={16} className="animate-spin" />
-                                {i18n.language === 'th' ? 'กำลังโหลด...' : 'Loading...'}
-                            </>
-                        ) : (
-                            <>
-                                <FileSpreadsheet size={16} />
-                                {i18n.language === 'th' ? 'สร้างรายงาน' : 'Generate Report'}
-                            </>
-                        )}
-                    </button>
-                    <button
-                        onClick={handleExportCSV}
-                        disabled={loading}
-                        className="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                    >
-                        <Download size={16} />
-                        {i18n.language === 'th' ? 'ส่งออก CSV' : 'Export CSV'}
-                    </button>
+                    <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                        <button
+                            onClick={handleGenerateReport}
+                            disabled={loading}
+                            className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 touch-target"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    {i18n.language === 'th' ? 'กำลังโหลด...' : 'Loading...'}
+                                </>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet size={16} />
+                                    {i18n.language === 'th' ? 'สร้างรายงาน' : 'Generate Report'}
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={handleExportCSV}
+                            disabled={loading}
+                            className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 touch-target"
+                        >
+                            <Download size={16} />
+                            <span className="hidden xs:inline">{i18n.language === 'th' ? 'ส่งออก CSV' : 'Export CSV'}</span>
+                            <span className="xs:hidden">CSV</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

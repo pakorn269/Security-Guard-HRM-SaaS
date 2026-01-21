@@ -21,6 +21,7 @@ Channel: **Security Guard HRM** (Channel ID: `2008914377`)
 | HRM Leave | `2008914377-ecuSztvj` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/leave` | Tall |
 | HRM Schedule | `2008914377-86hStTZc` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/schedule` | Tall |
 | HRM Clock In | `2008914377-NDoaNvUa` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/clock` | Full |
+| HRM Link | `2008914377-LnTodHai` | `https://security-guard-hrm-saa-s-frontend.vercel.app/liff/link` | Full |
 
 ---
 ## Development LIFF Apps ✅ CREATED

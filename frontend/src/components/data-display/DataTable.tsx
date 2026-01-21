@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -31,6 +31,10 @@ export interface ColumnDef<T> {
   align?: 'left' | 'center' | 'right';
   /** Hide column on mobile */
   hideOnMobile?: boolean;
+  /** Show this column in mobile card view (default: true for visible columns) */
+  showInCard?: boolean;
+  /** Priority for mobile card (lower = higher priority, default: 10) */
+  cardPriority?: number;
 }
 
 export interface DataTableProps<T> {
@@ -68,6 +72,12 @@ export interface DataTableProps<T> {
   emptyState?: React.ReactNode;
   /** Additional CSS classes */
   className?: string;
+  /** Use card layout on mobile (< 768px) */
+  useMobileCards?: boolean;
+  /** Custom mobile card renderer */
+  mobileCardRenderer?: (item: T, index: number) => React.ReactNode;
+  /** Breakpoint for mobile cards in pixels (default: 768) */
+  mobileBreakpoint?: number;
 }
 
 export default function DataTable<T extends object>({
@@ -88,7 +98,22 @@ export default function DataTable<T extends object>({
   emptyIcon,
   emptyState,
   className = '',
+  useMobileCards = false,
+  mobileCardRenderer,
+  mobileBreakpoint = 768,
 }: DataTableProps<T>) {
+  // Mobile viewport detection
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsMobileView(window.innerWidth < mobileBreakpoint);
+    };
+
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, [mobileBreakpoint]);
   // Check if all rows are selected
   const allSelected = useMemo(() => {
     if (data.length === 0) return false;
@@ -158,6 +183,87 @@ export default function DataTable<T extends object>({
     return '';
   };
 
+  // Get columns visible in card view (sorted by priority)
+  const cardColumns = useMemo(() => {
+    return columns
+      .filter((col) => col.showInCard !== false && !col.hideOnMobile)
+      .sort((a, b) => (a.cardPriority ?? 10) - (b.cardPriority ?? 10));
+  }, [columns]);
+
+  // Default mobile card renderer
+  const renderDefaultCard = (item: T, index: number) => {
+    const rowId = getRowId(item);
+    const isSelected = selectedIds.has(rowId);
+
+    // First column is typically primary (name, title, etc.)
+    const primaryColumn = cardColumns[0];
+    const secondaryColumns = cardColumns.slice(1, 4); // Show up to 3 more columns
+    const actionsColumn = columns.find((col) => col.id === 'actions');
+
+    return (
+      <div
+        key={rowId}
+        onClick={() => onRowClick?.(item)}
+        className={`
+          p-4 bg-white dark:bg-neutral-900 rounded-lg
+          border border-neutral-200 dark:border-neutral-800
+          ${isSelected ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-950/30' : ''}
+          ${isHoverable ? 'active:bg-neutral-50 dark:active:bg-neutral-800' : ''}
+          ${onRowClick ? 'cursor-pointer' : ''}
+          transition-colors
+        `}
+      >
+        <div className="flex items-start justify-between gap-3">
+          {/* Left: Primary content */}
+          <div className="flex-1 min-w-0">
+            {/* Primary (first) column content */}
+            {primaryColumn && (
+              <div className="mb-2">
+                {getCellValue(item, primaryColumn, index)}
+              </div>
+            )}
+
+            {/* Secondary columns as key-value pairs */}
+            <div className="space-y-1.5">
+              {secondaryColumns.map((col) => (
+                <div key={col.id} className="flex items-center gap-2 text-sm">
+                  <span className="text-neutral-500 dark:text-neutral-400 text-xs shrink-0">
+                    {col.header}:
+                  </span>
+                  <span className="text-neutral-700 dark:text-neutral-300 truncate">
+                    {getCellValue(item, col, index)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Selection checkbox and actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {isSelectable && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleSelectRow(rowId);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-5 h-5 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-primary-500"
+                aria-label={`Select row ${rowId}`}
+              />
+            )}
+            {actionsColumn && (
+              <div onClick={(e) => e.stopPropagation()}>
+                {getCellValue(item, actionsColumn, index)}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -186,6 +292,44 @@ export default function DataTable<T extends object>({
           {emptyIcon || <Inbox size={40} className="text-neutral-300 dark:text-neutral-600" />}
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{emptyMessage}</p>
         </div>
+      </div>
+    );
+  }
+
+  // Mobile card view
+  if (useMobileCards && isMobileView) {
+    return (
+      <div className={`space-y-3 ${className}`}>
+        {/* Bulk select header for mobile */}
+        {isSelectable && (
+          <div className="flex items-center justify-between px-1 py-2">
+            <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={handleSelectAll}
+                className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-primary-500"
+                aria-label="Select all rows"
+              />
+              <span>Select all</span>
+            </label>
+            {selectedIds.size > 0 && (
+              <span className="text-sm text-primary-600 dark:text-primary-400 font-medium">
+                {selectedIds.size} selected
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Card list */}
+        {data.map((item, index) =>
+          mobileCardRenderer
+            ? mobileCardRenderer(item, index)
+            : renderDefaultCard(item, index)
+        )}
       </div>
     );
   }

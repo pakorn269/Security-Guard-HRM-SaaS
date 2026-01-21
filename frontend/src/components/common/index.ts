@@ -24,3 +24,11 @@ export { default as LoadingSpinner, PageLoader, Skeleton, SkeletonText, Skeleton
 export { default as LanguageSwitcher } from './LanguageSwitcher';
 export { default as NotificationBell } from './NotificationBell';
 export { ErrorBoundary } from './ErrorBoundary';
+
+// Mobile-optimized components
+export { default as MobileFilterDrawer, FilterTriggerButton, useMobileFilterDrawer } from './MobileFilterDrawer';
+export type { MobileFilterDrawerProps, FilterTriggerButtonProps } from './MobileFilterDrawer';
+
+export { default as ResponsiveFilters } from './ResponsiveFilters';
+export type { ResponsiveFiltersProps } from './ResponsiveFilters';
+

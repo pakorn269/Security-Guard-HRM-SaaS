@@ -100,24 +100,26 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header with quick actions */}
       <PageHeader
         title={t('navigation.dashboard')}
         description={t('dashboard.subtitle', 'ภาพรวมการทำงานของพนักงานรักษาความปลอดภัย')}
+        hideDescriptionOnMobile
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" leftIcon={<Calendar size={16} />}>
+            <Button variant="outline" size="sm" leftIcon={<Calendar size={16} />} className="hidden sm:inline-flex">
               {t('dashboard.viewSchedule', 'ดูตารางงาน')}
             </Button>
             <Button variant="primary" size="sm" leftIcon={<Bell size={16} />}>
-              {t('dashboard.notifications', 'การแจ้งเตือน')}
+              <span className="hidden xs:inline">{t('dashboard.notifications', 'การแจ้งเตือน')}</span>
+              <span className="xs:hidden">แจ้งเตือน</span>
             </Button>
           </div>
         }
       />
 
-      {/* Stats grid */}
+      {/* Stats grid - already responsive via StatGroup */}
       <StatGroup columns={4}>
         {stats.map((stat, index) => (
           <StatCard
@@ -133,9 +135,9 @@ export default function DashboardPage() {
         ))}
       </StatGroup>
 
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's attendance - spans 2 columns */}
+      {/* Main content grid - stacks on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Today's attendance - spans 2 columns on desktop */}
         <div className="lg:col-span-2">
           <Card variant="bordered" padding="none">
             <div className="p-5 border-b border-neutral-200 dark:border-neutral-800">
@@ -203,8 +205,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Bottom widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Bottom widgets - responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Pending leave requests */}
         <PendingLeaveRequestsWidget />
 
