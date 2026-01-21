@@ -23,6 +23,7 @@ class UserService {
             lineUserId: row.line_user_id,
             lineDisplayName: row.line_display_name,
             linePictureUrl: row.line_picture_url,
+            lineLinkedAt: row.line_linked_at,
             isActive: row.is_active,
             language: row.language,
             lastLoginAt: row.last_login_at,
@@ -266,6 +267,7 @@ class UserService {
                 line_user_id: data.lineUserId,
                 line_display_name: data.lineDisplayName || null,
                 line_picture_url: data.linePictureUrl || null,
+                line_linked_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             })
             .eq('id', userId)
@@ -291,6 +293,7 @@ class UserService {
                 line_user_id: null,
                 line_display_name: null,
                 line_picture_url: null,
+                line_linked_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', userId)

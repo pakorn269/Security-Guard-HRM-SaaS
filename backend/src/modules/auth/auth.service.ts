@@ -700,6 +700,7 @@ class AuthService {
                 line_user_id: lineUser.sub,
                 line_display_name: lineUser.name,
                 line_picture_url: lineUser.picture,
+                line_linked_at: new Date().toISOString(),
             })
             .eq('id', userId)
             .select()
@@ -713,6 +714,399 @@ class AuthService {
             userId,
             lineUserId: lineUser.sub,
         });
+
+        return this.mapToAuthUser(user);
+    }
+
+    // ============================================================
+    // LIFF Account Linking Methods
+    // ============================================================
+
+    // Verify LINE token and check if user is linked
+    async lineVerify(idToken: string, liffId: string): Promise<{
+        isLinked: boolean;
+        user?: AuthUser;
+        tokens?: TokenPair;
+        lineProfile?: {
+            userId: string;
+            displayName: string | null;
+            pictureUrl: string | null;
+        };
+    }> {
+        logger.info('LINE verify attempt', { liffId });
+
+        // Verify LINE ID token
+        const lineUser = await this.verifyLineIdToken(idToken, liffId);
+
+        logger.info('LINE token verified for verify endpoint', {
+            lineUserId: lineUser.sub,
+            name: lineUser.name
+        });
+
+        // Check if LINE user ID is already linked to a user
+        const { data: existingUser } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('line_user_id', lineUser.sub)
+            .single();
+
+        if (existingUser) {
+            // User is linked - return user data and tokens
+            if (!existingUser.is_active) {
+                throw new UnauthorizedError(
+                    'Account is deactivated',
+                    'บัญชีถูกระงับ'
+                );
+            }
+
+            // Update profile info
+            await supabaseAdmin
+                .from('users')
+                .update({
+                    line_display_name: lineUser.name,
+                    line_picture_url: lineUser.picture,
+                    last_login_at: new Date().toISOString(),
+                })
+                .eq('id', existingUser.id);
+
+            const tokens = this.generateTokens({
+                userId: existingUser.id,
+                companyId: existingUser.company_id,
+                role: existingUser.role,
+                email: existingUser.email,
+                employeeId: existingUser.employee_id,
+                lineUserId: existingUser.line_user_id,
+            });
+
+            logger.info('LINE user verified - already linked', {
+                userId: existingUser.id,
+                lineUserId: lineUser.sub,
+            });
+
+            return {
+                isLinked: true,
+                user: this.mapToAuthUser({
+                    ...existingUser,
+                    line_display_name: lineUser.name,
+                    line_picture_url: lineUser.picture,
+                }),
+                tokens,
+            };
+        }
+
+        // User not linked - return LINE profile for linking flow
+        logger.info('LINE user verified - not linked', {
+            lineUserId: lineUser.sub,
+        });
+
+        return {
+            isLinked: false,
+            lineProfile: {
+                userId: lineUser.sub,
+                displayName: lineUser.name || null,
+                pictureUrl: lineUser.picture || null,
+            },
+        };
+    }
+
+    // Link LINE account to employee via employee code + phone (for guards)
+    async linkEmployee(
+        idToken: string,
+        liffId: string,
+        employeeCode: string,
+        phone: string,
+        companySlug: string
+    ): Promise<LoginResponse> {
+        logger.info('Link employee attempt', { employeeCode, companySlug });
+
+        // Verify LINE ID token
+        const lineUser = await this.verifyLineIdToken(idToken, liffId);
+
+        // Check if this LINE is already linked to another account
+        const { data: existingLineUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('line_user_id', lineUser.sub)
+            .single();
+
+        if (existingLineUser) {
+            throw new ConflictError(
+                'This LINE account is already linked to another user',
+                'บัญชี LINE นี้เชื่อมต่อกับบัญชีอื่นแล้ว'
+            );
+        }
+
+        // Find company by slug
+        const { data: company, error: companyError } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (companyError || !company) {
+            throw new NotFoundError(
+                'Company not found',
+                'ไม่พบข้อมูลบริษัท'
+            );
+        }
+
+        // Find employee by company + employee_code
+        const { data: employee, error: employeeError } = await supabaseAdmin
+            .from('employees')
+            .select('*, users!employees_user_id_fkey(*)')
+            .eq('company_id', company.id)
+            .eq('employee_code', employeeCode)
+            .single();
+
+        if (employeeError || !employee) {
+            throw new NotFoundError(
+                'Employee not found',
+                'ไม่พบข้อมูลพนักงาน'
+            );
+        }
+
+        // Normalize phone numbers for comparison (remove leading 0, spaces, dashes)
+        const normalizePhone = (p: string | null): string => {
+            if (!p) return '';
+            return p.replace(/[\s\-]/g, '').replace(/^0/, '');
+        };
+
+        const inputPhone = normalizePhone(phone);
+        const employeePhone = normalizePhone(employee.phone);
+
+        if (inputPhone !== employeePhone) {
+            throw new ValidationError(
+                'Phone number does not match',
+                [{
+                    field: 'phone',
+                    message: 'Phone number does not match employee record',
+                    message_th: 'เบอร์โทรศัพท์ไม่ตรงกับข้อมูลพนักงาน',
+                }]
+            );
+        }
+
+        // Check if employee has a user account
+        let user = employee.users;
+
+        if (user) {
+            // Check if user already has LINE linked
+            if (user.line_user_id) {
+                throw new ConflictError(
+                    'This employee account is already linked to a LINE account',
+                    'บัญชีพนักงานนี้เชื่อมต่อกับ LINE อื่นแล้ว'
+                );
+            }
+
+            // Update existing user with LINE info
+            const { data: updatedUser, error: updateError } = await supabaseAdmin
+                .from('users')
+                .update({
+                    line_user_id: lineUser.sub,
+                    line_display_name: lineUser.name,
+                    line_picture_url: lineUser.picture,
+                    line_linked_at: new Date().toISOString(),
+                    last_login_at: new Date().toISOString(),
+                })
+                .eq('id', user.id)
+                .select()
+                .single();
+
+            if (updateError || !updatedUser) {
+                logger.error('Failed to update user with LINE info', updateError);
+                throw new Error('Failed to link LINE account');
+            }
+
+            user = updatedUser;
+        } else {
+            // Create new user for employee with role 'guard'
+            const { data: newUser, error: createError } = await supabaseAdmin
+                .from('users')
+                .insert({
+                    company_id: company.id,
+                    employee_id: employee.id,
+                    email: `employee_${employee.id}@guard.local`,
+                    role: 'guard',
+                    line_user_id: lineUser.sub,
+                    line_display_name: lineUser.name,
+                    line_picture_url: lineUser.picture,
+                    line_linked_at: new Date().toISOString(),
+                    is_active: true,
+                    language: 'th',
+                })
+                .select()
+                .single();
+
+            if (createError || !newUser) {
+                logger.error('Failed to create user for employee', createError);
+                throw new Error('Failed to create user account');
+            }
+
+            // Update employee with user_id
+            await supabaseAdmin
+                .from('employees')
+                .update({ user_id: newUser.id })
+                .eq('id', employee.id);
+
+            user = newUser;
+        }
+
+        const tokens = this.generateTokens({
+            userId: user.id,
+            companyId: company.id,
+            role: user.role,
+            email: user.email,
+            employeeId: employee.id,
+            lineUserId: lineUser.sub,
+        });
+
+        logger.info('Employee linked to LINE', {
+            userId: user.id,
+            employeeId: employee.id,
+            lineUserId: lineUser.sub,
+        });
+
+        return {
+            user: this.mapToAuthUser({
+                ...user,
+                employee_id: employee.id,
+            }),
+            tokens,
+        };
+    }
+
+    // Link LINE account to existing user via email/password (for managers/admins)
+    async linkCredentials(
+        idToken: string,
+        liffId: string,
+        email: string,
+        password: string
+    ): Promise<LoginResponse> {
+        logger.info('Link credentials attempt', { email });
+
+        // Verify LINE ID token
+        const lineUser = await this.verifyLineIdToken(idToken, liffId);
+
+        // Check if this LINE is already linked to another account
+        const { data: existingLineUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('line_user_id', lineUser.sub)
+            .single();
+
+        if (existingLineUser) {
+            throw new ConflictError(
+                'This LINE account is already linked to another user',
+                'บัญชี LINE นี้เชื่อมต่อกับบัญชีอื่นแล้ว'
+            );
+        }
+
+        // Find user by email
+        const { data: user, error: userError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('email', email.toLowerCase())
+            .single();
+
+        if (userError || !user) {
+            throw new UnauthorizedError(
+                'Invalid email or password',
+                'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+            );
+        }
+
+        // Check if user is active
+        if (!user.is_active) {
+            throw new UnauthorizedError(
+                'Account is deactivated',
+                'บัญชีถูกระงับ'
+            );
+        }
+
+        // Verify password
+        if (!user.password_hash) {
+            throw new UnauthorizedError(
+                'This account does not have a password set',
+                'บัญชีนี้ไม่ได้ตั้งรหัสผ่าน'
+            );
+        }
+
+        const isValid = await this.verifyPassword(password, user.password_hash);
+        if (!isValid) {
+            throw new UnauthorizedError(
+                'Invalid email or password',
+                'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+            );
+        }
+
+        // Check if user already has LINE linked
+        if (user.line_user_id) {
+            throw new ConflictError(
+                'This account is already linked to a LINE account',
+                'บัญชีนี้เชื่อมต่อกับ LINE อื่นแล้ว'
+            );
+        }
+
+        // Update user with LINE info
+        const { data: updatedUser, error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({
+                line_user_id: lineUser.sub,
+                line_display_name: lineUser.name,
+                line_picture_url: lineUser.picture,
+                line_linked_at: new Date().toISOString(),
+                last_login_at: new Date().toISOString(),
+            })
+            .eq('id', user.id)
+            .select()
+            .single();
+
+        if (updateError || !updatedUser) {
+            logger.error('Failed to update user with LINE info', updateError);
+            throw new Error('Failed to link LINE account');
+        }
+
+        const tokens = this.generateTokens({
+            userId: updatedUser.id,
+            companyId: updatedUser.company_id,
+            role: updatedUser.role,
+            email: updatedUser.email,
+            employeeId: updatedUser.employee_id,
+            lineUserId: lineUser.sub,
+        });
+
+        logger.info('Credentials linked to LINE', {
+            userId: updatedUser.id,
+            lineUserId: lineUser.sub,
+        });
+
+        return {
+            user: this.mapToAuthUser(updatedUser),
+            tokens,
+        };
+    }
+
+    // Unlink LINE account from user
+    async unlinkLine(userId: string): Promise<AuthUser> {
+        logger.info('Unlink LINE attempt', { userId });
+
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .update({
+                line_user_id: null,
+                line_display_name: null,
+                line_picture_url: null,
+                line_linked_at: null,
+            })
+            .eq('id', userId)
+            .select()
+            .single();
+
+        if (error || !user) {
+            logger.error('Failed to unlink LINE account', error);
+            throw new Error('Failed to unlink LINE account');
+        }
+
+        logger.info('LINE account unlinked', { userId });
 
         return this.mapToAuthUser(user);
     }

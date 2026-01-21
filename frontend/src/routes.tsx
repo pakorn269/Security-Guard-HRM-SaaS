@@ -37,6 +37,11 @@ const LiffClockPage = lazy(() => import('./pages/liff/LiffClockPage'));
 const LiffLeavePage = lazy(() => import('./pages/liff/LiffLeavePage'));
 const LiffProfilePage = lazy(() => import('./pages/liff/LiffProfilePage'));
 
+// LIFF Account Linking pages
+const LiffLinkPage = lazy(() => import('./pages/liff/LiffLinkPage'));
+const LiffLinkEmployeePage = lazy(() => import('./pages/liff/LiffLinkEmployeePage'));
+const LiffLinkCredentialsPage = lazy(() => import('./pages/liff/LiffLinkCredentialsPage'));
+
 // Loading component
 const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
@@ -146,6 +151,19 @@ const routes: RouteObject[] = [
             {
                 path: 'profile',
                 element: withSuspense(LiffProfilePage),
+            },
+            // Account Linking pages
+            {
+                path: 'link',
+                element: withSuspense(LiffLinkPage),
+            },
+            {
+                path: 'link/employee',
+                element: withSuspense(LiffLinkEmployeePage),
+            },
+            {
+                path: 'link/credentials',
+                element: withSuspense(LiffLinkCredentialsPage),
             },
         ],
     },

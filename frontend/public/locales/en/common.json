@@ -138,5 +138,112 @@
         "phone": "Phone",
         "email": "Email",
         "hireDate": "Hire Date"
+    },
+    "employees": {
+        "title": "Employees",
+        "subtitle": "Manage your team members",
+        "code": "Employee Code",
+        "name": "Name",
+        "phone": "Phone",
+        "email": "Email",
+        "status": "Status",
+        "account": "User Account",
+        "addEmployee": "Add Employee",
+        "editEmployee": "Edit Employee",
+        "searchPlaceholder": "Search name, code, phone...",
+        "allStatuses": "All Statuses",
+        "statusActive": "Active",
+        "statusOnLeave": "On Leave",
+        "statusTerminated": "Terminated",
+        "noEmployees": "No employees found",
+        "hireDate": "Hire Date",
+        "fullName": "Full Name (English)",
+        "fullNameTh": "Full Name (Thai)",
+        "address": "Address",
+        "emergencyContactName": "Emergency Contact Name",
+        "emergencyContactPhone": "Emergency Contact Phone",
+        "notes": "Notes",
+        "createUserAccount": "Create user account for this employee",
+        "userRole": "User Role",
+        "password": "Password"
+    },
+    "common": {
+        "cancel": "Cancel",
+        "save": "Save"
+    },
+    "roles": {
+        "guard": "Security Guard",
+        "manager": "Manager"
+    },
+    "validation": {
+        "required": "This field is required",
+        "invalidEmail": "Invalid email format",
+        "emailRequiredForAccount": "Email is required for user account",
+        "passwordMinLength": "Password must be at least 8 characters",
+        "invalidPhone": "Invalid phone number"
+    },
+    "liff": {
+        "loading": "Loading...",
+        "pleaseWait": "Please wait",
+        "error": "Error",
+        "retry": "Try Again",
+        "redirectingToLine": "Redirecting",
+        "redirectingToLineDesc": "Please wait, redirecting to LINE Login",
+        "contactHR": "If you have any issues, please contact HR",
+        "linking": {
+            "title": "Link Your Account",
+            "welcome": "Hello",
+            "selectMethod": "Please select verification method",
+            "employeeCodeOption": "Employee Code",
+            "employeeCodeDesc": "For security guards",
+            "credentialsOption": "Email & Password",
+            "credentialsDesc": "For managers & admins"
+        },
+        "employeeLink": {
+            "title": "Verify with Employee Code",
+            "companyCode": "Company Code",
+            "companyCodeHint": "Ask HR for the company code",
+            "companyCodePlaceholder": "e.g. abc-security",
+            "employeeCode": "Employee Code",
+            "employeeCodePlaceholder": "e.g. EMP001",
+            "phone": "Phone Number",
+            "phoneHint": "Phone number registered in the system",
+            "verify": "Verify",
+            "verifying": "Verifying...",
+            "helpText": "If you don't know your information, please contact HR"
+        },
+        "credentialsLink": {
+            "title": "Verify with Email",
+            "email": "Email",
+            "emailPlaceholder": "manager@company.com",
+            "password": "Password",
+            "verify": "Verify",
+            "verifying": "Verifying...",
+            "helpText": "Use the same credentials as web login"
+        },
+        "success": {
+            "linked": "Account linked successfully!",
+            "redirecting": "Redirecting..."
+        },
+        "errors": {
+            "companyRequired": "Please enter company code",
+            "employeeCodeRequired": "Please enter employee code",
+            "phoneRequired": "Please enter phone number",
+            "emailRequired": "Please enter email",
+            "passwordRequired": "Please enter password",
+            "invalidPhoneFormat": "Invalid phone number format",
+            "invalidEmailFormat": "Invalid email format",
+            "companyNotFound": "Company not found",
+            "employeeNotFound": "Employee not found",
+            "phoneMismatch": "Phone number does not match employee record",
+            "alreadyLinked": "This account is already linked to another LINE",
+            "lineAlreadyUsed": "This LINE is already linked to another account",
+            "invalidCredentials": "Invalid email or password",
+            "accountDeactivated": "Account is deactivated",
+            "noPassword": "This account does not have a password set",
+            "linkFailed": "Failed to link account",
+            "tokenMissing": "LINE token not found",
+            "initFailed": "Failed to initialize LIFF"
+        }
     }
 }

@@ -13,6 +13,7 @@ export interface UserRow {
     line_user_id: string | null;
     line_display_name: string | null;
     line_picture_url: string | null;
+    line_linked_at: string | null;
     is_active: boolean;
     language: 'th' | 'en';
     last_login_at: string | null;
@@ -30,6 +31,7 @@ export interface User {
     lineUserId: string | null;
     lineDisplayName: string | null;
     linePictureUrl: string | null;
+    lineLinkedAt: string | null;
     isActive: boolean;
     language: 'th' | 'en';
     lastLoginAt: string | null;

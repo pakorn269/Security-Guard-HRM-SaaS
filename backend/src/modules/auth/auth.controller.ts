@@ -9,6 +9,9 @@ import {
     lineLoginSchema,
     refreshTokenSchema,
     linkLineSchema,
+    lineVerifySchema,
+    linkEmployeeSchema,
+    linkCredentialsSchema,
 } from './auth.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -129,6 +132,87 @@ class AuthController {
                 validation.data.liffId
             );
             sendSuccess(res, user);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ============================================================
+    // LIFF Account Linking Endpoints
+    // ============================================================
+
+    // POST /api/v1/auth/line/verify - Verify LINE token and check if linked
+    async lineVerify(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = lineVerifySchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.lineVerify(
+                validation.data.idToken,
+                validation.data.liffId
+            );
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/line/link-employee - Link LINE to employee via code + phone
+    async linkEmployee(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = linkEmployeeSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.linkEmployee(
+                validation.data.idToken,
+                validation.data.liffId,
+                validation.data.employeeCode,
+                validation.data.phone,
+                validation.data.companySlug
+            );
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/line/link-credentials - Link LINE to user via email/password
+    async linkCredentials(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = linkCredentialsSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.linkCredentials(
+                validation.data.idToken,
+                validation.data.liffId,
+                validation.data.email,
+                validation.data.password
+            );
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/line/unlink - Unlink LINE account (protected)
+    async unlinkLineAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const user = await authService.unlinkLine(req.user.userId);
+            sendSuccess(res, {
+                message: 'LINE account unlinked successfully',
+                message_th: 'ยกเลิกการเชื่อมต่อ LINE สำเร็จ',
+                user,
+            });
         } catch (error) {
             next(error);
         }

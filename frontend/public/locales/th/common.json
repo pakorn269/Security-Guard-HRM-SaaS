@@ -179,6 +179,87 @@
         "required": "จำเป็นต้องกรอก",
         "invalidEmail": "รูปแบบอีเมลไม่ถูกต้อง",
         "emailRequiredForAccount": "ต้องกรอกอีเมลสำหรับสร้างบัญชีผู้ใช้",
-        "passwordMinLength": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"
+        "passwordMinLength": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+        "invalidPhone": "เบอร์โทรศัพท์ไม่ถูกต้อง"
+    },
+    "liff": {
+        "loading": "กำลังโหลด...",
+        "pleaseWait": "กรุณารอสักครู่",
+        "error": "เกิดข้อผิดพลาด",
+        "retry": "ลองใหม่อีกครั้ง",
+        "redirectingToLine": "กำลังเปลี่ยนเส้นทาง",
+        "redirectingToLineDesc": "กรุณารอสักครู่ ระบบกำลังนำท่านไปยังหน้า LINE Login",
+        "contactHR": "หากมีปัญหาในการเข้าใช้งาน กรุณาติดต่อฝ่ายบุคคล",
+        "linking": {
+            "title": "เชื่อมต่อบัญชี",
+            "titleEn": "Link Your Account",
+            "welcome": "สวัสดี",
+            "welcomeEn": "Hello",
+            "selectMethod": "กรุณาเลือกวิธีการยืนยันตัวตน",
+            "selectMethodEn": "Please select verification method",
+            "employeeCodeOption": "รหัสพนักงาน",
+            "employeeCodeOptionEn": "Employee Code",
+            "employeeCodeDesc": "สำหรับพนักงานรักษาความปลอดภัย",
+            "credentialsOption": "อีเมลและรหัสผ่าน",
+            "credentialsOptionEn": "Email & Password",
+            "credentialsDesc": "สำหรับผู้จัดการและแอดมิน"
+        },
+        "employeeLink": {
+            "title": "ยืนยันด้วยรหัสพนักงาน",
+            "titleEn": "Verify with Employee Code",
+            "companyCode": "รหัสบริษัท",
+            "companyCodeEn": "Company Code",
+            "companyCodeHint": "สอบถามรหัสบริษัทได้จากฝ่ายบุคคล",
+            "companyCodePlaceholder": "เช่น abc-security",
+            "employeeCode": "รหัสพนักงาน",
+            "employeeCodeEn": "Employee Code",
+            "employeeCodePlaceholder": "เช่น EMP001",
+            "phone": "เบอร์โทรศัพท์",
+            "phoneEn": "Phone Number",
+            "phoneHint": "เบอร์โทรศัพท์ที่ลงทะเบียนไว้ในระบบ",
+            "verify": "ยืนยัน",
+            "verifyEn": "Verify",
+            "verifying": "กำลังตรวจสอบ...",
+            "helpText": "หากไม่ทราบข้อมูลของท่าน กรุณาติดต่อฝ่ายบุคคล"
+        },
+        "credentialsLink": {
+            "title": "ยืนยันด้วยอีเมล",
+            "titleEn": "Verify with Email",
+            "email": "อีเมล",
+            "emailEn": "Email",
+            "emailPlaceholder": "manager@company.com",
+            "password": "รหัสผ่าน",
+            "passwordEn": "Password",
+            "verify": "ยืนยัน",
+            "verifyEn": "Verify",
+            "verifying": "กำลังตรวจสอบ...",
+            "helpText": "ใช้อีเมลและรหัสผ่านเดียวกับการเข้าสู่ระบบเว็บ",
+            "helpTextEn": "Use the same credentials as web login"
+        },
+        "success": {
+            "linked": "เชื่อมต่อบัญชีสำเร็จ!",
+            "linkedEn": "Account linked successfully",
+            "redirecting": "กำลังเปลี่ยนหน้า..."
+        },
+        "errors": {
+            "companyRequired": "กรุณาระบุรหัสบริษัท",
+            "employeeCodeRequired": "กรุณาระบุรหัสพนักงาน",
+            "phoneRequired": "กรุณาระบุเบอร์โทรศัพท์",
+            "emailRequired": "กรุณาระบุอีเมล",
+            "passwordRequired": "กรุณาระบุรหัสผ่าน",
+            "invalidPhoneFormat": "เบอร์โทรศัพท์ไม่ถูกต้อง",
+            "invalidEmailFormat": "รูปแบบอีเมลไม่ถูกต้อง",
+            "companyNotFound": "ไม่พบข้อมูลบริษัท",
+            "employeeNotFound": "ไม่พบข้อมูลพนักงาน",
+            "phoneMismatch": "เบอร์โทรศัพท์ไม่ตรงกับข้อมูลพนักงาน",
+            "alreadyLinked": "บัญชีนี้เชื่อมต่อกับ LINE อื่นแล้ว",
+            "lineAlreadyUsed": "บัญชี LINE นี้เชื่อมต่อกับบัญชีอื่นแล้ว",
+            "invalidCredentials": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+            "accountDeactivated": "บัญชีถูกระงับ",
+            "noPassword": "บัญชีนี้ไม่ได้ตั้งรหัสผ่าน",
+            "linkFailed": "ไม่สามารถเชื่อมต่อบัญชีได้",
+            "tokenMissing": "ไม่พบข้อมูล LINE token",
+            "initFailed": "ไม่สามารถเชื่อมต่อ LIFF ได้"
+        }
     }
 }
