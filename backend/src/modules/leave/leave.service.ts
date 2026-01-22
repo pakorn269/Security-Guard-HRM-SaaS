@@ -145,6 +145,65 @@ class LeaveService {
         };
     }
 
+    // Helper to ensure balances exist for an employee for a given year
+    private async ensureBalancesForEmployee(
+        companyId: string,
+        employeeId: string,
+        year: number
+    ): Promise<void> {
+        // Get all active leave types and existing balances in parallel
+        const [leaveTypesResult, balancesResult] = await Promise.all([
+            supabaseAdmin
+                .from('leave_types')
+                .select('id, max_days_per_year')
+                .eq('company_id', companyId)
+                .eq('is_active', true),
+            supabaseAdmin
+                .from('leave_balances')
+                .select('leave_type_id')
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .eq('year', year)
+        ]);
+
+        const { data: leaveTypes, error: leaveTypesError } = leaveTypesResult;
+        if (leaveTypesError) {
+            logger.error('Error fetching leave types for balance ensuring:', leaveTypesError);
+            throw leaveTypesError;
+        }
+
+        const { data: existingBalances, error: balancesError } = balancesResult;
+        if (balancesError) {
+            logger.error('Error fetching existing balances for balance ensuring:', balancesError);
+            throw balancesError;
+        }
+
+        const existingLeaveTypeIds = new Set((existingBalances || []).map(b => b.leave_type_id));
+
+        const missingBalances = (leaveTypes || [])
+            .filter(lt => !existingLeaveTypeIds.has(lt.id))
+            .map(lt => ({
+                company_id: companyId,
+                employee_id: employeeId,
+                leave_type_id: lt.id,
+                year: year,
+                entitled_days: lt.max_days_per_year || 0,
+                used_days: 0,
+                pending_days: 0,
+            }));
+
+        if (missingBalances.length > 0) {
+            const { error: insertError } = await supabaseAdmin
+                .from('leave_balances')
+                .insert(missingBalances);
+
+            if (insertError) {
+                logger.error('Error creating missing leave balances:', insertError);
+                throw insertError;
+            }
+        }
+    }
+
     // ========================================================================
     // LEAVE TYPE OPERATIONS
     // ========================================================================
@@ -309,7 +368,7 @@ class LeaveService {
     }
 
     // Get employee's leave balance for a leave type and year
-    async getOrCreateBalance(
+    async getOrCreateSingleBalance(
         companyId: string,
         employeeId: string,
         leaveTypeId: string,
@@ -378,7 +437,7 @@ class LeaveService {
 
         // Check balance if max days is defined
         if (leaveType.maxDaysPerYear !== null) {
-            const balance = await this.getOrCreateBalance(
+            const balance = await this.getOrCreateSingleBalance(
                 companyId,
                 employeeId,
                 data.leaveTypeId,
@@ -795,73 +854,61 @@ class LeaveService {
     ): Promise<MyLeaveDataResponse> {
         const currentYear = year || new Date().getFullYear();
 
-        // Get leave balances with leave type info
-        const { data: balances, error: balancesError } = await supabaseAdmin
-            .from('leave_balances')
-            .select(`
-                *,
-                leave_types:leave_type_id (id, name, name_th, is_paid)
-            `)
-            .eq('company_id', companyId)
-            .eq('employee_id', employeeId)
-            .eq('year', currentYear);
+        // Ensure all balances exist for the employee for the current year.
+        await this.ensureBalancesForEmployee(companyId, employeeId, currentYear);
 
+        // Fetch all necessary data in parallel
+        const [balancesResult, pendingRequestsResult, recentRequestsResult] = await Promise.all([
+            supabaseAdmin
+                .from('leave_balances')
+                .select(`
+                    *,
+                    leave_types:leave_type_id (id, name, name_th, is_paid)
+                `)
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .eq('year', currentYear),
+            supabaseAdmin
+                .from('leave_requests')
+                .select(`
+                    *,
+                    employees:employee_id (id, full_name, employee_code),
+                    leave_types:leave_type_id (id, name, name_th, is_paid)
+                `)
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false }),
+            supabaseAdmin
+                .from('leave_requests')
+                .select(`
+                    *,
+                    employees:employee_id (id, full_name, employee_code),
+                    leave_types:leave_type_id (id, name, name_th, is_paid)
+                `)
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .order('created_at', { ascending: false })
+                .limit(10)
+        ]);
+
+        const { data: updatedBalances, error: balancesError } = balancesResult;
         if (balancesError) {
             logger.error('Error fetching leave balances:', balancesError);
             throw balancesError;
         }
 
-        // Also fetch leave types to show types with no balance yet
-        const { data: allLeaveTypes } = await supabaseAdmin
-            .from('leave_types')
-            .select('*')
-            .eq('company_id', companyId)
-            .eq('is_active', true);
-
-        // Create balances for leave types that don't have one yet
-        const existingTypeIds = new Set((balances || []).map((b: LeaveBalanceRowWithType) => b.leave_type_id));
-        const missingTypes = (allLeaveTypes || []).filter((t: LeaveTypeRow) => !existingTypeIds.has(t.id));
-
-        for (const leaveType of missingTypes) {
-            await this.getOrCreateBalance(companyId, employeeId, leaveType.id, currentYear);
+        const { data: pendingRequests, error: pendingError } = pendingRequestsResult;
+        if (pendingError) {
+            logger.error('Error fetching pending requests:', pendingError);
+            throw pendingError;
         }
 
-        // Re-fetch balances after creating missing ones
-        const { data: updatedBalances } = await supabaseAdmin
-            .from('leave_balances')
-            .select(`
-                *,
-                leave_types:leave_type_id (id, name, name_th, is_paid)
-            `)
-            .eq('company_id', companyId)
-            .eq('employee_id', employeeId)
-            .eq('year', currentYear);
-
-        // Get pending requests
-        const { data: pendingRequests } = await supabaseAdmin
-            .from('leave_requests')
-            .select(`
-                *,
-                employees:employee_id (id, full_name, employee_code),
-                leave_types:leave_type_id (id, name, name_th, is_paid)
-            `)
-            .eq('company_id', companyId)
-            .eq('employee_id', employeeId)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
-
-        // Get recent requests (last 10)
-        const { data: recentRequests } = await supabaseAdmin
-            .from('leave_requests')
-            .select(`
-                *,
-                employees:employee_id (id, full_name, employee_code),
-                leave_types:leave_type_id (id, name, name_th, is_paid)
-            `)
-            .eq('company_id', companyId)
-            .eq('employee_id', employeeId)
-            .order('created_at', { ascending: false })
-            .limit(10);
+        const { data: recentRequests, error: recentError } = recentRequestsResult;
+        if (recentError) {
+            logger.error('Error fetching recent requests:', recentError);
+            throw recentError;
+        }
 
         return {
             balances: (updatedBalances as LeaveBalanceRowWithType[] || []).map(b => this.mapToLeaveBalanceWithType(b)),
@@ -904,19 +951,10 @@ class LeaveService {
     ): Promise<LeaveBalanceWithType[]> {
         const currentYear = year || new Date().getFullYear();
 
-        // Get all active leave types
-        const { data: leaveTypes } = await supabaseAdmin
-            .from('leave_types')
-            .select('*')
-            .eq('company_id', companyId)
-            .eq('is_active', true);
+        // Ensure balances exist for the employee
+        await this.ensureBalancesForEmployee(companyId, employeeId, currentYear);
 
-        // Ensure balances exist for all leave types
-        for (const lt of (leaveTypes as LeaveTypeRow[] || [])) {
-            await this.getOrCreateBalance(companyId, employeeId, lt.id, currentYear);
-        }
-
-        // Fetch all balances
+        // Fetch all balances now that we know they exist
         const { data: balances, error } = await supabaseAdmin
             .from('leave_balances')
             .select(`
@@ -1118,7 +1156,7 @@ class LeaveService {
         entitledDays: number
     ): Promise<LeaveBalance> {
         // Get or create balance
-        const balance = await this.getOrCreateBalance(companyId, employeeId, leaveTypeId, year);
+        const balance = await this.getOrCreateSingleBalance(companyId, employeeId, leaveTypeId, year);
 
         // Update entitled days
         const { data: updated, error } = await supabaseAdmin
@@ -1196,58 +1234,92 @@ class LeaveService {
         year: number,
         employeeIds?: string[]
     ): Promise<{ created: number }> {
-        // Get all employees
-        let query = supabaseAdmin
+        // 1. Get all active employees for the company (or the specified subset)
+        let employeeQuery = supabaseAdmin
             .from('employees')
             .select('id')
             .eq('company_id', companyId)
             .eq('status', 'active');
 
         if (employeeIds && employeeIds.length > 0) {
-            query = query.in('id', employeeIds);
+            employeeQuery = employeeQuery.in('id', employeeIds);
         }
 
-        const { data: employees } = await query;
+        const { data: employees, error: employeesError } = await employeeQuery;
+        if (employeesError) {
+            logger.error('Error fetching employees for balance initialization:', employeesError);
+            throw employeesError;
+        }
+        if (!employees || employees.length === 0) {
+            return { created: 0 };
+        }
 
-        // Get all leave types
-        const { data: leaveTypes } = await supabaseAdmin
+        const targetEmployeeIds = employees.map(e => e.id);
+
+        // 2. Get all active leave types for the company
+        const { data: leaveTypes, error: leaveTypesError } = await supabaseAdmin
             .from('leave_types')
             .select('id, max_days_per_year')
             .eq('company_id', companyId)
             .eq('is_active', true);
 
-        let created = 0;
+        if (leaveTypesError) {
+            logger.error('Error fetching leave types for balance initialization:', leaveTypesError);
+            throw leaveTypesError;
+        }
+        if (!leaveTypes || leaveTypes.length === 0) {
+            return { created: 0 };
+        }
 
-        for (const employee of (employees || [])) {
-            for (const leaveType of (leaveTypes || [])) {
-                // Check if balance already exists
-                const { data: existing } = await supabaseAdmin
-                    .from('leave_balances')
-                    .select('id')
-                    .eq('company_id', companyId)
-                    .eq('employee_id', employee.id)
-                    .eq('leave_type_id', leaveType.id)
-                    .eq('year', year)
-                    .single();
+        // 3. Get all existing balances for the targeted employees and year
+        const { data: existingBalances, error: balancesError } = await supabaseAdmin
+            .from('leave_balances')
+            .select('employee_id, leave_type_id')
+            .eq('company_id', companyId)
+            .eq('year', year)
+            .in('employee_id', targetEmployeeIds);
 
-                if (!existing) {
-                    await supabaseAdmin
-                        .from('leave_balances')
-                        .insert({
-                            company_id: companyId,
-                            employee_id: employee.id,
-                            leave_type_id: leaveType.id,
-                            year: year,
-                            entitled_days: leaveType.max_days_per_year || 0,
-                            used_days: 0,
-                            pending_days: 0,
-                        });
-                    created++;
+        if (balancesError) {
+            logger.error('Error fetching existing balances for initialization:', balancesError);
+            throw balancesError;
+        }
+
+        // 4. Determine which balances are missing
+        const existingBalancesSet = new Set(
+            (existingBalances || []).map(b => `${b.employee_id}:${b.leave_type_id}`)
+        );
+
+        const balancesToCreate = [];
+        for (const employee of employees) {
+            for (const leaveType of leaveTypes) {
+                const key = `${employee.id}:${leaveType.id}`;
+                if (!existingBalancesSet.has(key)) {
+                    balancesToCreate.push({
+                        company_id: companyId,
+                        employee_id: employee.id,
+                        leave_type_id: leaveType.id,
+                        year: year,
+                        entitled_days: leaveType.max_days_per_year || 0,
+                        used_days: 0,
+                        pending_days: 0,
+                    });
                 }
             }
         }
 
-        return { created };
+        // 5. Bulk insert the missing balances
+        if (balancesToCreate.length > 0) {
+            const { error: insertError } = await supabaseAdmin
+                .from('leave_balances')
+                .insert(balancesToCreate);
+
+            if (insertError) {
+                logger.error('Error bulk inserting leave balances:', insertError);
+                throw insertError;
+            }
+        }
+
+        return { created: balancesToCreate.length };
     }
 }
 
