@@ -4,6 +4,7 @@ import { Menu, Globe, Search, ChevronDown, User, Settings, LogOut } from 'lucide
 import NotificationBell from '../common/NotificationBell';
 import Avatar from '../common/Avatar';
 import { ThemeToggle } from '../theme';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   /** Callback to open mobile sidebar */
@@ -144,6 +145,7 @@ interface UserMenuProps {
 
 function UserMenu({ user }: UserMenuProps) {
   const { t } = useTranslation();
+  const { logout } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -173,9 +175,8 @@ function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = () => {
-    // TODO: Implement actual logout logic
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    await logout();
     setIsOpen(false);
   };
 
