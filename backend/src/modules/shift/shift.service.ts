@@ -1122,6 +1122,15 @@ class ShiftService {
         const futureDate = this.addDays(today, days);
         const pastDate = this.addDays(today, -days);
 
+        logger.info('getMyShifts called', {
+            companyId,
+            employeeId,
+            today,
+            pastDate,
+            futureDate,
+            days,
+        });
+
         // Get all shifts in range
         const { data: shifts, error } = await supabaseAdmin
             .from('shifts')
@@ -1152,11 +1161,24 @@ class ShiftService {
             throw error;
         }
 
+        logger.info('getMyShifts query result', {
+            employeeId,
+            shiftsFound: shifts?.length ?? 0,
+            shiftDates: (shifts || []).map(s => ({ date: s.date, status: s.status })),
+        });
+
         const mappedShifts = (shifts || []).map(row => this.mapToShiftWithDetails(row as ShiftRowWithEmployee));
 
         const todayShifts = mappedShifts.filter(s => s.date === today);
         const upcomingShifts = mappedShifts.filter(s => s.date > today);
         const pastShifts = mappedShifts.filter(s => s.date < today);
+
+        logger.info('getMyShifts response', {
+            employeeId,
+            todayCount: todayShifts.length,
+            upcomingCount: upcomingShifts.length,
+            pastCount: pastShifts.length,
+        });
 
         return {
             today: todayShifts.length > 0 ? todayShifts[0] : null,
