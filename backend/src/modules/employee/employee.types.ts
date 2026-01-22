@@ -64,7 +64,32 @@ export interface EmployeeWithUser extends Employee {
         isPinLocked: boolean;
         pinLockedUntil?: string | null;
         failedPinAttempts: number;
+        // LINE integration fields
+        lineUserId?: string | null;
+        lineDisplayName?: string | null;
+        linePictureUrl?: string | null;
+        lineLinkedAt?: string | null;
+        isLineLinked: boolean;
     } | null;
+}
+
+// LINE messaging types
+export interface SendLineMessageRequest {
+    message: string;
+    messageTh?: string;
+}
+
+export interface BulkLineMessageRequest {
+    employeeIds: string[];
+    message: string;
+    messageTh?: string;
+}
+
+export interface LineMessageResult {
+    employeeId: string;
+    employeeName: string;
+    success: boolean;
+    error?: string;
 }
 
 // Create employee request

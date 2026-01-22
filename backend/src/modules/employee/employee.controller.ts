@@ -10,6 +10,8 @@ import {
     listEmployeesQuerySchema,
     createCertificationSchema,
     updateCertificationSchema,
+    sendLineMessageSchema,
+    bulkLineMessageSchema,
 } from './employee.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -388,6 +390,91 @@ class EmployeeController {
                 daysAhead
             );
             sendSuccess(res, certifications);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // === LINE Messaging Endpoints ===
+
+    // POST /api/v1/employees/:id/line-message - Send LINE message to employee
+    async sendLineMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.companyId) {
+                throw new ForbiddenError('No company associated with user');
+            }
+
+            // Only admins and managers can send LINE messages
+            if (!['super_admin', 'company_admin', 'manager'].includes(req.user.role)) {
+                throw new ForbiddenError(
+                    'Only admins and managers can send LINE messages',
+                    'เฉพาะผู้ดูแลระบบและผู้จัดการเท่านั้นที่สามารถส่งข้อความ LINE'
+                );
+            }
+
+            const employeeId = req.params.id as string;
+
+            const validation = sendLineMessageSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await employeeService.sendLineMessage(
+                employeeId,
+                req.user.companyId,
+                validation.data
+            );
+
+            if (!result.success) {
+                sendSuccess(res, { success: false, error: result.error }, 200);
+            } else {
+                sendSuccess(res, { success: true, message: 'LINE message sent successfully' });
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/employees/line-message/bulk - Send LINE message to multiple employees
+    async sendBulkLineMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.companyId) {
+                throw new ForbiddenError('No company associated with user');
+            }
+
+            // Only admins and managers can send bulk LINE messages
+            if (!['super_admin', 'company_admin', 'manager'].includes(req.user.role)) {
+                throw new ForbiddenError(
+                    'Only admins and managers can send bulk LINE messages',
+                    'เฉพาะผู้ดูแลระบบและผู้จัดการเท่านั้นที่สามารถส่งข้อความ LINE แบบกลุ่ม'
+                );
+            }
+
+            const validation = bulkLineMessageSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await employeeService.sendBulkLineMessage(
+                req.user.companyId,
+                validation.data
+            );
+
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /api/v1/employees/line-linked - Get employees with LINE linked
+    async getLineLinkedEmployees(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.companyId) {
+                throw new ForbiddenError('No company associated with user');
+            }
+
+            const employees = await employeeService.getLineLinkedEmployees(req.user.companyId);
+            sendSuccess(res, employees);
         } catch (error) {
             next(error);
         }

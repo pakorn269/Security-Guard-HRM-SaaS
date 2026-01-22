@@ -15,7 +15,11 @@ import type {
     CreateCertificationRequest,
     UpdateCertificationRequest,
     CertificationStatus,
+    SendLineMessageRequest,
+    BulkLineMessageRequest,
+    LineMessageResult,
 } from './employee.types.js';
+import { messagingApiClient, isLineConfigured } from '../../config/line.js';
 
 class EmployeeService {
     // Map database row to Employee
@@ -109,7 +113,11 @@ class EmployeeService {
                     password_hash,
                     pin_set_at,
                     pin_locked_until,
-                    pin_attempts
+                    pin_attempts,
+                    line_user_id,
+                    line_display_name,
+                    line_picture_url,
+                    line_linked_at
                 )
             `)
             .eq('id', employeeId)
@@ -130,6 +138,10 @@ class EmployeeService {
             pin_set_at: string | null;
             pin_locked_until: string | null;
             pin_attempts: number;
+            line_user_id: string | null;
+            line_display_name: string | null;
+            line_picture_url: string | null;
+            line_linked_at: string | null;
         } | null;
 
         return {
@@ -147,6 +159,11 @@ class EmployeeService {
                         : false,
                     pinLockedUntil: userData.pin_locked_until,
                     failedPinAttempts: userData.pin_attempts || 0,
+                    lineUserId: userData.line_user_id,
+                    lineDisplayName: userData.line_display_name,
+                    linePictureUrl: userData.line_picture_url,
+                    lineLinkedAt: userData.line_linked_at,
+                    isLineLinked: !!userData.line_user_id,
                 }
                 : null,
         };
@@ -189,7 +206,11 @@ class EmployeeService {
                     password_hash,
                     pin_set_at,
                     pin_locked_until,
-                    pin_attempts
+                    pin_attempts,
+                    line_user_id,
+                    line_display_name,
+                    line_picture_url,
+                    line_linked_at
                 )
             `,
                 { count: 'exact' }
@@ -235,6 +256,10 @@ class EmployeeService {
                 pin_set_at: string | null;
                 pin_locked_until: string | null;
                 pin_attempts: number;
+                line_user_id: string | null;
+                line_display_name: string | null;
+                line_picture_url: string | null;
+                line_linked_at: string | null;
             } | null;
 
             return {
@@ -252,6 +277,11 @@ class EmployeeService {
                             : false,
                         pinLockedUntil: userData.pin_locked_until,
                         failedPinAttempts: userData.pin_attempts || 0,
+                        lineUserId: userData.line_user_id,
+                        lineDisplayName: userData.line_display_name,
+                        linePictureUrl: userData.line_picture_url,
+                        lineLinkedAt: userData.line_linked_at,
+                        isLineLinked: !!userData.line_user_id,
                     }
                     : null,
             };
@@ -737,6 +767,217 @@ class EmployeeService {
         }
 
         return (data || []).map((row) => this.mapToCertification(row as CertificationRow));
+    }
+
+    // === LINE Messaging Methods ===
+
+    // Send LINE message to a single employee
+    async sendLineMessage(
+        employeeId: string,
+        companyId: string,
+        data: SendLineMessageRequest
+    ): Promise<{ success: boolean; error?: string }> {
+        if (!isLineConfigured()) {
+            return { success: false, error: 'LINE is not configured' };
+        }
+
+        // Get employee with user info
+        const employeeWithUser = await this.getByIdWithUser(employeeId, companyId);
+
+        if (!employeeWithUser.user) {
+            return { success: false, error: 'Employee does not have a user account' };
+        }
+
+        if (!employeeWithUser.user.lineUserId) {
+            return { success: false, error: 'Employee has not linked their LINE account' };
+        }
+
+        try {
+            await messagingApiClient.pushMessage({
+                to: employeeWithUser.user.lineUserId,
+                messages: [
+                    {
+                        type: 'text',
+                        text: data.message,
+                    },
+                ],
+            });
+
+            logger.info('LINE message sent to employee', {
+                employeeId,
+                employeeName: employeeWithUser.fullName,
+            });
+
+            return { success: true };
+        } catch (error) {
+            logger.error('Failed to send LINE message', { employeeId, error });
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to send LINE message',
+            };
+        }
+    }
+
+    // Send LINE message to multiple employees (bulk)
+    async sendBulkLineMessage(
+        companyId: string,
+        data: BulkLineMessageRequest
+    ): Promise<{ results: LineMessageResult[]; successCount: number; failureCount: number }> {
+        if (!isLineConfigured()) {
+            return {
+                results: data.employeeIds.map((id) => ({
+                    employeeId: id,
+                    employeeName: '',
+                    success: false,
+                    error: 'LINE is not configured',
+                })),
+                successCount: 0,
+                failureCount: data.employeeIds.length,
+            };
+        }
+
+        const results: LineMessageResult[] = [];
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Process each employee
+        for (const employeeId of data.employeeIds) {
+            try {
+                const employeeWithUser = await this.getByIdWithUser(employeeId, companyId);
+
+                if (!employeeWithUser.user) {
+                    results.push({
+                        employeeId,
+                        employeeName: employeeWithUser.fullName,
+                        success: false,
+                        error: 'No user account',
+                    });
+                    failureCount++;
+                    continue;
+                }
+
+                if (!employeeWithUser.user.lineUserId) {
+                    results.push({
+                        employeeId,
+                        employeeName: employeeWithUser.fullName,
+                        success: false,
+                        error: 'LINE not linked',
+                    });
+                    failureCount++;
+                    continue;
+                }
+
+                await messagingApiClient.pushMessage({
+                    to: employeeWithUser.user.lineUserId,
+                    messages: [
+                        {
+                            type: 'text',
+                            text: data.message,
+                        },
+                    ],
+                });
+
+                results.push({
+                    employeeId,
+                    employeeName: employeeWithUser.fullName,
+                    success: true,
+                });
+                successCount++;
+            } catch (error) {
+                const emp = await this.getById(employeeId, companyId).catch(() => null);
+                results.push({
+                    employeeId,
+                    employeeName: emp?.fullName || 'Unknown',
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                });
+                failureCount++;
+            }
+        }
+
+        logger.info('Bulk LINE message sent', {
+            companyId,
+            total: data.employeeIds.length,
+            successCount,
+            failureCount,
+        });
+
+        return { results, successCount, failureCount };
+    }
+
+    // Get employees with LINE linked (for filtering)
+    async getLineLinkedEmployees(companyId: string): Promise<EmployeeWithUser[]> {
+        const { data, error } = await supabaseAdmin
+            .from('employees')
+            .select(
+                `
+                *,
+                users:user_id!inner (
+                    id,
+                    email,
+                    role,
+                    is_active,
+                    password_hash,
+                    pin_set_at,
+                    pin_locked_until,
+                    pin_attempts,
+                    line_user_id,
+                    line_display_name,
+                    line_picture_url,
+                    line_linked_at
+                )
+            `
+            )
+            .eq('company_id', companyId)
+            .eq('status', 'active')
+            .not('users.line_user_id', 'is', null);
+
+        if (error) {
+            logger.error('Failed to get LINE-linked employees', error);
+            throw error;
+        }
+
+        return (data || []).map((row) => {
+            const employee = this.mapToEmployee(row as EmployeeRow);
+            const userData = (row as Record<string, unknown>).users as {
+                id: string;
+                email: string;
+                role: string;
+                is_active: boolean;
+                password_hash: string | null;
+                pin_set_at: string | null;
+                pin_locked_until: string | null;
+                pin_attempts: number;
+                line_user_id: string | null;
+                line_display_name: string | null;
+                line_picture_url: string | null;
+                line_linked_at: string | null;
+            } | null;
+
+            return {
+                ...employee,
+                user: userData
+                    ? {
+                        id: userData.id,
+                        email: userData.email,
+                        role: userData.role,
+                        isActive: userData.is_active,
+                        hasPin: !!userData.password_hash,
+                        pinSetAt: userData.pin_set_at,
+                        isPinLocked: userData.pin_locked_until
+                            ? new Date(userData.pin_locked_until) > new Date()
+                            : false,
+                        pinLockedUntil: userData.pin_locked_until,
+                        failedPinAttempts: userData.pin_attempts || 0,
+                        lineUserId: userData.line_user_id,
+                        lineDisplayName: userData.line_display_name,
+                        linePictureUrl: userData.line_picture_url,
+                        lineLinkedAt: userData.line_linked_at,
+                        isLineLinked: !!userData.line_user_id,
+                    }
+                    : null,
+            };
+        });
     }
 }
 
