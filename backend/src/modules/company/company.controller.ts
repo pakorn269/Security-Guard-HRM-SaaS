@@ -21,6 +21,17 @@ const formatZodError = (error: ZodError): ValidationError => {
 };
 
 class CompanyController {
+    // GET /api/v1/companies/by-slug/:slug/public - Get public company info
+    async getPublicBySlug(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const slug = req.params.slug as string;
+            const company = await companyService.getPublicBySlug(slug);
+            sendSuccess(res, company);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // GET /api/v1/companies - List all companies (super admin only)
     async list(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {

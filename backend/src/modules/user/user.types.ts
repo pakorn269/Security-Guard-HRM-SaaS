@@ -14,6 +14,9 @@ export interface UserRow {
     line_display_name: string | null;
     line_picture_url: string | null;
     line_linked_at: string | null;
+    pin_attempts: number;
+    pin_locked_until: string | null;
+    pin_set_at: string | null;
     is_active: boolean;
     language: 'th' | 'en';
     last_login_at: string | null;
@@ -32,6 +35,7 @@ export interface User {
     lineDisplayName: string | null;
     linePictureUrl: string | null;
     lineLinkedAt: string | null;
+    pinSetAt: string | null;
     isActive: boolean;
     language: 'th' | 'en';
     lastLoginAt: string | null;

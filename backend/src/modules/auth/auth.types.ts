@@ -14,6 +14,31 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface PhoneLoginRequest {
+    companySlug: string;
+    phone: string;
+    pin: string;
+    turnstileToken?: string;
+}
+
+export interface SetPinRequest {
+    currentPin?: string;
+    newPin: string;
+    resetToken?: string;
+}
+
+export interface ForgotPinRequest {
+    companySlug: string;
+    phone: string;
+    turnstileToken?: string;
+}
+
+export interface VerifyResetCodeRequest {
+    companySlug: string;
+    phone: string;
+    code: string;
+}
+
 export interface LineLoginRequest {
     idToken: string;
     liffId: string;
@@ -40,6 +65,7 @@ export interface AuthUser {
     linePictureUrl?: string;
     language: string;
     isActive: boolean;
+    hasPin: boolean;
 }
 
 export interface RegisterResponse {
@@ -125,4 +151,29 @@ export interface LinkCredentialsRequest {
 export interface LinkResponse {
     user: AuthUser;
     tokens: TokenPair;
+}
+
+// ============================================================
+// PIN Reset Request Types (Hybrid Approach)
+// ============================================================
+
+export interface RequestPinResetRequest {
+    companySlug: string;
+    phone: string;
+}
+
+export type PinResetRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PinResetRequest {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    employeeCode: string;
+    employeePhone: string;
+    companyId: string;
+    status: PinResetRequestStatus;
+    requestedAt: string;
+    resolvedAt?: string;
+    resolvedBy?: string;
+    notes?: string;
 }

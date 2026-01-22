@@ -20,6 +20,7 @@ router.delete('/:id', employeeController.terminate);
 // Employee actions
 router.post('/:id/reactivate', employeeController.reactivate);
 router.post('/:id/link-user', employeeController.linkToUser);
+router.post('/:id/reset-pin', employeeController.resetPin);
 
 // Certifications
 router.get('/:id/certifications', employeeController.getCertifications);

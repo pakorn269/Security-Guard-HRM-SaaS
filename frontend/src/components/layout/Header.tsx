@@ -1,9 +1,13 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Menu, Globe, Search, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import NotificationBell from '../common/NotificationBell';
 import Avatar from '../common/Avatar';
 import { ThemeToggle } from '../theme';
+import { useAuth } from '../../context/AuthContext';
+import MyAccountModal from '../auth/MyAccountModal';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   /** Callback to open mobile sidebar */
@@ -144,7 +148,10 @@ interface UserMenuProps {
 
 function UserMenu({ user }: UserMenuProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const userName = user?.name || 'User';
@@ -173,10 +180,10 @@ function UserMenu({ user }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = () => {
-    // TODO: Implement actual logout logic
-    console.log('Logout clicked');
+  const handleLogout = async () => {
     setIsOpen(false);
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -229,9 +236,21 @@ function UserMenu({ user }: UserMenuProps) {
 
           {/* Menu items */}
           <div className="py-1">
-            <MenuLink to="/settings/profile" icon={User} onClick={() => setIsOpen(false)}>
-              {t('settings.profile')}
-            </MenuLink>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                setIsAccountModalOpen(true);
+              }}
+              className="
+                w-full flex items-center gap-3 px-4 py-2
+                text-sm text-neutral-700 dark:text-neutral-300
+                hover:bg-neutral-50 dark:hover:bg-neutral-800
+                transition-colors text-left
+              "
+            >
+              <User size={16} className="text-neutral-400 dark:text-neutral-500" />
+              {t('account.title')}
+            </button>
             <MenuLink to="/settings" icon={Settings} onClick={() => setIsOpen(false)}>
               {t('navigation.settings')}
             </MenuLink>
@@ -254,6 +273,16 @@ function UserMenu({ user }: UserMenuProps) {
           </div>
         </div>
       )}
+
+      {/* Account Modal */}
+      <MyAccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        user={{
+          name: userName,
+          email: userEmail
+        }}
+      />
     </div>
   );
 }
@@ -268,8 +297,8 @@ interface MenuLinkProps {
 
 function MenuLink({ to, icon: Icon, children, onClick }: MenuLinkProps) {
   return (
-    <a
-      href={to}
+    <Link
+      to={to}
       onClick={onClick}
       className="
         flex items-center gap-3 px-4 py-2
@@ -280,7 +309,7 @@ function MenuLink({ to, icon: Icon, children, onClick }: MenuLinkProps) {
     >
       <Icon size={16} className="text-neutral-400 dark:text-neutral-500" />
       {children}
-    </a>
+    </Link>
   );
 }
 

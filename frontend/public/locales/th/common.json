@@ -171,6 +171,18 @@
         "cancel": "ยกเลิก",
         "save": "บันทึก"
     },
+    "auth": {
+        "logout": "ออกจากระบบ"
+    },
+    "account": {
+        "title": "บัญชีของฉัน",
+        "changePassword": "เปลี่ยนรหัสผ่าน",
+        "currentPassword": "รหัสผ่านปัจจุบัน",
+        "newPassword": "รหัสผ่านใหม่",
+        "confirmPassword": "ยืนยันรหัสผ่านใหม่",
+        "passwordsDoNotMatch": "รหัสผ่านไม่ตรงกัน",
+        "passwordChanged": "เปลี่ยนรหัสผ่านสำเร็จ"
+    },
     "roles": {
         "guard": "พนักงานรักษาความปลอดภัย",
         "manager": "ผู้จัดการ"

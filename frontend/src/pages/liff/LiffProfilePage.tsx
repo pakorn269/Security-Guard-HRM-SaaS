@@ -1,4 +1,6 @@
 import liff from '@line/liff';
+import { useNavigate } from 'react-router-dom';
+import { useLiffAuth } from '../../context/LiffAuthContext';
 import {
     User,
     Phone,
@@ -12,17 +14,23 @@ import {
     LogOut,
     ChevronRight,
     Award,
+    Lock,
+    Loader2,
 } from 'lucide-react';
 
 export default function LiffProfilePage() {
-    // Placeholder profile data (would come from LIFF and API)
+    const navigate = useNavigate();
+    const { user, isLoading, logout } = useLiffAuth();
+
+    // Placeholder profile data - will be combined with real user data
+    // In future, fetch employee details from API
     const profile = {
-        name: 'สมชาย รักงาน',
-        employeeCode: 'EMP-001',
-        phone: '081-234-5678',
-        email: 'somchai@company.com',
+        name: user?.lineDisplayName || 'พนักงาน',
+        employeeCode: user?.employeeId ? `EMP-${user.employeeId.slice(0, 6).toUpperCase()}` : 'N/A',
+        phone: '081-xxx-xxxx', // TODO: Fetch from employee API
+        email: user?.email || 'N/A',
         position: 'เจ้าหน้าที่รักษาความปลอดภัย',
-        hireDate: '1 ม.ค. 2024',
+        hireDate: 'N/A', // TODO: Fetch from employee API
     };
 
     const certifications = [
@@ -30,11 +38,16 @@ export default function LiffProfilePage() {
         { name: 'อบรมดับเพลิง', expiry: '15 มิ.ย. 2025', status: 'expiring' },
     ];
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await logout();
         if (liff.isLoggedIn()) {
             liff.logout();
-            window.location.reload();
         }
+        window.location.reload();
+    };
+
+    const handleChangePin = () => {
+        navigate('/liff/change-pin');
     };
 
     const getStatusIcon = (status: string) => {
@@ -59,12 +72,28 @@ export default function LiffProfilePage() {
         }
     };
 
+    if (isLoading) {
+        return (
+            <div className="p-4 flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            </div>
+        );
+    }
+
     return (
         <div className="p-4 space-y-6 animate-fade-in">
             {/* Profile header */}
             <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg p-6 text-white text-center shadow-lg">
-                <div className="w-24 h-24 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-4 ring-4 ring-white/30">
-                    <User size={48} className="text-white/90" />
+                <div className="w-24 h-24 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-4 ring-4 ring-white/30 overflow-hidden">
+                    {user?.linePictureUrl ? (
+                        <img
+                            src={user.linePictureUrl}
+                            alt={profile.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <User size={48} className="text-white/90" />
+                    )}
                 </div>
                 <h1 className="text-xl font-bold">{profile.name}</h1>
                 <p className="text-white/80 mt-1 text-sm">{profile.employeeCode}</p>
@@ -135,6 +164,19 @@ export default function LiffProfilePage() {
             <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 shadow-sm border border-neutral-200 dark:border-neutral-800">
                 <h2 className="font-semibold text-neutral-800 dark:text-white mb-3">ตั้งค่า</h2>
                 <div className="space-y-1">
+                    {/* Change PIN - Only show if user has PIN set */}
+                    {user?.hasPin && (
+                        <button
+                            onClick={handleChangePin}
+                            className="w-full text-left p-3 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors flex items-center justify-between group"
+                        >
+                            <span className="text-neutral-700 dark:text-neutral-300 flex items-center gap-3">
+                                <Lock size={18} className="text-neutral-500 dark:text-neutral-400" />
+                                เปลี่ยนรหัส PIN
+                            </span>
+                            <ChevronRight size={18} className="text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors" />
+                        </button>
+                    )}
                     <button className="w-full text-left p-3 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors flex items-center justify-between group">
                         <span className="text-neutral-700 dark:text-neutral-300 flex items-center gap-3">
                             <Bell size={18} className="text-neutral-500 dark:text-neutral-400" />
@@ -168,3 +210,4 @@ export default function LiffProfilePage() {
         </div>
     );
 }
+

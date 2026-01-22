@@ -105,7 +105,11 @@ class EmployeeService {
                     id,
                     email,
                     role,
-                    is_active
+                    is_active,
+                    password_hash,
+                    pin_set_at,
+                    pin_locked_until,
+                    pin_attempts
                 )
             `)
             .eq('id', employeeId)
@@ -122,6 +126,10 @@ class EmployeeService {
             email: string;
             role: string;
             is_active: boolean;
+            password_hash: string | null;
+            pin_set_at: string | null;
+            pin_locked_until: string | null;
+            pin_attempts: number;
         } | null;
 
         return {
@@ -132,6 +140,13 @@ class EmployeeService {
                     email: userData.email,
                     role: userData.role,
                     isActive: userData.is_active,
+                    hasPin: !!userData.password_hash,
+                    pinSetAt: userData.pin_set_at,
+                    isPinLocked: userData.pin_locked_until
+                        ? new Date(userData.pin_locked_until) > new Date()
+                        : false,
+                    pinLockedUntil: userData.pin_locked_until,
+                    failedPinAttempts: userData.pin_attempts || 0,
                 }
                 : null,
         };
@@ -170,7 +185,11 @@ class EmployeeService {
                     id,
                     email,
                     role,
-                    is_active
+                    is_active,
+                    password_hash,
+                    pin_set_at,
+                    pin_locked_until,
+                    pin_attempts
                 )
             `,
                 { count: 'exact' }
@@ -212,6 +231,10 @@ class EmployeeService {
                 email: string;
                 role: string;
                 is_active: boolean;
+                password_hash: string | null;
+                pin_set_at: string | null;
+                pin_locked_until: string | null;
+                pin_attempts: number;
             } | null;
 
             return {
@@ -222,6 +245,13 @@ class EmployeeService {
                         email: userData.email,
                         role: userData.role,
                         isActive: userData.is_active,
+                        hasPin: !!userData.password_hash,
+                        pinSetAt: userData.pin_set_at,
+                        isPinLocked: userData.pin_locked_until
+                            ? new Date(userData.pin_locked_until) > new Date()
+                            : false,
+                        pinLockedUntil: userData.pin_locked_until,
+                        failedPinAttempts: userData.pin_attempts || 0,
                     }
                     : null,
             };

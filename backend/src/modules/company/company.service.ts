@@ -8,6 +8,7 @@ import type {
     CreateCompanyRequest,
     UpdateCompanyRequest,
     UpdateCompanySettingsRequest,
+    PublicCompanyInfo,
 } from './company.types.js';
 
 class CompanyService {
@@ -78,6 +79,31 @@ class CompanyService {
         }
 
         return this.mapToCompany(data as CompanyRow);
+    }
+
+    // Get public company info by slug (for login page)
+    async getPublicBySlug(slug: string): Promise<PublicCompanyInfo> {
+        const { data, error } = await supabaseAdmin
+            .from('companies')
+            .select('id, name, slug, logo_url, settings')
+            .eq('slug', slug)
+            .single();
+
+        if (error || !data) {
+            throw new NotFoundError('Company', 'ไม่พบข้อมูลบริษัท');
+        }
+
+        const row = data as CompanyRow;
+
+        return {
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            logoUrl: row.logo_url,
+            settings: {
+                defaultLanguage: (row.settings?.default_language as 'th' | 'en') || 'th'
+            }
+        };
     }
 
     // List all companies (super admin only)

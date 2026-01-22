@@ -21,6 +21,20 @@ export interface Employee {
     updatedAt: string;
 }
 
+export interface EmployeeWithUser extends Employee {
+    user?: {
+        id: string;
+        email: string;
+        role: string;
+        isActive: boolean;
+        hasPin: boolean;
+        pinSetAt?: string | null;
+        isPinLocked: boolean;
+        pinLockedUntil?: string | null;
+        failedPinAttempts: number;
+    } | null;
+}
+
 export type CertificationStatus = 'valid' | 'expiring_soon' | 'expired';
 
 export interface Certification {

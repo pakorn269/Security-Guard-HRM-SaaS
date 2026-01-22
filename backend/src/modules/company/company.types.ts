@@ -61,6 +61,16 @@ export interface UpdateCompanySettingsRequest {
     geofenceRadiusMeters?: number;
 }
 
+export interface PublicCompanyInfo {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string;
+    settings: {
+        defaultLanguage: 'th' | 'en';
+    }
+}
+
 // Database row type (snake_case)
 export interface CompanyRow {
     id: string;

@@ -24,6 +24,7 @@ class UserService {
             lineDisplayName: row.line_display_name,
             linePictureUrl: row.line_picture_url,
             lineLinkedAt: row.line_linked_at,
+            pinSetAt: row.pin_set_at,
             isActive: row.is_active,
             language: row.language,
             lastLoginAt: row.last_login_at,

@@ -2,7 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useCallback } from 'r
 import type { ReactNode } from 'react';
 import authService from '../services/auth.service';
 import { getAccessToken, clearTokens } from '../services/api';
-import type { AuthUser, LoginCredentials, RegisterData, AuthState } from '../types/auth';
+import type { AuthUser, LoginCredentials, RegisterData, AuthState, PhoneLoginCredentials } from '../types/auth';
 
 // Action types
 type AuthAction =
@@ -59,6 +59,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 // Context interface
 interface AuthContextValue extends AuthState {
     login: (credentials: LoginCredentials) => Promise<boolean>;
+    phoneLogin: (credentials: PhoneLoginCredentials) => Promise<boolean>;
     register: (data: RegisterData) => Promise<boolean>;
     logout: () => Promise<void>;
     lineLogin: (idToken: string, liffId: string) => Promise<boolean>;
@@ -113,6 +114,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, []);
 
+    // Phone Login handler - returns true on success
+    const phoneLogin = useCallback(async (credentials: PhoneLoginCredentials): Promise<boolean> => {
+        dispatch({ type: 'AUTH_START' });
+        try {
+            const response = await authService.phoneLogin(credentials);
+            dispatch({ type: 'AUTH_SUCCESS', payload: response.user });
+            return true;
+        } catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : 'Login failed';
+            dispatch({ type: 'AUTH_FAILURE', payload: message });
+            return false;
+        }
+    }, []);
+
     // Register handler - returns true on success
     const register = useCallback(async (data: RegisterData): Promise<boolean> => {
         dispatch({ type: 'AUTH_START' });
@@ -159,6 +176,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const value: AuthContextValue = {
         ...state,
         login,
+        phoneLogin,
         register,
         logout,
         lineLogin,

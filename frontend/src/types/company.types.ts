@@ -7,6 +7,16 @@ export interface CompanySettings {
     defaultLanguage: 'th' | 'en';
 }
 
+export interface PublicCompanyInfo {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string;
+    settings: {
+        defaultLanguage: 'th' | 'en';
+    };
+}
+
 export interface Company {
     id: string;
     name: string;

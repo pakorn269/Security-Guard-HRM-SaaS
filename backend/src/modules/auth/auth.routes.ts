@@ -7,13 +7,22 @@ const router = Router();
 // Public routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/login-phone', authController.phoneLogin);
 router.post('/line', authController.lineLogin);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
+router.post('/forgot-pin', authController.forgotPin);
+router.post('/verify-reset-code', authController.verifyResetCode);
+router.post('/request-pin-reset', authController.requestPinReset);
+router.post('/me/request-pin-reset', authMiddleware, authController.requestPinResetMe);
 
 // Protected routes (require authentication)
 router.get('/me', authMiddleware, authController.me);
 router.post('/link-line', authMiddleware, authController.linkLine);
+router.post('/password', authMiddleware, authController.changePassword);
+router.post('/set-pin', authMiddleware, authController.setPin);
+router.get('/pin-reset-requests', authMiddleware, authController.getPinResetRequests);
+router.get('/pin-reset-requests/count', authMiddleware, authController.getPendingPinResetCount);
 
 // ============================================================
 // LIFF Account Linking Routes

@@ -48,6 +48,11 @@ const LiffLinkCredentialsPage = lazy(() => import('./pages/liff/LiffLinkCredenti
 const LiffLoginSelectPage = lazy(() => import('./pages/liff/LiffLoginSelectPage'));
 const LiffEmailLoginPage = lazy(() => import('./pages/liff/LiffEmailLoginPage'));
 
+// Company URL Login pages
+const CompanyLoginPage = lazy(() => import('./pages/liff/CompanyLoginPage'));
+const SetPinPage = lazy(() => import('./pages/liff/SetPinPage'));
+const ForgotPinPage = lazy(() => import('./pages/liff/ForgotPinPage'));
+
 // Loading component
 const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
@@ -138,7 +143,7 @@ const routes: RouteObject[] = [
                 element: withSuspense(SitesPage),
             },
             {
-                path: 'settings',
+                path: 'settings/:tab?',
                 element: withSuspense(SettingsPage),
             },
         ],
@@ -166,6 +171,11 @@ const routes: RouteObject[] = [
                 path: 'profile',
                 element: withSuspense(LiffProfilePage),
             },
+            // PIN Management
+            {
+                path: 'change-pin',
+                element: withSuspense(SetPinPage),
+            },
             // Account Linking pages
             {
                 path: 'link',
@@ -191,6 +201,23 @@ const routes: RouteObject[] = [
     {
         path: '/liff/email-login',
         element: withSuspense(LiffEmailLoginPage),
+        errorElement: <ErrorBoundary />,
+    },
+
+    // Company URL Login routes
+    {
+        path: '/liff/:companySlug/login',
+        element: withSuspense(CompanyLoginPage),
+        errorElement: <ErrorBoundary />,
+    },
+    {
+        path: '/liff/:companySlug/set-pin',
+        element: withSuspense(SetPinPage),
+        errorElement: <ErrorBoundary />,
+    },
+    {
+        path: '/liff/:companySlug/forgot-pin',
+        element: withSuspense(ForgotPinPage),
         errorElement: <ErrorBoundary />,
     },
 ];

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     Building2,
@@ -13,6 +14,7 @@ import {
     Copy,
     Check,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import api from '../../services/api';
 
 interface CompanySettings {
@@ -45,6 +47,8 @@ type SettingsTab = 'profile' | 'attendance' | 'notifications' | 'leave';
 
 export default function SettingsPage() {
     const { i18n } = useTranslation();
+    const { tab } = useParams<{ tab: string }>();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -68,6 +72,16 @@ export default function SettingsPage() {
             attendanceAlerts: true,
         },
     });
+
+    useEffect(() => {
+        if (tab) {
+            // Validate tab exists
+            const validTabs: SettingsTab[] = ['profile', 'attendance', 'notifications', 'leave'];
+            if (validTabs.includes(tab as SettingsTab)) {
+                setActiveTab(tab as SettingsTab);
+            }
+        }
+    }, [tab]);
 
     useEffect(() => {
         fetchSettings();
@@ -214,17 +228,17 @@ export default function SettingsPage() {
                 {/* Mobile: Horizontal scrollable tabs - full bleed */}
                 <div className="lg:hidden overflow-x-auto mobile-scroll-x w-[calc(100%+2rem)] -mx-4 px-4">
                     <div className="flex gap-2 pb-1">
-                        {tabs.map((tab) => (
+                        {tabs.map((tabItem) => (
                             <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all flex-shrink-0 touch-target ${activeTab === tab.id
+                                key={tabItem.id}
+                                onClick={() => navigate(`/settings/${tabItem.id}`)}
+                                className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all flex-shrink-0 touch-target ${activeTab === tabItem.id
                                     ? 'bg-primary-500 text-white shadow-sm'
                                     : 'bg-white dark:bg-surface-800 text-surface-600 dark:text-surface-400 border border-surface-200 dark:border-surface-700'
                                     }`}
                             >
-                                {tab.icon}
-                                <span className="font-medium text-sm whitespace-nowrap">{tab.label}</span>
+                                {tabItem.icon}
+                                <span className="font-medium text-sm whitespace-nowrap">{tabItem.label}</span>
                             </button>
                         ))}
                     </div>
@@ -233,17 +247,17 @@ export default function SettingsPage() {
                 {/* Desktop: Sidebar tabs */}
                 <div className="hidden lg:block lg:w-64 flex-shrink-0">
                     <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-2">
-                        {tabs.map((tab) => (
+                        {tabs.map((tabItem) => (
                             <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`w-full px-4 py-3 rounded-lg text-left flex items-center gap-3 transition-all ${activeTab === tab.id
+                                key={tabItem.id}
+                                onClick={() => navigate(`/settings/${tabItem.id}`)}
+                                className={`w-full px-4 py-3 rounded-lg text-left flex items-center gap-3 transition-all ${activeTab === tabItem.id
                                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                                     : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-700'
                                     }`}
                             >
-                                {tab.icon}
-                                <span className="font-medium">{tab.label}</span>
+                                {tabItem.icon}
+                                <span className="font-medium">{tabItem.label}</span>
                             </button>
                         ))}
                     </div>
@@ -302,6 +316,50 @@ export default function SettingsPage() {
                                                 ? 'แจ้งรหัสนี้ให้พนักงานเพื่อใช้เข้าสู่ระบบผ่านอีเมล (สำหรับผู้ที่ไม่ใช้ LINE)'
                                                 : 'Share this code with employees for email login (for those who don\'t use LINE)'}
                                         </p>
+                                    </div>
+
+                                    {/* Company Login URL & QR Code */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                            {i18n.language === 'th' ? 'ลิงก์เข้าสู่ระบบสำหรับพนักงาน' : 'Employee Login Link'}
+                                        </label>
+                                        <div className="p-4 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                                            <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                                                <div className="bg-white p-2 rounded-lg shadow-sm">
+                                                    <QRCodeSVG
+                                                        value={`${window.location.origin}/liff/${profile.slug}/login`}
+                                                        size={120}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 w-full space-y-3">
+                                                    <p className="text-sm text-surface-600 dark:text-surface-400">
+                                                        {i18n.language === 'th'
+                                                            ? 'สแกน QR Code หรือใช้ลิงก์ด้านล่างเพื่อเข้าสู่ระบบพนักงาน'
+                                                            : 'Scan QR Code or use the link below to login as an employee.'}
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={`${window.location.origin}/liff/${profile.slug}/login`}
+                                                            readOnly
+                                                            className="flex-1 px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white text-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(`${window.location.origin}/liff/${profile.slug}/login`);
+                                                                setCopied(true);
+                                                                setTimeout(() => setCopied(false), 2000);
+                                                            }}
+                                                            className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-600 transition-colors"
+                                                            title={i18n.language === 'th' ? 'คัดลอก' : 'Copy'}
+                                                        >
+                                                            {copied ? <Check size={18} className="text-success-500" /> : <Copy size={18} />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div>
