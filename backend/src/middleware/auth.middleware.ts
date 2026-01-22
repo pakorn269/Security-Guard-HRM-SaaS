@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { UnauthorizedError } from '../utils/errors.js';
+import { enforceGuardRestrictions } from './rbac.middleware.js';
 
 // JWT payload interface
 export interface JwtPayload {
@@ -25,7 +26,7 @@ declare global {
 // Verify JWT token and attach user to request
 export const authMiddleware = (
     req: Request,
-    _res: Response,
+    res: Response,
     next: NextFunction
 ): void => {
     try {
@@ -45,7 +46,9 @@ export const authMiddleware = (
         try {
             const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
             req.user = decoded;
-            next();
+
+            // Enforce RBAC for guards
+            enforceGuardRestrictions(req, res, next);
         } catch (jwtError) {
             if (jwtError instanceof jwt.TokenExpiredError) {
                 throw new UnauthorizedError('Token expired', 'Token หมดอายุ');

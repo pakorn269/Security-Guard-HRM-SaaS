@@ -30,6 +30,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
     // Check role-based access
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+        // If a guard tries to access a non-allowed page (likely dashboard), redirect to LIFF
+        if (user.role === 'guard') {
+            return <Navigate to="/liff/clock" replace />;
+        }
+
         return (
             <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
                 <div className="text-center">
