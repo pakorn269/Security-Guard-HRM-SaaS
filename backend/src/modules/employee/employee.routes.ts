@@ -7,8 +7,10 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
-// Special route for expiring certifications (must be before :id routes)
+// Special routes (must be before :id routes)
 router.get('/certifications/expiring', employeeController.getExpiringCertifications);
+router.get('/line-linked', employeeController.getLineLinkedEmployees);
+router.post('/line-message/bulk', employeeController.sendBulkLineMessage);
 
 // Employee CRUD
 router.get('/', employeeController.list);
@@ -21,6 +23,7 @@ router.delete('/:id', employeeController.terminate);
 router.post('/:id/reactivate', employeeController.reactivate);
 router.post('/:id/link-user', employeeController.linkToUser);
 router.post('/:id/reset-pin', employeeController.resetPin);
+router.post('/:id/line-message', employeeController.sendLineMessage);
 
 // Certifications
 router.get('/:id/certifications', employeeController.getCertifications);

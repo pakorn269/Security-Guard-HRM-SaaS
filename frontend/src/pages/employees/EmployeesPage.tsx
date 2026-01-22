@@ -1,18 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
-
   Filter,
   Download,
   MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
-
   UserCheck,
   ChevronDown,
+  MessageCircle,
+  Send,
 } from 'lucide-react';
 import { Button, Badge, Avatar, Card } from '../../components/common';
 import { PageHeader } from '../../components/layout';
@@ -21,6 +21,7 @@ import { SearchInput } from '../../components/forms';
 import { Menu, MenuItem, MenuDivider } from '../../components/navigation';
 import { employeeService, type EmployeeWithUser, type ListEmployeesParams } from '../../services/employee.service';
 import EmployeeFormModal from './EmployeeFormModal';
+import LineMessageModal from './LineMessageModal';
 import PinResetRequestsPanel from '../../components/admin/PinResetRequestsPanel';
 
 /**
@@ -61,6 +62,8 @@ export default function EmployeesPage() {
   const [sortColumn, setSortColumn] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showFilters, setShowFilters] = useState(false);
+  const [isLineMessageModalOpen, setIsLineMessageModalOpen] = useState(false);
+  const [lineMessageEmployee, setLineMessageEmployee] = useState<EmployeeWithUser | null>(null);
 
   const pageSize = 10;
 
@@ -136,6 +139,26 @@ export default function EmployeesPage() {
   const handleClearSelection = () => {
     setSelectedIds(new Set());
   };
+
+  const handleSendLineMessage = (employee: EmployeeWithUser) => {
+    setLineMessageEmployee(employee);
+    setIsLineMessageModalOpen(true);
+  };
+
+  const handleSendBulkLineMessage = () => {
+    setLineMessageEmployee(null);
+    setIsLineMessageModalOpen(true);
+  };
+
+  const handleLineMessageClose = () => {
+    setIsLineMessageModalOpen(false);
+    setLineMessageEmployee(null);
+  };
+
+  // Get selected employees for bulk LINE message
+  const selectedEmployees = useMemo(() => {
+    return employees.filter((e) => selectedIds.has(e.id));
+  }, [employees, selectedIds]);
 
   // Table columns definition with mobile card priorities
   const columns: ColumnDef<EmployeeWithUser>[] = [
@@ -216,6 +239,26 @@ export default function EmployeesPage() {
       hideOnMobile: true,
     },
     {
+      id: 'lineStatus',
+      header: 'LINE',
+      cell: (employee) =>
+        employee.user?.isLineLinked ? (
+          <div
+            className="flex items-center gap-1.5 text-green-600 dark:text-green-400"
+            title={employee.user.lineDisplayName || 'LINE linked'}
+          >
+            <MessageCircle size={14} className="fill-current" />
+            <span className="text-xs font-medium truncate max-w-[60px]">
+              {employee.user.lineDisplayName || 'Linked'}
+            </span>
+          </div>
+        ) : (
+          <span className="text-neutral-400 text-sm">-</span>
+        ),
+      hideOnMobile: true,
+      width: '100px',
+    },
+    {
       id: 'actions',
       header: '',
       width: '48px',
@@ -235,6 +278,14 @@ export default function EmployeesPage() {
           <MenuItem icon={<Pencil size={16} />} onClick={() => handleEditEmployee(employee)}>
             {t('common.edit', 'แก้ไข')}
           </MenuItem>
+          {employee.user?.isLineLinked && (
+            <MenuItem
+              icon={<Send size={16} />}
+              onClick={() => handleSendLineMessage(employee)}
+            >
+              {t('line.sendMessage', 'ส่งข้อความ LINE')}
+            </MenuItem>
+          )}
           <MenuDivider />
           <MenuItem icon={<Trash2 size={16} />} destructive>
             {t('common.delete', 'ลบ')}
@@ -366,6 +417,15 @@ export default function EmployeesPage() {
           totalCount={employees.length}
           onClearSelection={handleClearSelection}
         >
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Send size={14} />}
+            onClick={handleSendBulkLineMessage}
+            disabled={!selectedEmployees.some((e) => e.user?.isLineLinked)}
+          >
+            {t('line.sendMessage', 'ส่ง LINE')}
+          </Button>
           <Button variant="outline" size="sm">
             {t('common.export', 'ส่งออก')}
           </Button>
@@ -410,6 +470,14 @@ export default function EmployeesPage() {
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
         employee={editingEmployee}
+      />
+
+      {/* LINE Message Modal */}
+      <LineMessageModal
+        isOpen={isLineMessageModalOpen}
+        onClose={handleLineMessageClose}
+        employee={lineMessageEmployee}
+        selectedEmployees={lineMessageEmployee ? undefined : selectedEmployees}
       />
     </div>
   );

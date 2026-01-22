@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MessageCircle, Send, LinkIcon, Unlink } from 'lucide-react';
 import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
 import CertificationFormModal from './CertificationFormModal';
+import LineMessageModal from './LineMessageModal';
 
 // Status badge component
 function StatusBadge({ status }: { status: string }) {
@@ -62,6 +64,7 @@ export default function EmployeeDetailPage() {
     const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
     const [terminationNotes, setTerminationNotes] = useState('');
     const [isTerminating, setIsTerminating] = useState(false);
+    const [isLineMessageModalOpen, setIsLineMessageModalOpen] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -371,6 +374,82 @@ export default function EmployeeDetailPage() {
                         )}
                     </Card>
 
+                    {/* LINE Integration */}
+                    <Card>
+                        <CardHeader
+                            title={t('line.integration', 'LINE Integration')}
+                            action={
+                                employee.user?.isLineLinked && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setIsLineMessageModalOpen(true)}
+                                    >
+                                        <Send size={14} />
+                                    </Button>
+                                )
+                            }
+                        />
+                        {employee.user?.isLineLinked ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    {employee.user.linePictureUrl ? (
+                                        <img
+                                            src={employee.user.linePictureUrl}
+                                            alt={employee.user.lineDisplayName || 'LINE'}
+                                            className="w-12 h-12 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                            <MessageCircle size={24} className="text-green-600 dark:text-green-400" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="font-medium text-surface-900 dark:text-white">
+                                            {employee.user.lineDisplayName || 'LINE User'}
+                                        </p>
+                                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-sm">
+                                            <LinkIcon size={12} />
+                                            <span>{t('line.linked', 'Linked')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {employee.user.lineLinkedAt && (
+                                    <div className="text-xs text-surface-500">
+                                        {t('line.linkedAt', 'Linked on')}: {new Date(employee.user.lineLinkedAt).toLocaleDateString()}
+                                    </div>
+                                )}
+
+                                <Button
+                                    size="sm"
+                                    variant="primary"
+                                    className="w-full"
+                                    leftIcon={<Send size={14} />}
+                                    onClick={() => setIsLineMessageModalOpen(true)}
+                                >
+                                    {t('line.sendMessage', 'Send LINE Message')}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="text-center py-4">
+                                <div className="w-12 h-12 rounded-full bg-surface-100 dark:bg-surface-700 flex items-center justify-center mx-auto mb-3">
+                                    <Unlink size={20} className="text-surface-400" />
+                                </div>
+                                <p className="text-surface-500 dark:text-surface-400 text-sm">
+                                    {employee.user
+                                        ? t('line.notLinked', 'LINE account not linked')
+                                        : t('line.noUserAccount', 'No user account to link LINE')}
+                                </p>
+                                {employee.user && (
+                                    <p className="text-xs text-surface-400 mt-2">
+                                        {t('line.linkInstructions', 'Employee can link LINE via LIFF app')}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </Card>
+
                     {/* Certifications */}
                     <Card>
                         <CardHeader
@@ -496,6 +575,13 @@ export default function EmployeeDetailPage() {
                     </Button>
                 </ModalFooter>
             </Modal>
+
+            {/* LINE Message Modal */}
+            <LineMessageModal
+                isOpen={isLineMessageModalOpen}
+                onClose={() => setIsLineMessageModalOpen(false)}
+                employee={employee}
+            />
         </div>
     );
 }
