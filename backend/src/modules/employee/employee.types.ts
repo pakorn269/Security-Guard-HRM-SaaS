@@ -59,6 +59,11 @@ export interface EmployeeWithUser extends Employee {
         email: string;
         role: string;
         isActive: boolean;
+        hasPin: boolean;
+        pinSetAt?: string | null;
+        isPinLocked: boolean;
+        pinLockedUntil?: string | null;
+        failedPinAttempts: number;
     } | null;
 }
 

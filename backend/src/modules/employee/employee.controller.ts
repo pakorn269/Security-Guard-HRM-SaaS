@@ -221,6 +221,47 @@ class EmployeeController {
         }
     }
 
+    // POST /api/v1/employees/:id/reset-pin - Reset employee PIN
+    async resetPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.companyId) {
+                throw new ForbiddenError('No company associated with user');
+            }
+
+            // Only admins can reset PINs
+            if (!['super_admin', 'company_admin'].includes(req.user.role)) {
+                throw new ForbiddenError(
+                    'Only admins can reset PINs',
+                    'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถรีเซ็ตรหัส PIN'
+                );
+            }
+
+            const employeeId = req.params.id as string;
+
+            // Get employee to find user ID
+            const employee = await employeeService.getById(employeeId, req.user.companyId);
+
+            if (!employee.userId) {
+                throw new ValidationError('Employee does not have a user account');
+            }
+
+            // Call auth service to reset PIN
+            const { authService } = await import('../auth/auth.service.js');
+            await authService.adminResetPin(employee.userId);
+
+            // Resolve any pending PIN reset request for this employee
+            await authService.resolvePinResetRequestByEmployee(
+                employeeId,
+                req.user.companyId,
+                req.user.userId
+            );
+
+            sendSuccess(res, { message: 'PIN reset successfully' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // === Certification endpoints ===
 
     // GET /api/v1/employees/:id/certifications - Get certifications

@@ -9,6 +9,11 @@ export interface EmployeeWithUser extends Employee {
         email: string;
         role: string;
         isActive: boolean;
+        hasPin: boolean;
+        pinSetAt?: string | null;
+        isPinLocked: boolean;
+        pinLockedUntil?: string | null;
+        failedPinAttempts: number;
     } | null;
 }
 
@@ -159,6 +164,13 @@ export const employeeService = {
             return response.data;
         }
         throw new Error('Failed to link employee to user');
+    },
+
+    /**
+     * Reset employee PIN
+     */
+    async resetPin(employeeId: string): Promise<void> {
+        await apiPost(`${EMPLOYEES_BASE}/${employeeId}/reset-pin`, {});
     },
 
     // === Certification methods ===

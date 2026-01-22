@@ -19,8 +19,13 @@ import type {
     LoginResponse,
     RefreshResponse,
     LineIdTokenPayload,
+    PhoneLoginRequest,
+    SetPinRequest,
+    ForgotPinRequest,
+    VerifyResetCodeRequest,
 } from './auth.types.js';
 import type { JwtPayload } from '../../middleware/auth.middleware.js';
+import { PhoneUtils } from '../../utils/phone.js';
 
 // Constants
 const SALT_ROUNDS = 12;
@@ -101,6 +106,7 @@ class AuthService {
             linePictureUrl: user.line_picture_url as string | undefined,
             language: (user.language as string) || 'th',
             isActive: user.is_active as boolean,
+            hasPin: !!(user.password_hash),
         };
     }
 
@@ -303,6 +309,367 @@ class AuthService {
             user: this.mapToAuthUser(user),
             tokens,
         };
+    }
+
+    // Phone + PIN Login
+    async phoneLogin(data: PhoneLoginRequest): Promise<LoginResponse> {
+        const { companySlug, phone, pin, turnstileToken } = data;
+
+        // Verify Turnstile (skip in dev/test for now, or assume frontend handles it)
+        // TODO: Implement Turnstile verification if keys are available
+
+        // Normalize phone
+        const normalizedPhone = PhoneUtils.normalize(phone);
+
+        // Find company by slug
+        const { data: company, error: companyError } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (companyError || !company) {
+            // Use generic error for security, but log specific
+            logger.warn(`Company not found for slug: ${companySlug}`);
+            throw new UnauthorizedError(
+                'Invalid phone number or PIN',
+                'เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง'
+            );
+        }
+
+        // Find employee by phone and company
+        // We look up employee first because guards might not know their email/username
+        const { data: employee, error: employeeError } = await supabaseAdmin
+            .from('employees')
+            .select('user_id')
+            .eq('company_id', company.id)
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (employeeError || !employee || !employee.user_id) {
+            logger.warn(`Employee not found or no user linked for phone: ${normalizedPhone} in company: ${companySlug}`);
+            throw new UnauthorizedError(
+                'Invalid phone number or PIN',
+                'เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง'
+            );
+        }
+
+        // Get user details
+        const { data: user, error: userError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', employee.user_id)
+            .single();
+
+        if (userError || !user) {
+            logger.warn(`User not found for employee: ${employee.user_id}`);
+            throw new UnauthorizedError(
+                'Invalid phone number or PIN',
+                'เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง'
+            );
+        }
+
+        // Check account status
+        if (!user.is_active) {
+            throw new UnauthorizedError(
+                'Account is deactivated',
+                'บัญชีถูกระงับ'
+            );
+        }
+
+        // Check PIN lockout
+        if (user.pin_locked_until && new Date(user.pin_locked_until) > new Date()) {
+            const minutesLeft = Math.ceil((new Date(user.pin_locked_until).getTime() - new Date().getTime()) / 60000);
+            throw new UnauthorizedError(
+                `Account locked. Please wait ${minutesLeft} minutes.`,
+                `บัญชีถูกล็อค กรุณารอ ${minutesLeft} นาที`
+            );
+        }
+
+        // Verify PIN (using password logic)
+        if (!user.password_hash) {
+            throw new UnauthorizedError(
+                'PIN not set. Please set PIN first.',
+                'ยังไม่ได้ตั้งรหัส PIN กรุณาตั้งค่าก่อนใช้งาน'
+            );
+        }
+
+        const isValid = await this.verifyPassword(pin, user.password_hash);
+
+        if (!isValid) {
+            // Increment failed attempts
+            const attempts = (user.pin_attempts || 0) + 1;
+            let lockedUntil: Date | null = null;
+
+            // Lockout logic: 5 attempts = 15m, 10 attempts = 1h, 15 attempts = admin unlock (indefinite/long)
+            if (attempts >= 15) {
+                // Lock for 1 year (effective admin unlock needed)
+                lockedUntil = new Date();
+                lockedUntil.setFullYear(lockedUntil.getFullYear() + 1);
+            } else if (attempts >= 10) {
+                lockedUntil = new Date();
+                lockedUntil.setHours(lockedUntil.getHours() + 1);
+            } else if (attempts >= 5) {
+                lockedUntil = new Date();
+                lockedUntil.setMinutes(lockedUntil.getMinutes() + 15);
+            }
+
+            await supabaseAdmin
+                .from('users')
+                .update({
+                    pin_attempts: attempts,
+                    pin_locked_until: lockedUntil ? lockedUntil.toISOString() : null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+
+            throw new UnauthorizedError(
+                'Invalid phone number or PIN',
+                'เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง'
+            );
+        }
+
+        // Reset failed attempts on success
+        await supabaseAdmin
+            .from('users')
+            .update({
+                pin_attempts: 0,
+                pin_locked_until: null,
+                last_login_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+
+        // Generate tokens
+        const tokens = this.generateTokens({
+            userId: user.id,
+            companyId: user.company_id,
+            role: user.role,
+            email: user.email,
+            employeeId: user.employee_id,
+            lineUserId: user.line_user_id,
+        });
+
+        logger.info('User logged in via phone', { userId: user.id, companyId: company.id });
+
+        return {
+            user: this.mapToAuthUser(user),
+            tokens,
+        };
+    }
+
+    // Set PIN
+    async setPin(userId: string, data: SetPinRequest): Promise<void> {
+        const { currentPin, newPin, resetToken } = data;
+
+        // Get user to check current state
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error || !user) {
+            throw new NotFoundError('User', 'ไม่พบข้อมูลผู้ใช้');
+        }
+
+        // Check if this is first-time setup
+        const isFirstTime = !user.password_hash;
+
+        if (!isFirstTime && !resetToken) {
+            // Changing PIN - require current PIN
+            if (!currentPin) {
+                throw new ValidationError('Current PIN is required', [
+                    { field: 'currentPin', message: 'กรุณาระรหัส PIN เดิม' }
+                ]);
+            }
+
+            const isValid = await this.verifyPassword(currentPin, user.password_hash);
+            if (!isValid) {
+                throw new ValidationError('Current PIN is incorrect', [
+                    { field: 'currentPin', message: 'รหัส PIN เดิมไม่ถูกต้อง' }
+                ]);
+            }
+        }
+
+        // Hash new PIN
+        const pinHash = await this.hashPassword(newPin);
+
+        // Update user
+        await supabaseAdmin
+            .from('users')
+            .update({
+                password_hash: pinHash,
+                pin_set_at: new Date().toISOString(),
+                pin_attempts: 0,
+                pin_locked_until: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+
+        logger.info('PIN set successfully', { userId });
+    }
+
+    // Forgot PIN - Send Reset Code
+    async forgotPin(data: ForgotPinRequest): Promise<void> {
+        const { companySlug, phone } = data;
+        const normalizedPhone = PhoneUtils.normalize(phone);
+
+        // Find company
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (!company) {
+            // Silent error to prevent enumeration
+            return;
+        }
+
+        // Find employee
+        const { data: employee } = await supabaseAdmin
+            .from('employees')
+            .select('user_id')
+            .eq('company_id', company.id)
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (!employee || !employee.user_id) {
+            return;
+        }
+
+        // Generate 6-digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Hash code
+        const codeHash = await this.hashPassword(code);
+
+        // Expiry (10 mins)
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+        // Store code
+        await supabaseAdmin
+            .from('users')
+            .update({
+                reset_code_hash: codeHash,
+                reset_code_expires_at: expiresAt.toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', employee.user_id);
+
+        // Send SMS (Skipped as per request)
+        // Log locally for testing
+        logger.info(`[MOCK SMS] Reset code for ${phone}: ${code}`);
+    }
+
+    // Verify Reset Code
+    async verifyResetCode(data: VerifyResetCodeRequest): Promise<LoginResponse> {
+        const { companySlug, phone, code } = data;
+        const normalizedPhone = PhoneUtils.normalize(phone);
+
+        // Find company
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (!company) {
+            throw new UnauthorizedError('Invalid code', 'รหัสไม่ถูกต้อง');
+        }
+
+        // Find employee
+        const { data: employee } = await supabaseAdmin
+            .from('employees')
+            .select('user_id')
+            .eq('company_id', company.id)
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (!employee || !employee.user_id) {
+            throw new UnauthorizedError('Invalid code', 'รหัสไม่ถูกต้อง');
+        }
+
+        // Get user
+        const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', employee.user_id)
+            .single();
+
+        if (!user || !user.reset_code_hash || !user.reset_code_expires_at) {
+            throw new UnauthorizedError('Invalid code', 'รหัสไม่ถูกต้อง');
+        }
+
+        // Check expiry
+        if (new Date() > new Date(user.reset_code_expires_at)) {
+            throw new UnauthorizedError('Code expired', 'รหัสหมดอายุ');
+        }
+
+        // Verify code
+        const isValid = await this.verifyPassword(code, user.reset_code_hash);
+        if (!isValid) {
+            throw new UnauthorizedError('Invalid code', 'รหัสไม่ถูกต้อง');
+        }
+
+        // Clear code
+        await supabaseAdmin
+            .from('users')
+            .update({
+                reset_code_hash: null,
+                reset_code_expires_at: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+
+        // Generate temporary access token for setting PIN
+        // We give them a normal token but they will be redirected to set-pin page by frontend
+
+        const tokens = this.generateTokens({
+            userId: user.id,
+            companyId: user.company_id,
+            role: user.role,
+            email: user.email,
+            employeeId: user.employee_id,
+            lineUserId: user.line_user_id,
+        });
+
+        return {
+            user: this.mapToAuthUser(user),
+            tokens
+        };
+    }
+
+    // Admin Reset PIN (Clear PIN)
+    async adminResetPin(userId: string): Promise<void> {
+        // Find user
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('role')
+            .eq('id', userId)
+            .single();
+
+        if (error || !user) {
+            throw new NotFoundError('User', 'ไม่พบข้อมูลผู้ใช้');
+        }
+
+        // Perform reset
+        await supabaseAdmin
+            .from('users')
+            .update({
+                password_hash: null, // Clear PIN
+                pin_attempts: 0,
+                pin_locked_until: null,
+                pin_set_at: null,
+                reset_code_hash: null,
+                reset_code_expires_at: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+
+        logger.info('PIN reset by admin', { userId });
     }
 
     // LINE Login
@@ -1234,6 +1601,303 @@ class AuthService {
             }),
             tokens,
         };
+    }
+
+    // Change password
+    async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+        // Get user
+        const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (!user) {
+            throw new NotFoundError('User');
+        }
+
+        // Verify old password if set
+        if (user.password_hash) {
+            const isValid = await this.verifyPassword(oldPassword, user.password_hash);
+            if (!isValid) {
+                throw new UnauthorizedError(
+                    'Invalid old password',
+                    'รหัสผ่านเดิมไม่ถูกต้อง'
+                );
+            }
+        }
+
+        // Hash new password
+        const passwordHash = await this.hashPassword(newPassword);
+
+        // Update password
+        const { error } = await supabaseAdmin
+            .from('users')
+            .update({ password_hash: passwordHash })
+            .eq('id', userId);
+
+        if (error) {
+            throw new Error('Failed to update password');
+        }
+    }
+
+    // ============================================================
+    // PIN Reset Request Methods (Hybrid Approach)
+    // ============================================================
+
+    // Guard requests PIN reset (public endpoint)
+    async requestPinReset(companySlug: string, phone: string): Promise<void> {
+        const normalizedPhone = PhoneUtils.normalize(phone);
+
+        // Find company
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (!company) {
+            // Silently return to prevent enumeration
+            logger.warn(`PIN reset request: Company not found for slug: ${companySlug}`);
+            return;
+        }
+
+        // Find employee
+        const { data: employee } = await supabaseAdmin
+            .from('employees')
+            .select('id, user_id, full_name')
+            .eq('company_id', company.id)
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (!employee) {
+            logger.warn(`PIN reset request: Employee not found for phone: ${normalizedPhone}`);
+            return;
+        }
+
+        // Check if there's already a pending request for this employee
+        const { data: existingRequest } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .select('id')
+            .eq('employee_id', employee.id)
+            .eq('status', 'pending')
+            .single();
+
+        if (existingRequest) {
+            // Already have a pending request
+            logger.info(`PIN reset request: Already pending for employee: ${employee.id}`);
+            return;
+        }
+
+        // Create request
+        const { error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .insert({
+                employee_id: employee.id,
+                company_id: company.id,
+                status: 'pending',
+                requested_at: new Date().toISOString(),
+            });
+
+        if (error) {
+            logger.error('Failed to create PIN reset request', error);
+            throw new Error('Failed to create request');
+        }
+
+        logger.info('PIN reset request created', {
+            employeeId: employee.id,
+            employeeName: employee.full_name,
+            companyId: company.id
+        });
+    }
+
+    // Guard requests PIN reset (authenticated)
+    async requestPinResetMe(userId: string): Promise<void> {
+        // Get user and company info
+        const { data: user, error: userError } = await supabaseAdmin
+            .from('users')
+            .select('id, company_id, employee_id')
+            .eq('id', userId)
+            .single();
+
+        if (userError || !user) {
+            throw new NotFoundError('User');
+        }
+
+        // Get employee ID
+        let employeeId = user.employee_id;
+        if (!employeeId) {
+            // Try to find employee by user_id
+            const { data: emp } = await supabaseAdmin
+                .from('employees')
+                .select('id')
+                .eq('user_id', userId)
+                .single();
+
+            if (emp) {
+                employeeId = emp.id;
+            }
+        }
+
+        if (!employeeId) {
+            throw new Error('Employee record not found for this user');
+        }
+
+        // Check if there's already a pending request
+        const { data: existingRequest } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .select('id')
+            .eq('employee_id', employeeId)
+            .eq('status', 'pending')
+            .single();
+
+        if (existingRequest) {
+            logger.info(`PIN reset request: Already pending for employee: ${employeeId}`);
+            return;
+        }
+
+        // Create request
+        const { error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .insert({
+                employee_id: employeeId,
+                company_id: user.company_id,
+                status: 'pending',
+                requested_at: new Date().toISOString(),
+            });
+
+        if (error) {
+            logger.error('Failed to create PIN reset request', error);
+            throw new Error('Failed to create request');
+        }
+
+        logger.info('PIN reset request created (authenticated)', {
+            userId,
+            employeeId,
+            companyId: user.company_id
+        });
+    }
+
+    // Admin gets pending PIN reset requests
+    async getPinResetRequests(companyId: string): Promise<Array<{
+        id: string;
+        employeeId: string;
+        employeeName: string;
+        employeeCode: string;
+        employeePhone: string;
+        companyId: string;
+        status: string;
+        requestedAt: string;
+        resolvedAt?: string;
+        resolvedBy?: string;
+    }>> {
+        const { data, error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .select(`
+                id,
+                employee_id,
+                company_id,
+                status,
+                requested_at,
+                resolved_at,
+                resolved_by,
+                employees (
+                    id,
+                    full_name,
+                    employee_code,
+                    phone
+                )
+            `)
+            .eq('company_id', companyId)
+            .eq('status', 'pending')
+            .order('requested_at', { ascending: true });
+
+        if (error) {
+            logger.error('Failed to fetch PIN reset requests', error);
+            throw new Error('Failed to fetch requests');
+        }
+
+        return (data || []).map((row: any) => ({
+            id: row.id,
+            employeeId: row.employee_id,
+            employeeName: row.employees?.full_name || 'Unknown',
+            employeeCode: row.employees?.employee_code || '',
+            employeePhone: row.employees?.phone || '',
+            companyId: row.company_id,
+            status: row.status,
+            requestedAt: row.requested_at,
+            resolvedAt: row.resolved_at,
+            resolvedBy: row.resolved_by,
+        }));
+    }
+
+    // Admin resolves PIN reset request (called after admin resets PIN)
+    async resolvePinResetRequest(
+        requestId: string,
+        companyId: string,
+        resolvedBy: string,
+        status: 'approved' | 'rejected' = 'approved'
+    ): Promise<void> {
+        const { error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .update({
+                status,
+                resolved_at: new Date().toISOString(),
+                resolved_by: resolvedBy,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', requestId)
+            .eq('company_id', companyId);
+
+        if (error) {
+            logger.error('Failed to resolve PIN reset request', error);
+            throw new Error('Failed to resolve request');
+        }
+
+        logger.info('PIN reset request resolved', { requestId, status, resolvedBy });
+    }
+
+    // Admin resolves PIN reset request by employee ID (called from employee detail page reset)
+    async resolvePinResetRequestByEmployee(
+        employeeId: string,
+        companyId: string,
+        resolvedBy: string
+    ): Promise<void> {
+        // Find any pending request for this employee and mark as approved
+        const { error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .update({
+                status: 'approved',
+                resolved_at: new Date().toISOString(),
+                resolved_by: resolvedBy,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('employee_id', employeeId)
+            .eq('company_id', companyId)
+            .eq('status', 'pending');
+
+        if (error) {
+            // Don't throw - this is a best-effort cleanup
+            logger.warn('Failed to resolve PIN reset request by employee', error);
+        } else {
+            logger.info('PIN reset request resolved by employee', { employeeId, resolvedBy });
+        }
+    }
+
+    // Get pending request count for admin notification badge
+    async getPendingPinResetCount(companyId: string): Promise<number> {
+        const { count, error } = await supabaseAdmin
+            .from('pin_reset_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', companyId)
+            .eq('status', 'pending');
+
+        if (error) {
+            logger.error('Failed to count PIN reset requests', error);
+            return 0;
+        }
+
+        return count || 0;
     }
 }
 

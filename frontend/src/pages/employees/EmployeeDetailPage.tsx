@@ -139,6 +139,22 @@ export default function EmployeeDetailPage() {
         }
     };
 
+    const handleResetPin = async () => {
+        if (!employee) return;
+        if (!window.confirm('Are you sure you want to reset the PIN for this employee? The employee will need to set a new PIN on next login.')) {
+            return;
+        }
+
+        try {
+            await employeeService.resetPin(employee.id);
+            alert('PIN has been reset successfully.');
+            fetchEmployee(); // Refresh to show cleared status
+        } catch (error) {
+            console.error('Failed to reset PIN:', error);
+            alert('Failed to reset PIN.');
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -290,19 +306,58 @@ export default function EmployeeDetailPage() {
                     <Card>
                         <CardHeader title={t('employees.userAccount', 'User Account')} />
                         {employee.user ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500" />
-                                    <span className="text-sm text-surface-600 dark:text-surface-400">
-                                        {employee.user.isActive ? 'Active' : 'Inactive'}
-                                    </span>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${employee.user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                                        <span className="text-sm text-surface-600 dark:text-surface-400">
+                                            {employee.user.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-surface-900 dark:text-white">
+                                        {employee.user.email}
+                                    </p>
+                                    <p className="text-xs text-surface-500">
+                                        Role: {employee.user.role}
+                                    </p>
                                 </div>
-                                <p className="text-sm text-surface-900 dark:text-white">
-                                    {employee.user.email}
-                                </p>
-                                <p className="text-xs text-surface-500">
-                                    Role: {employee.user.role}
-                                </p>
+
+                                <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
+                                    <h4 className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-2">
+                                        PIN Status
+                                    </h4>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-surface-600 dark:text-surface-400">Status:</span>
+                                            <span className={employee.user.hasPin ? 'text-green-600' : 'text-yellow-600'}>
+                                                {employee.user.hasPin ? 'Set' : 'Not Set'}
+                                            </span>
+                                        </div>
+                                        {employee.user.isPinLocked && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-surface-600 dark:text-surface-400">Locked:</span>
+                                                <span className="text-red-600 font-medium">Yes</span>
+                                            </div>
+                                        )}
+                                        {employee.user.failedPinAttempts > 0 && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-surface-600 dark:text-surface-400">Failed Attempts:</span>
+                                                <span className="text-orange-600">{employee.user.failedPinAttempts}</span>
+                                            </div>
+                                        )}
+
+                                        <div className="pt-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                onClick={handleResetPin}
+                                            >
+                                                Reset PIN
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="text-center py-4">

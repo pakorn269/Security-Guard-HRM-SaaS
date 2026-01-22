@@ -6,6 +6,10 @@ import { ValidationError } from '../../utils/errors.js';
 import {
     registerSchema,
     loginSchema,
+    phoneLoginSchema,
+    setPinSchema,
+    forgotPinSchema,
+    verifyResetCodeSchema,
     lineLoginSchema,
     refreshTokenSchema,
     linkLineSchema,
@@ -13,6 +17,8 @@ import {
     linkEmployeeSchema,
     linkCredentialsSchema,
     liffEmployeeLoginSchema,
+    changePasswordSchema,
+    requestPinResetSchema,
 } from './auth.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -51,6 +57,77 @@ class AuthController {
             }
 
             const result = await authService.login(validation.data);
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/login-phone - Phone + PIN login
+    async phoneLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = phoneLoginSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.phoneLogin(validation.data);
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/set-pin - Set/Update PIN
+    async setPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const validation = setPinSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            await authService.setPin(req.user.userId, validation.data);
+            sendSuccess(res, {
+                message: 'PIN updated successfully',
+                message_th: 'ตั้งรหัส PIN สำเร็จ'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/forgot-pin - Request PIN reset
+    async forgotPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = forgotPinSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            await authService.forgotPin(validation.data);
+            // Always return success to prevent enumeration
+            sendSuccess(res, {
+                message: 'If the phone number exists, a reset code has been sent.',
+                message_th: 'หากเบอร์โทรศัพท์ถูกต้อง ระบบได้ส่งรหัสรีเซ็ตไปแล้ว'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/verify-reset-code - Verify reset code
+    async verifyResetCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = verifyResetCodeSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.verifyResetCode(validation.data);
             sendSuccess(res, result);
         } catch (error) {
             next(error);
@@ -201,6 +278,33 @@ class AuthController {
         }
     }
 
+    // POST /api/v1/auth/password - Change password
+    async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const validation = changePasswordSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            await authService.changePassword(
+                req.user.userId,
+                validation.data.oldPassword,
+                validation.data.newPassword
+            );
+
+            sendSuccess(res, {
+                message: 'Password updated successfully',
+                message_th: 'เปลี่ยนรหัสผ่านสำเร็จ',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // POST /api/v1/auth/line/unlink - Unlink LINE account (protected)
     async unlinkLineAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -238,6 +342,79 @@ class AuthController {
                 validation.data.companySlug
             );
             sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ============================================================
+    // PIN Reset Request Endpoints (Hybrid Approach)
+    // ============================================================
+
+    // POST /api/v1/auth/request-pin-reset - Guard requests PIN reset (public)
+    async requestPinReset(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = requestPinResetSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            await authService.requestPinReset(
+                validation.data.companySlug,
+                validation.data.phone
+            );
+
+            // Always return success to prevent enumeration
+            sendSuccess(res, {
+                message: 'If the phone number exists, your request has been submitted to the administrator.',
+                message_th: 'หากเบอร์โทรศัพท์ถูกต้อง คำขอของคุณได้ถูกส่งไปยังผู้ดูแลระบบแล้ว'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/me/request-pin-reset - Authenticated guard requests PIN reset
+    async requestPinResetMe(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            await authService.requestPinResetMe(req.user.userId);
+
+            sendSuccess(res, {
+                message: 'Your PIN reset request has been submitted to the administrator.',
+                message_th: 'ส่งคำขอรีเซ็ต PIN ไปยังผู้ดูแลระบบแล้ว'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /api/v1/auth/pin-reset-requests - Admin gets pending requests (protected)
+    async getPinResetRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const requests = await authService.getPinResetRequests(req.user.companyId);
+            sendSuccess(res, { requests });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /api/v1/auth/pin-reset-requests/count - Admin gets pending request count (protected)
+    async getPendingPinResetCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const count = await authService.getPendingPinResetCount(req.user.companyId);
+            sendSuccess(res, { count });
         } catch (error) {
             next(error);
         }

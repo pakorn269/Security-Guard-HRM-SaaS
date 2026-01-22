@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   MapPin,
   type LucideIcon,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface NavItem {
   path: string;
@@ -212,16 +213,21 @@ interface SidebarUserMenuProps {
 
 function SidebarUserMenu({ isExpanded }: SidebarUserMenuProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user: authUser, logout } = useAuth();
 
-  // TODO: Get actual user data from auth context
-  const user = {
-    name: 'Admin User',
-    initials: 'AU',
-  };
+  // Get user data from auth context
+  const userName = authUser?.lineDisplayName || authUser?.email || 'User';
+  const userInitials = userName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
-  const handleLogout = () => {
-    // TODO: Implement actual logout logic
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -234,7 +240,7 @@ function SidebarUserMenu({ isExpanded }: SidebarUserMenuProps) {
       {/* User Avatar */}
       <div className="w-8 h-8 rounded-full bg-primary-600 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
         <span className="text-xs font-semibold text-white">
-          {user.initials}
+          {userInitials}
         </span>
       </div>
 
@@ -246,7 +252,7 @@ function SidebarUserMenu({ isExpanded }: SidebarUserMenuProps) {
         `}
       >
         <p className="text-sm font-medium text-white truncate">
-          {user.name}
+          {userName}
         </p>
         <button
           onClick={handleLogout}

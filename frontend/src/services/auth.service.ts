@@ -5,7 +5,11 @@ import type {
     RegisterData,
     LoginResponse,
     RegisterResponse,
-    AuthUser
+    AuthUser,
+    PhoneLoginCredentials,
+    SetPinData,
+    ForgotPinData,
+    VerifyResetCodeData,
 } from '../types/auth';
 
 const AUTH_BASE = '/auth';
@@ -45,6 +49,74 @@ export const authService = {
         }
 
         throw new Error(response.data.error?.message || 'Login failed');
+    },
+
+    /**
+     * Login with Phone + PIN
+     */
+    async phoneLogin(credentials: PhoneLoginCredentials): Promise<LoginResponse> {
+        const response = await api.post<ApiResponse<LoginResponse>>(
+            `${AUTH_BASE}/login-phone`,
+            credentials
+        );
+
+        if (response.data.success && response.data.data) {
+            const { tokens } = response.data.data;
+            setTokens(tokens.accessToken, tokens.refreshToken);
+            return response.data.data;
+        }
+
+        throw new Error(response.data.error?.message || 'Login failed');
+    },
+
+    /**
+     * Set or Change PIN
+     */
+    async setPin(data: SetPinData): Promise<void> {
+        const response = await api.post<ApiResponse<void>>(
+            `${AUTH_BASE}/set-pin`,
+            data
+        );
+
+        if (response.data.success) {
+            return;
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to set PIN');
+    },
+
+    /**
+     * Request PIN reset (Forgot PIN)
+     */
+    async forgotPin(data: ForgotPinData): Promise<string> {
+        const response = await api.post<ApiResponse<{ message: string }>>(
+            `${AUTH_BASE}/forgot-pin`,
+            data
+        );
+
+        if (response.data.success) {
+            return response.data.data?.message || 'If the phone number exists, a reset code has been sent.';
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to request PIN reset');
+    },
+
+    /**
+     * Verify PIN reset code
+     */
+    async verifyResetCode(data: VerifyResetCodeData): Promise<LoginResponse> {
+        const response = await api.post<ApiResponse<LoginResponse>>(
+            `${AUTH_BASE}/verify-reset-code`,
+            data
+        );
+
+        if (response.data.success && response.data.data) {
+            const { tokens } = response.data.data;
+            setTokens(tokens.accessToken, tokens.refreshToken);
+            return response.data.data;
+        }
+
+        throw new Error(response.data.error?.message || 'Verification failed');
     },
 
     /**
@@ -113,6 +185,100 @@ export const authService = {
     isAuthenticated(): boolean {
         return !!getAccessToken();
     },
+
+    /**
+     * Change password
+     */
+    async changePassword(password: string, newPassword: string): Promise<void> {
+        const response = await api.post<ApiResponse<void>>(
+            `${AUTH_BASE}/password`,
+            { oldPassword: password, newPassword }
+        );
+
+        if (response.data.success) {
+            return;
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to change password');
+    },
+
+    /**
+     * Request PIN reset (Hybrid approach - Guard submits request for admin)
+     */
+    async requestPinReset(companySlug: string, phone: string): Promise<string> {
+        const response = await api.post<ApiResponse<{ message: string; message_th: string }>>(
+            `${AUTH_BASE}/request-pin-reset`,
+            { companySlug, phone }
+        );
+
+        if (response.data.success) {
+            return response.data.data?.message_th || response.data.data?.message || 'Request submitted successfully';
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to submit request');
+    },
+
+    /**
+     * Request PIN reset (Authenticated user)
+     */
+    async requestPinResetMe(): Promise<string> {
+        const response = await api.post<ApiResponse<{ message: string; message_th: string }>>(
+            `${AUTH_BASE}/me/request-pin-reset`
+        );
+
+        if (response.data.success) {
+            return response.data.data?.message_th || response.data.data?.message || 'Request submitted successfully';
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to submit request');
+    },
+
+    /**
+     * Get pending PIN reset requests (Admin)
+     */
+    async getPinResetRequests(): Promise<Array<{
+        id: string;
+        employeeId: string;
+        employeeName: string;
+        employeeCode: string;
+        employeePhone: string;
+        status: string;
+        requestedAt: string;
+    }>> {
+        const response = await api.get<ApiResponse<{
+            requests: Array<{
+                id: string;
+                employeeId: string;
+                employeeName: string;
+                employeeCode: string;
+                employeePhone: string;
+                status: string;
+                requestedAt: string;
+            }>
+        }>>(`${AUTH_BASE}/pin-reset-requests`);
+
+        if (response.data.success && response.data.data) {
+            return response.data.data.requests;
+        }
+
+        throw new Error('Failed to fetch PIN reset requests');
+    },
+
+    /**
+     * Get pending PIN reset request count (Admin)
+     */
+    async getPendingPinResetCount(): Promise<number> {
+        const response = await api.get<ApiResponse<{ count: number }>>(
+            `${AUTH_BASE}/pin-reset-requests/count`
+        );
+
+        if (response.data.success && response.data.data) {
+            return response.data.data.count;
+        }
+
+        return 0;
+    },
 };
 
 export default authService;
+

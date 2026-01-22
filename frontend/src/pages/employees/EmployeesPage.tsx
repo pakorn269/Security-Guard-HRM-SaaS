@@ -21,6 +21,7 @@ import { SearchInput } from '../../components/forms';
 import { Menu, MenuItem, MenuDivider } from '../../components/navigation';
 import { employeeService, type EmployeeWithUser, type ListEmployeesParams } from '../../services/employee.service';
 import EmployeeFormModal from './EmployeeFormModal';
+import PinResetRequestsPanel from '../../components/admin/PinResetRequestsPanel';
 
 /**
  * Employees Page - Redesigned (Part 5.3)
@@ -269,6 +270,9 @@ export default function EmployeesPage() {
           </div>
         }
       />
+
+      {/* PIN Reset Requests Panel - Shows pending requests from guards */}
+      <PinResetRequestsPanel />
 
       {/* Search and Filters */}
       <Card variant="bordered" padding="md" className="mobile-p-sm">

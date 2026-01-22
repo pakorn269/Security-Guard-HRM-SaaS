@@ -38,6 +38,9 @@ const envSchema = z.object({
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
     RATE_LIMIT_MAX: z.string().default('100'),
+
+    // Turnstile
+    TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 // Validate and parse environment variables

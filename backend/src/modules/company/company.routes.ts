@@ -4,6 +4,9 @@ import { authMiddleware } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
+// Public routes
+router.get('/by-slug/:slug/public', companyController.getPublicBySlug);
+
 // All routes require authentication
 router.use(authMiddleware);
 

@@ -171,6 +171,15 @@
         "cancel": "Cancel",
         "save": "Save"
     },
+    "account": {
+        "title": "My Account",
+        "changePassword": "Change Password",
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "passwordsDoNotMatch": "Passwords do not match",
+        "passwordChanged": "Password changed successfully"
+    },
     "roles": {
         "guard": "Security Guard",
         "manager": "Manager"
