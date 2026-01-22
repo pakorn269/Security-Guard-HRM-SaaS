@@ -109,7 +109,11 @@ class EmployeeService {
                     password_hash,
                     pin_set_at,
                     pin_locked_until,
-                    pin_attempts
+                    pin_attempts,
+                    line_user_id,
+                    line_display_name,
+                    line_picture_url,
+                    line_linked_at
                 )
             `)
             .eq('id', employeeId)
@@ -130,6 +134,10 @@ class EmployeeService {
             pin_set_at: string | null;
             pin_locked_until: string | null;
             pin_attempts: number;
+            line_user_id: string | null;
+            line_display_name: string | null;
+            line_picture_url: string | null;
+            line_linked_at: string | null;
         } | null;
 
         return {
@@ -146,7 +154,12 @@ class EmployeeService {
                         ? new Date(userData.pin_locked_until) > new Date()
                         : false,
                     pinLockedUntil: userData.pin_locked_until,
+
                     failedPinAttempts: userData.pin_attempts || 0,
+                    lineUserId: userData.line_user_id,
+                    lineDisplayName: userData.line_display_name,
+                    linePictureUrl: userData.line_picture_url,
+                    lineLinkedAt: userData.line_linked_at,
                 }
                 : null,
         };
@@ -189,7 +202,11 @@ class EmployeeService {
                     password_hash,
                     pin_set_at,
                     pin_locked_until,
-                    pin_attempts
+                    pin_attempts,
+                    line_user_id,
+                    line_display_name,
+                    line_picture_url,
+                    line_linked_at
                 )
             `,
                 { count: 'exact' }
@@ -235,6 +252,10 @@ class EmployeeService {
                 pin_set_at: string | null;
                 pin_locked_until: string | null;
                 pin_attempts: number;
+                line_user_id: string | null;
+                line_display_name: string | null;
+                line_picture_url: string | null;
+                line_linked_at: string | null;
             } | null;
 
             return {
@@ -251,7 +272,12 @@ class EmployeeService {
                             ? new Date(userData.pin_locked_until) > new Date()
                             : false,
                         pinLockedUntil: userData.pin_locked_until,
+
                         failedPinAttempts: userData.pin_attempts || 0,
+                        lineUserId: userData.line_user_id,
+                        lineDisplayName: userData.line_display_name,
+                        linePictureUrl: userData.line_picture_url,
+                        lineLinkedAt: userData.line_linked_at,
                     }
                     : null,
             };
