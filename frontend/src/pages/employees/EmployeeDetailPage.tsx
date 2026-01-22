@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, LinkIcon, Unlink } from 'lucide-react';
+import { MessageCircle, Send, LinkIcon, Unlink, Bell, Clock, History, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
+import { lineService, type LineNotificationPreferences, type LineMessageHistory } from '../../services/line.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
 import CertificationFormModal from './CertificationFormModal';
@@ -49,6 +50,54 @@ function CertStatusBadge({ status }: { status: string }) {
     );
 }
 
+// Notification toggle component
+function NotificationToggle({
+    label,
+    description,
+    checked,
+    onChange,
+    disabled,
+}: {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onChange: (value: boolean) => void;
+    disabled?: boolean;
+}) {
+    return (
+        <label className="flex items-start gap-3 cursor-pointer">
+            <div className="relative mt-0.5">
+                <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => onChange(e.target.checked)}
+                    disabled={disabled}
+                    className="sr-only peer"
+                />
+                <div className={`w-9 h-5 rounded-full transition-colors ${
+                    checked
+                        ? 'bg-primary-500'
+                        : 'bg-surface-300 dark:bg-surface-600'
+                } ${disabled ? 'opacity-50' : ''}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        checked ? 'translate-x-4' : 'translate-x-0'
+                    }`} />
+                </div>
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-surface-900 dark:text-white">
+                    {label}
+                </p>
+                {description && (
+                    <p className="text-xs text-surface-500 dark:text-surface-400">
+                        {description}
+                    </p>
+                )}
+            </div>
+        </label>
+    );
+}
+
 export default function EmployeeDetailPage() {
     const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
@@ -66,12 +115,31 @@ export default function EmployeeDetailPage() {
     const [isTerminating, setIsTerminating] = useState(false);
     const [isLineMessageModalOpen, setIsLineMessageModalOpen] = useState(false);
 
+    // LINE Notification Preferences
+    const [notificationPrefs, setNotificationPrefs] = useState<LineNotificationPreferences | null>(null);
+    const [isLoadingPrefs, setIsLoadingPrefs] = useState(false);
+    const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+
+    // LINE Message History
+    const [messageHistory, setMessageHistory] = useState<LineMessageHistory[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [historyExpanded, setHistoryExpanded] = useState(false);
+    const [historyTotal, setHistoryTotal] = useState(0);
+
     useEffect(() => {
         if (id) {
             fetchEmployee();
             fetchCertifications();
         }
     }, [id]);
+
+    // Fetch notification preferences when employee with LINE is loaded
+    useEffect(() => {
+        if (employee?.user?.isLineLinked && id) {
+            fetchNotificationPrefs();
+            fetchMessageHistory();
+        }
+    }, [employee?.user?.isLineLinked, id]);
 
     const fetchEmployee = async () => {
         if (!id) return;
@@ -93,6 +161,62 @@ export default function EmployeeDetailPage() {
             setCertifications(data);
         } catch (error) {
             console.error('Failed to fetch certifications:', error);
+        }
+    };
+
+    const fetchNotificationPrefs = async () => {
+        if (!id) return;
+        setIsLoadingPrefs(true);
+        try {
+            const data = await lineService.getEmployeePreferences(id);
+            setNotificationPrefs(data);
+        } catch (error) {
+            console.error('Failed to fetch notification preferences:', error);
+        } finally {
+            setIsLoadingPrefs(false);
+        }
+    };
+
+    const fetchMessageHistory = async () => {
+        if (!id) return;
+        setIsLoadingHistory(true);
+        try {
+            const response = await lineService.getEmployeeHistory(id, { pageSize: 10 });
+            setMessageHistory(response.data);
+            setHistoryTotal(response.pagination.total);
+        } catch (error) {
+            console.error('Failed to fetch message history:', error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
+    const handleToggleNotificationPref = async (key: keyof LineNotificationPreferences, value: boolean) => {
+        if (!id || !notificationPrefs) return;
+        setIsSavingPrefs(true);
+        try {
+            const updated = await lineService.updateEmployeePreferences(id, { [key]: value });
+            setNotificationPrefs(updated);
+        } catch (error) {
+            console.error('Failed to update notification preference:', error);
+        } finally {
+            setIsSavingPrefs(false);
+        }
+    };
+
+    const handleUpdateQuietHours = async (enabled: boolean, start?: string, end?: string) => {
+        if (!id || !notificationPrefs) return;
+        setIsSavingPrefs(true);
+        try {
+            const updates: Record<string, unknown> = { quietHoursEnabled: enabled };
+            if (start) updates.quietHoursStart = start;
+            if (end) updates.quietHoursEnd = end;
+            const updated = await lineService.updateEmployeePreferences(id, updates);
+            setNotificationPrefs(updated);
+        } catch (error) {
+            console.error('Failed to update quiet hours:', error);
+        } finally {
+            setIsSavingPrefs(false);
         }
     };
 
@@ -301,6 +425,96 @@ export default function EmployeeDetailPage() {
                             </p>
                         </Card>
                     )}
+
+                    {/* LINE Message History */}
+                    {employee.user?.isLineLinked && (
+                        <Card>
+                            <CardHeader
+                                title={t('line.messageHistory', 'LINE Message History')}
+                                action={
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-surface-500">
+                                            {historyTotal} {t('line.messages', 'messages')}
+                                        </span>
+                                        <History size={16} className="text-surface-400" />
+                                    </div>
+                                }
+                            />
+                            {isLoadingHistory ? (
+                                <div className="flex justify-center py-8">
+                                    <LoadingSpinner size="sm" />
+                                </div>
+                            ) : messageHistory.length > 0 ? (
+                                <div className="space-y-3">
+                                    {(historyExpanded ? messageHistory : messageHistory.slice(0, 5)).map((msg) => (
+                                        <div
+                                            key={msg.id}
+                                            className="p-3 rounded-lg bg-surface-50 dark:bg-surface-700/50 border border-surface-200 dark:border-surface-600"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-surface-900 dark:text-white line-clamp-2">
+                                                        {msg.message}
+                                                    </p>
+                                                    {msg.templateName && (
+                                                        <p className="text-xs text-surface-500 mt-1">
+                                                            {t('line.template', 'Template')}: {msg.templateName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex-shrink-0">
+                                                    {msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read' ? (
+                                                        <CheckCircle size={16} className="text-green-500" />
+                                                    ) : (
+                                                        <XCircle size={16} className="text-red-500" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2 text-xs text-surface-500">
+                                                <span>
+                                                    {msg.sentByName || t('line.system', 'System')}
+                                                </span>
+                                                <span>
+                                                    {new Date(msg.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            {msg.status === 'failed' && msg.errorMessage && (
+                                                <p className="text-xs text-red-500 mt-1">
+                                                    {msg.errorMessage}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {messageHistory.length > 5 && (
+                                        <button
+                                            onClick={() => setHistoryExpanded(!historyExpanded)}
+                                            className="w-full flex items-center justify-center gap-1 py-2 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                                        >
+                                            {historyExpanded ? (
+                                                <>
+                                                    <ChevronUp size={16} />
+                                                    {t('common.showLess', 'Show less')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDown size={16} />
+                                                    {t('line.showMore', `Show ${messageHistory.length - 5} more`)}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <History size={32} className="text-surface-300 dark:text-surface-600 mx-auto mb-2" />
+                                    <p className="text-surface-500 dark:text-surface-400 text-sm">
+                                        {t('line.noHistory', 'No messages sent yet')}
+                                    </p>
+                                </div>
+                            )}
+                        </Card>
+                    )}
                 </div>
 
                 {/* Sidebar */}
@@ -449,6 +663,111 @@ export default function EmployeeDetailPage() {
                             </div>
                         )}
                     </Card>
+
+                    {/* LINE Notification Preferences */}
+                    {employee.user?.isLineLinked && (
+                        <Card>
+                            <CardHeader
+                                title={t('line.notificationPrefs', 'Notification Preferences')}
+                                action={
+                                    <Bell size={16} className="text-surface-400" />
+                                }
+                            />
+                            {isLoadingPrefs ? (
+                                <div className="flex justify-center py-4">
+                                    <LoadingSpinner size="sm" />
+                                </div>
+                            ) : notificationPrefs ? (
+                                <div className="space-y-4">
+                                    {/* Notification Toggles */}
+                                    <div className="space-y-3">
+                                        <NotificationToggle
+                                            label={t('line.prefs.shiftPublished', 'Shift Published')}
+                                            description={t('line.prefs.shiftPublishedDesc', 'When new shifts are published')}
+                                            checked={notificationPrefs.shiftPublished}
+                                            onChange={(v) => handleToggleNotificationPref('shiftPublished', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        <NotificationToggle
+                                            label={t('line.prefs.shiftChanged', 'Shift Changed')}
+                                            description={t('line.prefs.shiftChangedDesc', 'When shifts are modified')}
+                                            checked={notificationPrefs.shiftChanged}
+                                            onChange={(v) => handleToggleNotificationPref('shiftChanged', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        <NotificationToggle
+                                            label={t('line.prefs.shiftReminder', 'Shift Reminder')}
+                                            description={t('line.prefs.shiftReminderDesc', 'Before shift starts')}
+                                            checked={notificationPrefs.shiftReminder}
+                                            onChange={(v) => handleToggleNotificationPref('shiftReminder', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        <NotificationToggle
+                                            label={t('line.prefs.leaveApproved', 'Leave Approved')}
+                                            description={t('line.prefs.leaveApprovedDesc', 'When leave is approved')}
+                                            checked={notificationPrefs.leaveApproved}
+                                            onChange={(v) => handleToggleNotificationPref('leaveApproved', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        <NotificationToggle
+                                            label={t('line.prefs.leaveRejected', 'Leave Rejected')}
+                                            description={t('line.prefs.leaveRejectedDesc', 'When leave is rejected')}
+                                            checked={notificationPrefs.leaveRejected}
+                                            onChange={(v) => handleToggleNotificationPref('leaveRejected', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        <NotificationToggle
+                                            label={t('line.prefs.announcements', 'Announcements')}
+                                            description={t('line.prefs.announcementsDesc', 'Company announcements')}
+                                            checked={notificationPrefs.announcements}
+                                            onChange={(v) => handleToggleNotificationPref('announcements', v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                    </div>
+
+                                    {/* Quiet Hours */}
+                                    <div className="pt-3 border-t border-surface-200 dark:border-surface-700">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Clock size={14} className="text-surface-400" />
+                                            <span className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                                {t('line.prefs.quietHours', 'Quiet Hours')}
+                                            </span>
+                                        </div>
+                                        <NotificationToggle
+                                            label={t('line.prefs.enableQuietHours', 'Enable Quiet Hours')}
+                                            description={t('line.prefs.quietHoursDesc', 'No notifications during these hours')}
+                                            checked={notificationPrefs.quietHoursEnabled}
+                                            onChange={(v) => handleUpdateQuietHours(v)}
+                                            disabled={isSavingPrefs}
+                                        />
+                                        {notificationPrefs.quietHoursEnabled && (
+                                            <div className="flex items-center gap-2 mt-2 ml-7">
+                                                <input
+                                                    type="time"
+                                                    value={notificationPrefs.quietHoursStart}
+                                                    onChange={(e) => handleUpdateQuietHours(true, e.target.value, notificationPrefs.quietHoursEnd)}
+                                                    className="px-2 py-1 text-xs rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800"
+                                                    disabled={isSavingPrefs}
+                                                />
+                                                <span className="text-xs text-surface-500">-</span>
+                                                <input
+                                                    type="time"
+                                                    value={notificationPrefs.quietHoursEnd}
+                                                    onChange={(e) => handleUpdateQuietHours(true, notificationPrefs.quietHoursStart, e.target.value)}
+                                                    className="px-2 py-1 text-xs rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800"
+                                                    disabled={isSavingPrefs}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-center text-surface-500 dark:text-surface-400 text-sm py-4">
+                                    {t('line.prefs.unavailable', 'Preferences unavailable')}
+                                </p>
+                            )}
+                        </Card>
+                    )}
 
                     {/* Certifications */}
                     <Card>
