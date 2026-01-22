@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-<<<<<<< HEAD
-import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input, Avatar } from '../../components/common';
-=======
 import { MessageCircle, Send, LinkIcon, Unlink } from 'lucide-react';
 import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
->>>>>>> origin/claude/add-line-integration-VaMuT
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
@@ -380,36 +376,6 @@ export default function EmployeeDetailPage() {
 
                     {/* LINE Integration */}
                     <Card>
-<<<<<<< HEAD
-                        <CardHeader title={t('employees.lineIntegration', 'LINE Integration')} />
-                        {employee.user?.lineUserId ? (
-                            <div className="flex items-center gap-4">
-                                <Avatar
-                                    src={employee.user.linePictureUrl || undefined}
-                                    name={employee.user.lineDisplayName || 'LINE User'}
-                                    size="lg"
-                                />
-                                <div>
-                                    <p className="font-medium text-surface-900 dark:text-white">
-                                        {employee.user.lineDisplayName || 'Connected'}
-                                    </p>
-                                    {employee.user.lineLinkedAt && (
-                                        <p className="text-sm text-surface-500">
-                                            Linked on {new Date(employee.user.lineLinkedAt).toLocaleDateString()}
-                                        </p>
-                                    )}
-                                    <span className="inline-flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
-                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                        Connected
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-4">
-                                <p className="text-surface-500 dark:text-surface-400 text-sm mb-3">
-                                    {t('employees.noLineAccount', 'No LINE account linked')}
-                                </p>
-=======
                         <CardHeader
                             title={t('line.integration', 'LINE Integration')}
                             action={
@@ -480,7 +446,6 @@ export default function EmployeeDetailPage() {
                                         {t('line.linkInstructions', 'Employee can link LINE via LIFF app')}
                                     </p>
                                 )}
->>>>>>> origin/claude/add-line-integration-VaMuT
                             </div>
                         )}
                     </Card>
@@ -546,12 +511,13 @@ export default function EmployeeDetailPage() {
                         )}
                     </Card>
                 </div>
-            </div>
+            </div >
 
             {/* Edit Employee Modal */}
-            <EmployeeFormModal
+            < EmployeeFormModal
                 isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
+                onClose={() => setIsEditModalOpen(false)
+                }
                 onSuccess={() => {
                     setIsEditModalOpen(false);
                     fetchEmployee();
@@ -560,22 +526,24 @@ export default function EmployeeDetailPage() {
             />
 
             {/* Certification Form Modal */}
-            {employee && (
-                <CertificationFormModal
-                    isOpen={isCertModalOpen}
-                    onClose={() => {
-                        setIsCertModalOpen(false);
-                        setEditingCertification(null);
-                    }}
-                    onSuccess={() => {
-                        setIsCertModalOpen(false);
-                        setEditingCertification(null);
-                        fetchCertifications();
-                    }}
-                    employeeId={employee.id}
-                    certification={editingCertification}
-                />
-            )}
+            {
+                employee && (
+                    <CertificationFormModal
+                        isOpen={isCertModalOpen}
+                        onClose={() => {
+                            setIsCertModalOpen(false);
+                            setEditingCertification(null);
+                        }}
+                        onSuccess={() => {
+                            setIsCertModalOpen(false);
+                            setEditingCertification(null);
+                            fetchCertifications();
+                        }}
+                        employeeId={employee.id}
+                        certification={editingCertification}
+                    />
+                )
+            }
 
             {/* Terminate Modal */}
             <Modal
@@ -617,6 +585,6 @@ export default function EmployeeDetailPage() {
                 onClose={() => setIsLineMessageModalOpen(false)}
                 employee={employee}
             />
-        </div>
+        </div >
     );
 }

@@ -165,10 +165,7 @@ class EmployeeService {
                     lineDisplayName: userData.line_display_name,
                     linePictureUrl: userData.line_picture_url,
                     lineLinkedAt: userData.line_linked_at,
-<<<<<<< HEAD
-=======
                     isLineLinked: !!userData.line_user_id,
->>>>>>> origin/claude/add-line-integration-VaMuT
                 }
                 : null,
         };
@@ -287,10 +284,7 @@ class EmployeeService {
                         lineDisplayName: userData.line_display_name,
                         linePictureUrl: userData.line_picture_url,
                         lineLinkedAt: userData.line_linked_at,
-<<<<<<< HEAD
-=======
                         isLineLinked: !!userData.line_user_id,
->>>>>>> origin/claude/add-line-integration-VaMuT
                     }
                     : null,
             };

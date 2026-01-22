@@ -175,7 +175,7 @@ export const sendTemplatedMessageSchema = z.object({
     }),
     body: z.object({
         templateId: z.string().uuid(),
-        variables: z.record(z.string()).optional(),
+        variables: z.record(z.string(), z.string()).optional(),
         customMessage: z.string().max(5000).optional(),
         customMessageTh: z.string().max(5000).optional(),
     }),
@@ -185,7 +185,7 @@ export const sendBulkTemplatedMessageSchema = z.object({
     body: z.object({
         employeeIds: z.array(z.string().uuid()).min(1).max(100),
         templateId: z.string().uuid().optional(),
-        variables: z.record(z.string()).optional(),
+        variables: z.record(z.string(), z.string()).optional(),
         message: z.string().min(1).max(5000).optional(),
         messageTh: z.string().max(5000).optional(),
     }).refine(
