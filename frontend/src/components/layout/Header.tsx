@@ -6,8 +6,11 @@ import NotificationBell from '../common/NotificationBell';
 import Avatar from '../common/Avatar';
 import { ThemeToggle } from '../theme';
 import { useAuth } from '../../context/AuthContext';
+<<<<<<< HEAD
 import MyAccountModal from '../auth/MyAccountModal';
 import { Link } from 'react-router-dom';
+=======
+>>>>>>> c250b2ab5f71c2f1dbd343e4f40002ffd4ea34ed
 
 interface HeaderProps {
   /** Callback to open mobile sidebar */
@@ -148,7 +151,10 @@ interface UserMenuProps {
 
 function UserMenu({ user }: UserMenuProps) {
   const { t } = useTranslation();
+<<<<<<< HEAD
   const navigate = useNavigate();
+=======
+>>>>>>> c250b2ab5f71c2f1dbd343e4f40002ffd4ea34ed
   const { logout } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = React.useState(false);
@@ -181,6 +187,10 @@ function UserMenu({ user }: UserMenuProps) {
   }, []);
 
   const handleLogout = async () => {
+<<<<<<< HEAD
+=======
+    await logout();
+>>>>>>> c250b2ab5f71c2f1dbd343e4f40002ffd4ea34ed
     setIsOpen(false);
     await logout();
     navigate('/login');
