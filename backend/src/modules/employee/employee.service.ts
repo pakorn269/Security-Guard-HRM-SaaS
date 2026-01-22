@@ -20,6 +20,7 @@ import type {
     LineMessageResult,
 } from './employee.types.js';
 import { messagingApiClient, isLineConfigured } from '../../config/line.js';
+import { lineService } from '../line/line.service.js';
 
 class EmployeeService {
     // Map database row to Employee
@@ -783,7 +784,9 @@ class EmployeeService {
     async sendLineMessage(
         employeeId: string,
         companyId: string,
-        data: SendLineMessageRequest
+        data: SendLineMessageRequest,
+        sentByUserId?: string,
+        sentByName?: string
     ): Promise<{ success: boolean; error?: string }> {
         if (!isLineConfigured()) {
             return { success: false, error: 'LINE is not configured' };
@@ -793,10 +796,35 @@ class EmployeeService {
         const employeeWithUser = await this.getByIdWithUser(employeeId, companyId);
 
         if (!employeeWithUser.user) {
+            // Log failed attempt
+            await lineService.logMessage(companyId, {
+                recipientEmployeeId: employeeId,
+                recipientName: employeeWithUser.fullName,
+                message: data.message,
+                messageTh: data.messageTh,
+                sentBy: sentByUserId,
+                sentByName,
+                status: 'failed',
+                errorMessage: 'Employee does not have a user account',
+                context: 'manual',
+            });
             return { success: false, error: 'Employee does not have a user account' };
         }
 
         if (!employeeWithUser.user.lineUserId) {
+            // Log failed attempt
+            await lineService.logMessage(companyId, {
+                recipientUserId: employeeWithUser.user.id,
+                recipientEmployeeId: employeeId,
+                recipientName: employeeWithUser.fullName,
+                message: data.message,
+                messageTh: data.messageTh,
+                sentBy: sentByUserId,
+                sentByName,
+                status: 'failed',
+                errorMessage: 'Employee has not linked their LINE account',
+                context: 'manual',
+            });
             return { success: false, error: 'Employee has not linked their LINE account' };
         }
 
@@ -811,6 +839,20 @@ class EmployeeService {
                 ],
             });
 
+            // Log successful message
+            await lineService.logMessage(companyId, {
+                recipientUserId: employeeWithUser.user.id,
+                recipientEmployeeId: employeeId,
+                recipientLineUserId: employeeWithUser.user.lineUserId,
+                recipientName: employeeWithUser.fullName,
+                message: data.message,
+                messageTh: data.messageTh,
+                sentBy: sentByUserId,
+                sentByName,
+                status: 'sent',
+                context: 'manual',
+            });
+
             logger.info('LINE message sent to employee', {
                 employeeId,
                 employeeName: employeeWithUser.fullName,
@@ -818,10 +860,27 @@ class EmployeeService {
 
             return { success: true };
         } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Failed to send LINE message';
+
+            // Log failed attempt
+            await lineService.logMessage(companyId, {
+                recipientUserId: employeeWithUser.user.id,
+                recipientEmployeeId: employeeId,
+                recipientLineUserId: employeeWithUser.user.lineUserId,
+                recipientName: employeeWithUser.fullName,
+                message: data.message,
+                messageTh: data.messageTh,
+                sentBy: sentByUserId,
+                sentByName,
+                status: 'failed',
+                errorMessage: errorMsg,
+                context: 'manual',
+            });
+
             logger.error('Failed to send LINE message', { employeeId, error });
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to send LINE message',
+                error: errorMsg,
             };
         }
     }
@@ -829,7 +888,9 @@ class EmployeeService {
     // Send LINE message to multiple employees (bulk)
     async sendBulkLineMessage(
         companyId: string,
-        data: BulkLineMessageRequest
+        data: BulkLineMessageRequest,
+        sentByUserId?: string,
+        sentByName?: string
     ): Promise<{ results: LineMessageResult[]; successCount: number; failureCount: number }> {
         if (!isLineConfigured()) {
             return {
@@ -861,6 +922,19 @@ class EmployeeService {
                         error: 'No user account',
                     });
                     failureCount++;
+
+                    // Log failed attempt
+                    await lineService.logMessage(companyId, {
+                        recipientEmployeeId: employeeId,
+                        recipientName: employeeWithUser.fullName,
+                        message: data.message,
+                        messageTh: data.messageTh,
+                        sentBy: sentByUserId,
+                        sentByName,
+                        status: 'failed',
+                        errorMessage: 'No user account',
+                        context: 'bulk_message',
+                    });
                     continue;
                 }
 
@@ -872,6 +946,20 @@ class EmployeeService {
                         error: 'LINE not linked',
                     });
                     failureCount++;
+
+                    // Log failed attempt
+                    await lineService.logMessage(companyId, {
+                        recipientUserId: employeeWithUser.user.id,
+                        recipientEmployeeId: employeeId,
+                        recipientName: employeeWithUser.fullName,
+                        message: data.message,
+                        messageTh: data.messageTh,
+                        sentBy: sentByUserId,
+                        sentByName,
+                        status: 'failed',
+                        errorMessage: 'LINE not linked',
+                        context: 'bulk_message',
+                    });
                     continue;
                 }
 
@@ -885,6 +973,20 @@ class EmployeeService {
                     ],
                 });
 
+                // Log successful message
+                await lineService.logMessage(companyId, {
+                    recipientUserId: employeeWithUser.user.id,
+                    recipientEmployeeId: employeeId,
+                    recipientLineUserId: employeeWithUser.user.lineUserId,
+                    recipientName: employeeWithUser.fullName,
+                    message: data.message,
+                    messageTh: data.messageTh,
+                    sentBy: sentByUserId,
+                    sentByName,
+                    status: 'sent',
+                    context: 'bulk_message',
+                });
+
                 results.push({
                     employeeId,
                     employeeName: employeeWithUser.fullName,
@@ -893,13 +995,27 @@ class EmployeeService {
                 successCount++;
             } catch (error) {
                 const emp = await this.getById(employeeId, companyId).catch(() => null);
+                const errorMsg = error instanceof Error ? error.message : 'Unknown error';
                 results.push({
                     employeeId,
                     employeeName: emp?.fullName || 'Unknown',
                     success: false,
-                    error: error instanceof Error ? error.message : 'Unknown error',
+                    error: errorMsg,
                 });
                 failureCount++;
+
+                // Log failed attempt
+                await lineService.logMessage(companyId, {
+                    recipientEmployeeId: employeeId,
+                    recipientName: emp?.fullName,
+                    message: data.message,
+                    messageTh: data.messageTh,
+                    sentBy: sentByUserId,
+                    sentByName,
+                    status: 'failed',
+                    errorMessage: errorMsg,
+                    context: 'bulk_message',
+                });
             }
         }
 
