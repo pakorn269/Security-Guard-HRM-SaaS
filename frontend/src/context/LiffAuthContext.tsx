@@ -1,11 +1,12 @@
 // LIFF Auth Context
 // Manages LIFF authentication state and account linking flow
+// Now also supports email-based authentication (without LINE)
 
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import liff from '@line/liff';
 import liffAuthService, { type LineProfile } from '../services/liff-auth.service';
-import { clearTokens } from '../services/api';
+import api, { clearTokens, getAccessToken } from '../services/api';
 import type { AuthUser } from '../types/auth';
 
 // ============================================================
@@ -18,6 +19,7 @@ export type LiffAuthStatus =
     | 'verifying'        // Verifying LINE token with backend
     | 'not_linked'       // LINE verified but not linked to user
     | 'linked'           // LINE verified and linked to user
+    | 'email_auth'       // Authenticated via email (no LINE)
     | 'error';           // An error occurred
 
 export interface LiffAuthState {
@@ -27,6 +29,7 @@ export interface LiffAuthState {
     error: string | null;
     idToken: string | null;
     liffId: string | null;
+    isEmailAuth: boolean;  // True if user logged in via email, not LINE
 }
 
 type LiffAuthAction =
@@ -39,7 +42,8 @@ type LiffAuthAction =
     | { type: 'LINK_START' }
     | { type: 'ERROR'; payload: string }
     | { type: 'LOGOUT' }
-    | { type: 'CLEAR_ERROR' };
+    | { type: 'CLEAR_ERROR' }
+    | { type: 'EMAIL_AUTH_SUCCESS'; payload: AuthUser };
 
 // ============================================================
 // Initial State
@@ -52,6 +56,7 @@ const initialState: LiffAuthState = {
     error: null,
     idToken: null,
     liffId: null,
+    isEmailAuth: false,
 };
 
 // ============================================================
@@ -108,6 +113,15 @@ function liffAuthReducer(state: LiffAuthState, action: LiffAuthAction): LiffAuth
         case 'CLEAR_ERROR':
             return { ...state, error: null };
 
+        case 'EMAIL_AUTH_SUCCESS':
+            return {
+                ...state,
+                status: 'email_auth',
+                user: action.payload,
+                error: null,
+                isEmailAuth: true,
+            };
+
         default:
             return state;
     }
@@ -156,6 +170,30 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
         try {
             dispatch({ type: 'INIT_START' });
 
+            // ============================================================
+            // Check for existing JWT token first (email login users)
+            // ============================================================
+            const existingToken = getAccessToken();
+            if (existingToken) {
+                console.log('[LiffAuth] Found existing JWT token, verifying...');
+                try {
+                    // Try to get current user with existing token
+                    const response = await api.get('/auth/me');
+                    if (response.data?.success && response.data?.data) {
+                        console.log('[LiffAuth] JWT token valid, using email auth mode');
+                        dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: response.data.data });
+                        return;
+                    }
+                } catch {
+                    // Token invalid/expired, continue with LINE auth
+                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth');
+                    clearTokens();
+                }
+            }
+
+            // ============================================================
+            // No valid JWT token, proceed with LINE authentication
+            // ============================================================
             const liffId = import.meta.env.VITE_LIFF_ID;
             console.log('[LiffAuth] Initializing LIFF with ID:', liffId);
 
@@ -279,13 +317,14 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
     // Logout
     const logout = useCallback(async () => {
         clearTokens();
-        dispatch({ type: 'LOGOUT' });
 
-        // Also logout from LIFF if available
-        if (liff.isLoggedIn()) {
+        // Only logout from LIFF if user was authenticated via LINE (not email)
+        if (!state.isEmailAuth && liff.isLoggedIn()) {
             liff.logout();
         }
-    }, []);
+
+        dispatch({ type: 'LOGOUT' });
+    }, [state.isEmailAuth]);
 
     // Clear error
     const clearError = useCallback(() => {
@@ -300,7 +339,7 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
 
     // Computed values
     const isLoading = state.status === 'initializing' || state.status === 'verifying';
-    const isLinked = state.status === 'linked';
+    const isLinked = state.status === 'linked' || state.status === 'email_auth';
     const needsLinking = state.status === 'not_linked';
 
     const value: LiffAuthContextValue = {

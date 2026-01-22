@@ -12,6 +12,7 @@ import {
     lineVerifySchema,
     linkEmployeeSchema,
     linkCredentialsSchema,
+    liffEmployeeLoginSchema,
 } from './auth.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -217,7 +218,32 @@ class AuthController {
             next(error);
         }
     }
+
+    // ============================================================
+    // LIFF Email Login (Without LINE)
+    // ============================================================
+
+    // POST /api/v1/auth/liff/employee-login - LIFF login for guards without LINE
+    async liffEmployeeLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = liffEmployeeLoginSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.liffEmployeeLogin(
+                validation.data.employeeCode,
+                validation.data.phone,
+                validation.data.password,
+                validation.data.companySlug
+            );
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export const authController = new AuthController();
 export default authController;
+

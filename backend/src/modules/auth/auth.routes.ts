@@ -24,7 +24,15 @@ router.post('/line/verify', authController.lineVerify);
 router.post('/line/link-employee', authController.linkEmployee);
 router.post('/line/link-credentials', authController.linkCredentials);
 
+// ============================================================
+// LIFF Email Login (Without LINE)
+// ============================================================
+
+// Public route - for guards who don't use LINE
+router.post('/liff/employee-login', authController.liffEmployeeLogin);
+
 // Protected route - requires authentication
 router.post('/line/unlink', authMiddleware, authController.unlinkLineAccount);
 
 export default router;
+

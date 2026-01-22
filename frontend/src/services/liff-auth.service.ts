@@ -45,6 +45,14 @@ export interface LinkCredentialsData {
     password: string;
 }
 
+// LIFF Employee Login request (for guards without LINE)
+export interface LiffEmployeeLoginData {
+    employeeCode: string;
+    phone: string;
+    password: string;
+    companySlug: string;
+}
+
 export const liffAuthService = {
     /**
      * Verify LINE token and check if user is already linked
@@ -58,12 +66,12 @@ export const liffAuthService = {
 
         if (response.data.success && response.data.data) {
             const data = response.data.data;
-            
+
             // If linked, store tokens
             if (data.isLinked && data.tokens) {
                 setTokens(data.tokens.accessToken, data.tokens.refreshToken);
             }
-            
+
             return data;
         }
 
@@ -109,6 +117,25 @@ export const liffAuthService = {
     },
 
     /**
+     * Login via employee code + phone + password (without LINE)
+     * Used by guards who don't use LINE
+     */
+    async liffEmployeeLogin(data: LiffEmployeeLoginData): Promise<LoginResponse> {
+        const response = await api.post<ApiResponse<LoginResponse>>(
+            `${AUTH_BASE}/liff/employee-login`,
+            data
+        );
+
+        if (response.data.success && response.data.data) {
+            const { tokens } = response.data.data;
+            setTokens(tokens.accessToken, tokens.refreshToken);
+            return response.data.data;
+        }
+
+        throw new Error(response.data.error?.message_th || response.data.error?.message || 'เข้าสู่ระบบไม่สำเร็จ');
+    },
+
+    /**
      * Unlink LINE account from current user
      * Requires authentication
      */
@@ -126,3 +153,4 @@ export const liffAuthService = {
 };
 
 export default liffAuthService;
+

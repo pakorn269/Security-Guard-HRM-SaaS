@@ -91,6 +91,28 @@ export const linkCredentialsSchema = z.object({
     password: z.string().min(1, 'Password is required / กรุณากรอกรหัสผ่าน'),
 });
 
+// ============================================================
+// LIFF Email Login (Without LINE)
+// ============================================================
+
+// Employee login validation schema (for guards without LINE)
+export const liffEmployeeLoginSchema = z.object({
+    employeeCode: z
+        .string()
+        .min(1, 'Employee code is required / กรุณาระบุรหัสพนักงาน')
+        .max(50),
+    phone: z
+        .string()
+        .min(9, 'Phone number must be at least 9 digits / เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก')
+        .max(20)
+        .regex(/^[0-9]+$/, 'Phone number must contain only digits / เบอร์โทรศัพท์ต้องเป็นตัวเลขเท่านั้น'),
+    password: z.string().min(1, 'Password is required / กรุณากรอกรหัสผ่าน'),
+    companySlug: z
+        .string()
+        .min(1, 'Company is required / กรุณาเลือกบริษัท')
+        .max(100),
+});
+
 // Type exports
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -100,3 +122,4 @@ export type LinkLineInput = z.infer<typeof linkLineSchema>;
 export type LineVerifyInput = z.infer<typeof lineVerifySchema>;
 export type LinkEmployeeInput = z.infer<typeof linkEmployeeSchema>;
 export type LinkCredentialsInput = z.infer<typeof linkCredentialsSchema>;
+export type LiffEmployeeLoginInput = z.infer<typeof liffEmployeeLoginSchema>;

@@ -185,16 +185,19 @@ function LiffLayoutContent() {
     return <Navigate to="/liff/link" replace />;
   }
 
-  // Redirect away from linking page if already linked
-  if (status === 'linked' && isLinkingPage) {
+  // Check if user is authenticated (either via LINE linking or email login)
+  const isAuthenticated = status === 'linked' || status === 'email_auth';
+
+  // Redirect away from linking page if already authenticated
+  if (isAuthenticated && isLinkingPage) {
     return <Navigate to="/liff/clock" replace />;
   }
 
   // Determine if we should show bottom navigation
-  // Show when linked and not on linking pages
-  const showBottomNav = status === 'linked' && !isLinkingPage;
+  // Show when authenticated and not on linking pages
+  const showBottomNav = isAuthenticated && !isLinkingPage;
 
-  // Main layout (linked users or on linking pages)
+  // Main layout (authenticated users or on linking pages)
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 no-overscroll">
       {/* Main content with safe area padding */}
@@ -202,7 +205,7 @@ function LiffLayoutContent() {
         <Outlet />
       </div>
 
-      {/* Bottom navigation for linked users */}
+      {/* Bottom navigation for authenticated users */}
       {showBottomNav && <LiffBottomNav />}
     </div>
   );

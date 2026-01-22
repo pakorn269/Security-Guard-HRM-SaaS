@@ -1110,7 +1110,133 @@ class AuthService {
 
         return this.mapToAuthUser(user);
     }
+
+    // ============================================================
+    // LIFF Email Login (Without LINE)
+    // ============================================================
+
+    // Login for guards without LINE - uses employee code + phone + password
+    async liffEmployeeLogin(
+        employeeCode: string,
+        phone: string,
+        password: string,
+        companySlug: string
+    ): Promise<LoginResponse> {
+        logger.info('LIFF employee login attempt', { employeeCode, companySlug });
+
+        // Find company by slug
+        const { data: company, error: companyError } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (companyError || !company) {
+            throw new NotFoundError(
+                'Company not found',
+                'ไม่พบข้อมูลบริษัท'
+            );
+        }
+
+        // Find employee by company + employee_code
+        const { data: employee, error: employeeError } = await supabaseAdmin
+            .from('employees')
+            .select('*, users!employees_user_id_fkey(*)')
+            .eq('company_id', company.id)
+            .eq('employee_code', employeeCode)
+            .single();
+
+        if (employeeError || !employee) {
+            throw new NotFoundError(
+                'Employee not found',
+                'ไม่พบข้อมูลพนักงาน'
+            );
+        }
+
+        // Normalize phone numbers for comparison (remove leading 0, spaces, dashes)
+        const normalizePhone = (p: string | null): string => {
+            if (!p) return '';
+            return p.replace(/[\s\-]/g, '').replace(/^0/, '');
+        };
+
+        const inputPhone = normalizePhone(phone);
+        const employeePhone = normalizePhone(employee.phone);
+
+        if (inputPhone !== employeePhone) {
+            throw new ValidationError(
+                'Phone number does not match',
+                [{
+                    field: 'phone',
+                    message: 'Phone number does not match employee record',
+                    message_th: 'เบอร์โทรศัพท์ไม่ตรงกับข้อมูลพนักงาน',
+                }]
+            );
+        }
+
+        // Check if employee has a user account
+        let user = employee.users;
+
+        if (user) {
+            // Existing user - verify password
+            if (!user.password_hash) {
+                throw new UnauthorizedError(
+                    'This account does not have a password set. Please use LINE Login or contact HR.',
+                    'บัญชีนี้ยังไม่ได้ตั้งรหัสผ่าน กรุณาใช้ LINE เข้าสู่ระบบ หรือติดต่อฝ่ายบุคคล'
+                );
+            }
+
+            const isValid = await this.verifyPassword(password, user.password_hash);
+            if (!isValid) {
+                throw new UnauthorizedError(
+                    'Invalid password',
+                    'รหัสผ่านไม่ถูกต้อง'
+                );
+            }
+
+            if (!user.is_active) {
+                throw new UnauthorizedError(
+                    'Account is deactivated',
+                    'บัญชีถูกระงับ'
+                );
+            }
+
+            // Update last login
+            await supabaseAdmin
+                .from('users')
+                .update({ last_login_at: new Date().toISOString() })
+                .eq('id', user.id);
+        } else {
+            // No user account - this employee needs a user account with password
+            throw new UnauthorizedError(
+                'No account found. Please contact HR to set up your account.',
+                'ไม่พบบัญชีผู้ใช้ กรุณาติดต่อฝ่ายบุคคลเพื่อตั้งค่าบัญชี'
+            );
+        }
+
+        const tokens = this.generateTokens({
+            userId: user.id,
+            companyId: company.id,
+            role: user.role,
+            email: user.email,
+            employeeId: employee.id,
+            lineUserId: user.line_user_id,
+        });
+
+        logger.info('LIFF employee login successful', {
+            userId: user.id,
+            employeeId: employee.id,
+        });
+
+        return {
+            user: this.mapToAuthUser({
+                ...user,
+                employee_id: employee.id,
+            }),
+            tokens,
+        };
+    }
 }
 
 export const authService = new AuthService();
 export default authService;
+
