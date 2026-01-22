@@ -422,7 +422,9 @@ class EmployeeController {
             const result = await employeeService.sendLineMessage(
                 employeeId,
                 req.user.companyId,
-                validation.data
+                validation.data,
+                req.user.userId,
+                req.user.email
             );
 
             if (!result.success) {
@@ -457,7 +459,9 @@ class EmployeeController {
 
             const result = await employeeService.sendBulkLineMessage(
                 req.user.companyId,
-                validation.data
+                validation.data,
+                req.user.userId,
+                req.user.email
             );
 
             sendSuccess(res, result);
