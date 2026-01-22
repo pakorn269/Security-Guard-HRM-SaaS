@@ -75,7 +75,7 @@ describe('LeaveService', () => {
                 const mockBuilder = createMockQueryBuilder(mockBalanceRow);
                 vi.mocked(supabaseAdmin.from).mockReturnValue(mockBuilder as any);
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
@@ -106,7 +106,7 @@ describe('LeaveService', () => {
                 const mockBuilder = createMockQueryBuilder(mockBalanceRow);
                 vi.mocked(supabaseAdmin.from).mockReturnValue(mockBuilder as any);
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
@@ -134,7 +134,7 @@ describe('LeaveService', () => {
                 const mockBuilder = createMockQueryBuilder(mockBalanceRow);
                 vi.mocked(supabaseAdmin.from).mockReturnValue(mockBuilder as any);
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
@@ -146,7 +146,7 @@ describe('LeaveService', () => {
             });
         });
 
-        describe('getOrCreateBalance', () => {
+        describe('getOrCreateSingleBalance', () => {
             it('should return existing balance when found', async () => {
                 const mockBalanceRow = {
                     id: 'balance-1',
@@ -164,7 +164,7 @@ describe('LeaveService', () => {
                 const mockBuilder = createMockQueryBuilder(mockBalanceRow);
                 vi.mocked(supabaseAdmin.from).mockReturnValue(mockBuilder as any);
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
@@ -210,7 +210,7 @@ describe('LeaveService', () => {
                     return createMockQueryBuilder() as any;
                 });
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
@@ -253,7 +253,7 @@ describe('LeaveService', () => {
                     return createMockQueryBuilder() as any;
                 });
 
-                const balance = await leaveService.getOrCreateBalance(
+                const balance = await leaveService.getOrCreateSingleBalance(
                     'company-1',
                     'employee-1',
                     'leave-type-1',
