@@ -43,7 +43,12 @@ type LiffAuthAction =
     | { type: 'ERROR'; payload: string }
     | { type: 'LOGOUT' }
     | { type: 'CLEAR_ERROR' }
-    | { type: 'EMAIL_AUTH_SUCCESS'; payload: AuthUser };
+    | { type: 'LINK_START' }
+    | { type: 'ERROR'; payload: string }
+    | { type: 'LOGOUT' }
+    | { type: 'CLEAR_ERROR' }
+    | { type: 'EMAIL_AUTH_SUCCESS'; payload: AuthUser }
+    | { type: 'UPDATE_USER'; payload: AuthUser };
 
 // ============================================================
 // Initial State
@@ -122,6 +127,18 @@ function liffAuthReducer(state: LiffAuthState, action: LiffAuthAction): LiffAuth
                 isEmailAuth: true,
             };
 
+        case 'UPDATE_USER':
+            return {
+                ...state,
+                user: action.payload,
+                // Check if user is still linked (has lineUserId)
+                // If we unlinked, status might change if we were 'linked'.
+                // If we linked, status might become 'linked' if we were 'email_auth'.
+                // But keeping it simple for now, 'linked' means "Logged in via LINE" originally, or just "Is Linked"?
+                // The current logic uses 'linked' as a login state mostly.
+                // Let's not change status blindly, just update user.
+            };
+
         default:
             return state;
     }
@@ -135,6 +152,8 @@ interface LiffAuthContextValue extends LiffAuthState {
     // Methods for linking
     linkWithEmployeeCode: (employeeCode: string, phone: string, companySlug: string) => Promise<boolean>;
     linkWithCredentials: (email: string, password: string) => Promise<boolean>;
+    unlinkLine: () => Promise<boolean>;
+    connectLine: () => Promise<boolean>;
 
     // Other methods
     logout: () => Promise<void>;
@@ -314,6 +333,102 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
         }
     }, [state.idToken, state.liffId]);
 
+    // Unlink LINE account
+    const unlinkLine = useCallback(async (): Promise<boolean> => {
+        try {
+            dispatch({ type: 'LINK_START' }); // Shows loading
+            const result = await liffAuthService.unlinkLine();
+            dispatch({ type: 'UPDATE_USER', payload: result.user });
+            // If success, we should update status?
+            // If we were 'linked' (meaning logged in via LINE), unlinking is weird but possible if we have other credentials.
+            // If we are 'email_auth', we just update user.
+
+            // To be safe, if we unlink, we might want to ensure status reflects that?
+            // But 'status' is mostly for the initial load determining if we show "Link" page or "App".
+            // Once in the app, status matters less, except for 'isLinked' computed property.
+
+            // We need to make sure we clear loading state.
+            // Using 'UPDATE_USER' doesn't clear loading if we used 'LINK_START' (which sets verifying).
+            // Actually 'LINK_START' sets status='verifying'.
+            // And 'UPDATE_USER' just updates user.
+            // We need an action that sets status back to 'linked' or 'email_auth' OR just 'ready'?
+            // Our reducer is a bit rigid.
+
+            // Let's modify 'UPDATE_USER' or use 'LINK_SUCCESS'.
+            // 'LINK_SUCCESS' sets status='linked'.
+            // If we unlink, we probably don't want status='linked' if that implies "Logged in via LINE".
+            // But if we use 'LINK_SUCCESS', it clears loading.
+
+            // Let's use 'LINK_SUCCESS' for now as it updates user and clears error/loading.
+            // Even if unlinked, we are "Authorized".
+            // But 'isLinked' computed property checks for status==='linked' || status==='email_auth'.
+            // If we use 'LINK_SUCCESS', status becomes 'linked'.
+            // But 'isLinked' relies on that?
+            // Actually 'isLinked' computed property is:
+            // const isLinked = state.status === 'linked' || state.status === 'email_auth';
+
+            // If I unlink, I am still authenticated.
+            // So LINK_SUCCESS is fine for maintaining "authenticated" state, 
+            // BUT the user object won't have lineUserId, so I can check that for UI.
+
+            dispatch({ type: 'LINK_SUCCESS', payload: result.user });
+            return true;
+        } catch (err) {
+            dispatch({
+                type: 'ERROR',
+                payload: err instanceof Error ? err.message : 'ไม่สามารถยกเลิกการเชื่อมต่อได้',
+            });
+            return false;
+        }
+    }, []);
+
+    // Connect LINE account
+    const connectLine = useCallback(async (): Promise<boolean> => {
+        if (!state.idToken || !state.liffId) {
+            // If missing token, we can't link.
+            // In real app, we might trigger liff login here if needed.
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return false;
+            }
+            // Retrieve token if not in state?
+            const idToken = liff.getIDToken();
+            if (!idToken) {
+                dispatch({ type: 'ERROR', payload: 'ไม่พบข้อมูล LINE Token' });
+                return false;
+            }
+            // We continue with this token
+            try {
+                dispatch({ type: 'LINK_START' });
+                const user = await liffAuthService.linkLine(idToken, liff.id!);
+                // Note: liff.id is the liffId if initialized. Or use state.liffId if available.
+                // Better to use what we have or re-fetch.
+
+                dispatch({ type: 'LINK_SUCCESS', payload: user });
+                return true;
+            } catch (err) {
+                dispatch({
+                    type: 'ERROR',
+                    payload: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
+                });
+                return false;
+            }
+        }
+
+        try {
+            dispatch({ type: 'LINK_START' });
+            const result = await liffAuthService.linkLine(state.idToken, state.liffId);
+            dispatch({ type: 'LINK_SUCCESS', payload: result });
+            return true;
+        } catch (err) {
+            dispatch({
+                type: 'ERROR',
+                payload: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
+            });
+            return false;
+        }
+    }, [state.idToken, state.liffId]);
+
     // Logout
     const logout = useCallback(async () => {
         clearTokens();
@@ -346,6 +461,8 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
         ...state,
         linkWithEmployeeCode,
         linkWithCredentials,
+        unlinkLine,
+        connectLine,
         logout,
         clearError,
         retry,
