@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
+import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input, Avatar } from '../../components/common';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
@@ -367,6 +367,40 @@ export default function EmployeeDetailPage() {
                                 <Button size="sm" variant="outline">
                                     {t('employees.createAccount', 'Create Account')}
                                 </Button>
+                            </div>
+                        )}
+                    </Card>
+
+                    {/* LINE Integration */}
+                    <Card>
+                        <CardHeader title={t('employees.lineIntegration', 'LINE Integration')} />
+                        {employee.user?.lineUserId ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar
+                                    src={employee.user.linePictureUrl || undefined}
+                                    name={employee.user.lineDisplayName || 'LINE User'}
+                                    size="lg"
+                                />
+                                <div>
+                                    <p className="font-medium text-surface-900 dark:text-white">
+                                        {employee.user.lineDisplayName || 'Connected'}
+                                    </p>
+                                    {employee.user.lineLinkedAt && (
+                                        <p className="text-sm text-surface-500">
+                                            Linked on {new Date(employee.user.lineLinkedAt).toLocaleDateString()}
+                                        </p>
+                                    )}
+                                    <span className="inline-flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                        Connected
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-4">
+                                <p className="text-surface-500 dark:text-surface-400 text-sm mb-3">
+                                    {t('employees.noLineAccount', 'No LINE account linked')}
+                                </p>
                             </div>
                         )}
                     </Card>

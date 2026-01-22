@@ -14,6 +14,10 @@ export interface EmployeeWithUser extends Employee {
         isPinLocked: boolean;
         pinLockedUntil?: string | null;
         failedPinAttempts: number;
+        lineUserId?: string | null;
+        lineDisplayName?: string | null;
+        linePictureUrl?: string | null;
+        lineLinkedAt?: string | null;
     } | null;
 }
 
