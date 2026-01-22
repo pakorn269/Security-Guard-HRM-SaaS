@@ -1,5 +1,11 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
-import type { Employee, Certification } from '../types/employee.types';
+import type {
+    Employee,
+    Certification,
+    SendLineMessageData,
+    BulkLineMessageData,
+    BulkLineMessageResponse,
+} from '../types/employee.types';
 
 const EMPLOYEES_BASE = '/employees';
 
@@ -14,10 +20,18 @@ export interface EmployeeWithUser extends Employee {
         isPinLocked: boolean;
         pinLockedUntil?: string | null;
         failedPinAttempts: number;
+<<<<<<< HEAD
+=======
+        // LINE integration fields
+>>>>>>> origin/claude/add-line-integration-VaMuT
         lineUserId?: string | null;
         lineDisplayName?: string | null;
         linePictureUrl?: string | null;
         lineLinkedAt?: string | null;
+<<<<<<< HEAD
+=======
+        isLineLinked: boolean;
+>>>>>>> origin/claude/add-line-integration-VaMuT
     } | null;
 }
 
@@ -246,6 +260,50 @@ export const employeeService = {
             return response.data;
         }
         throw new Error('Failed to get expiring certifications');
+    },
+
+    // === LINE Messaging Methods ===
+
+    /**
+     * Send LINE message to a single employee
+     */
+    async sendLineMessage(
+        employeeId: string,
+        data: SendLineMessageData
+    ): Promise<{ success: boolean; error?: string }> {
+        const response = await apiPost<{ success: boolean; error?: string }>(
+            `${EMPLOYEES_BASE}/${employeeId}/line-message`,
+            data
+        );
+        if (response.success && response.data) {
+            return response.data;
+        }
+        throw new Error('Failed to send LINE message');
+    },
+
+    /**
+     * Send LINE message to multiple employees (bulk)
+     */
+    async sendBulkLineMessage(data: BulkLineMessageData): Promise<BulkLineMessageResponse> {
+        const response = await apiPost<BulkLineMessageResponse>(
+            `${EMPLOYEES_BASE}/line-message/bulk`,
+            data
+        );
+        if (response.success && response.data) {
+            return response.data;
+        }
+        throw new Error('Failed to send bulk LINE message');
+    },
+
+    /**
+     * Get employees with LINE linked
+     */
+    async getLineLinkedEmployees(): Promise<EmployeeWithUser[]> {
+        const response = await apiGet<EmployeeWithUser[]>(`${EMPLOYEES_BASE}/line-linked`);
+        if (response.success && response.data) {
+            return response.data;
+        }
+        throw new Error('Failed to get LINE-linked employees');
     },
 };
 

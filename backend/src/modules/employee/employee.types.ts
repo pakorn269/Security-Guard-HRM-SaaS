@@ -64,11 +64,38 @@ export interface EmployeeWithUser extends Employee {
         isPinLocked: boolean;
         pinLockedUntil?: string | null;
         failedPinAttempts: number;
+<<<<<<< HEAD
+=======
+        // LINE integration fields
+>>>>>>> origin/claude/add-line-integration-VaMuT
         lineUserId?: string | null;
         lineDisplayName?: string | null;
         linePictureUrl?: string | null;
         lineLinkedAt?: string | null;
+<<<<<<< HEAD
+=======
+        isLineLinked: boolean;
+>>>>>>> origin/claude/add-line-integration-VaMuT
     } | null;
+}
+
+// LINE messaging types
+export interface SendLineMessageRequest {
+    message: string;
+    messageTh?: string;
+}
+
+export interface BulkLineMessageRequest {
+    employeeIds: string[];
+    message: string;
+    messageTh?: string;
+}
+
+export interface LineMessageResult {
+    employeeId: string;
+    employeeName: string;
+    success: boolean;
+    error?: string;
 }
 
 // Create employee request
