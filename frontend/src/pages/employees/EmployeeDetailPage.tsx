@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, LinkIcon, Unlink, Bell, Clock } from 'lucide-react';
+import { MessageCircle, Send, LinkIcon, Unlink, Bell, Clock, History, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
-import { lineService, type LineNotificationPreferences } from '../../services/line.service';
+import { lineService, type LineNotificationPreferences, type LineMessageHistory } from '../../services/line.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
 import CertificationFormModal from './CertificationFormModal';
@@ -120,6 +120,12 @@ export default function EmployeeDetailPage() {
     const [isLoadingPrefs, setIsLoadingPrefs] = useState(false);
     const [isSavingPrefs, setIsSavingPrefs] = useState(false);
 
+    // LINE Message History
+    const [messageHistory, setMessageHistory] = useState<LineMessageHistory[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [historyExpanded, setHistoryExpanded] = useState(false);
+    const [historyTotal, setHistoryTotal] = useState(0);
+
     useEffect(() => {
         if (id) {
             fetchEmployee();
@@ -131,6 +137,7 @@ export default function EmployeeDetailPage() {
     useEffect(() => {
         if (employee?.user?.isLineLinked && id) {
             fetchNotificationPrefs();
+            fetchMessageHistory();
         }
     }, [employee?.user?.isLineLinked, id]);
 
@@ -167,6 +174,20 @@ export default function EmployeeDetailPage() {
             console.error('Failed to fetch notification preferences:', error);
         } finally {
             setIsLoadingPrefs(false);
+        }
+    };
+
+    const fetchMessageHistory = async () => {
+        if (!id) return;
+        setIsLoadingHistory(true);
+        try {
+            const response = await lineService.getEmployeeHistory(id, { pageSize: 10 });
+            setMessageHistory(response.data);
+            setHistoryTotal(response.pagination.total);
+        } catch (error) {
+            console.error('Failed to fetch message history:', error);
+        } finally {
+            setIsLoadingHistory(false);
         }
     };
 
@@ -402,6 +423,96 @@ export default function EmployeeDetailPage() {
                             <p className="text-surface-700 dark:text-surface-300 whitespace-pre-wrap">
                                 {employee.notes}
                             </p>
+                        </Card>
+                    )}
+
+                    {/* LINE Message History */}
+                    {employee.user?.isLineLinked && (
+                        <Card>
+                            <CardHeader
+                                title={t('line.messageHistory', 'LINE Message History')}
+                                action={
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-surface-500">
+                                            {historyTotal} {t('line.messages', 'messages')}
+                                        </span>
+                                        <History size={16} className="text-surface-400" />
+                                    </div>
+                                }
+                            />
+                            {isLoadingHistory ? (
+                                <div className="flex justify-center py-8">
+                                    <LoadingSpinner size="sm" />
+                                </div>
+                            ) : messageHistory.length > 0 ? (
+                                <div className="space-y-3">
+                                    {(historyExpanded ? messageHistory : messageHistory.slice(0, 5)).map((msg) => (
+                                        <div
+                                            key={msg.id}
+                                            className="p-3 rounded-lg bg-surface-50 dark:bg-surface-700/50 border border-surface-200 dark:border-surface-600"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-surface-900 dark:text-white line-clamp-2">
+                                                        {msg.message}
+                                                    </p>
+                                                    {msg.templateName && (
+                                                        <p className="text-xs text-surface-500 mt-1">
+                                                            {t('line.template', 'Template')}: {msg.templateName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex-shrink-0">
+                                                    {msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read' ? (
+                                                        <CheckCircle size={16} className="text-green-500" />
+                                                    ) : (
+                                                        <XCircle size={16} className="text-red-500" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2 text-xs text-surface-500">
+                                                <span>
+                                                    {msg.sentByName || t('line.system', 'System')}
+                                                </span>
+                                                <span>
+                                                    {new Date(msg.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            {msg.status === 'failed' && msg.errorMessage && (
+                                                <p className="text-xs text-red-500 mt-1">
+                                                    {msg.errorMessage}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {messageHistory.length > 5 && (
+                                        <button
+                                            onClick={() => setHistoryExpanded(!historyExpanded)}
+                                            className="w-full flex items-center justify-center gap-1 py-2 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                                        >
+                                            {historyExpanded ? (
+                                                <>
+                                                    <ChevronUp size={16} />
+                                                    {t('common.showLess', 'Show less')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDown size={16} />
+                                                    {t('line.showMore', `Show ${messageHistory.length - 5} more`)}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <History size={32} className="text-surface-300 dark:text-surface-600 mx-auto mb-2" />
+                                    <p className="text-surface-500 dark:text-surface-400 text-sm">
+                                        {t('line.noHistory', 'No messages sent yet')}
+                                    </p>
+                                </div>
+                            )}
                         </Card>
                     )}
                 </div>
