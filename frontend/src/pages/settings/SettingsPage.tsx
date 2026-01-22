@@ -10,6 +10,8 @@ import {
     Save,
     Loader2,
     Lightbulb,
+    Copy,
+    Check,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -48,6 +50,7 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const [profile, setProfile] = useState<CompanyProfile | null>(null);
     const [settings, setSettings] = useState<CompanySettings>({
@@ -267,6 +270,38 @@ export default function SettingsPage() {
                                             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                                             className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
+                                    </div>
+
+                                    {/* Company Code - for employee email login */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                            {i18n.language === 'th' ? 'รหัสบริษัท (Company Code)' : 'Company Code'}
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={profile.slug}
+                                                readOnly
+                                                className="flex-1 px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-100 dark:bg-surface-800 text-surface-800 dark:text-white cursor-not-allowed"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(profile.slug);
+                                                    setCopied(true);
+                                                    setTimeout(() => setCopied(false), 2000);
+                                                }}
+                                                className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-600 transition-colors"
+                                                title={i18n.language === 'th' ? 'คัดลอก' : 'Copy'}
+                                            >
+                                                {copied ? <Check size={18} className="text-success-500" /> : <Copy size={18} />}
+                                            </button>
+                                        </div>
+                                        <p className="mt-1 text-xs text-surface-500">
+                                            {i18n.language === 'th'
+                                                ? 'แจ้งรหัสนี้ให้พนักงานเพื่อใช้เข้าสู่ระบบผ่านอีเมล (สำหรับผู้ที่ไม่ใช้ LINE)'
+                                                : 'Share this code with employees for email login (for those who don\'t use LINE)'}
+                                        </p>
                                     </div>
 
                                     <div>

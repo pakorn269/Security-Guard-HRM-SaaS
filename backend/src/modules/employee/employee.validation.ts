@@ -59,7 +59,11 @@ export const listEmployeesQuerySchema = z.object({
         (val) => (val === '' ? undefined : val),
         z.enum(['active', 'on_leave', 'terminated']).optional()
     ),
-    hasUser: z.enum(['true', 'false']).optional().transform((val) => val === 'true'),
+    // Fix: Only transform when a value is explicitly provided, otherwise keep undefined
+    hasUser: z.preprocess(
+        (val) => (val === '' || val === undefined ? undefined : val),
+        z.enum(['true', 'false']).optional().transform((val) => val === undefined ? undefined : val === 'true')
+    ),
 });
 
 // Create certification validation schema

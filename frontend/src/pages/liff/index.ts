@@ -5,3 +5,6 @@ export { default as LiffProfilePage } from './LiffProfilePage';
 export { default as LiffLinkPage } from './LiffLinkPage';
 export { default as LiffLinkEmployeePage } from './LiffLinkEmployeePage';
 export { default as LiffLinkCredentialsPage } from './LiffLinkCredentialsPage';
+export { default as LiffLoginSelectPage } from './LiffLoginSelectPage';
+export { default as LiffEmailLoginPage } from './LiffEmailLoginPage';
+

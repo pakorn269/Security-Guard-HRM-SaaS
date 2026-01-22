@@ -44,6 +44,10 @@ const LiffLinkPage = lazy(() => import('./pages/liff/LiffLinkPage'));
 const LiffLinkEmployeePage = lazy(() => import('./pages/liff/LiffLinkEmployeePage'));
 const LiffLinkCredentialsPage = lazy(() => import('./pages/liff/LiffLinkCredentialsPage'));
 
+// LIFF Email Login pages (for guards without LINE)
+const LiffLoginSelectPage = lazy(() => import('./pages/liff/LiffLoginSelectPage'));
+const LiffEmailLoginPage = lazy(() => import('./pages/liff/LiffEmailLoginPage'));
+
 // Loading component
 const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
@@ -177,8 +181,21 @@ const routes: RouteObject[] = [
             },
         ],
     },
+
+    // LIFF Email Login routes (outside LiffLayout to bypass LINE auth)
+    {
+        path: '/liff/login-select',
+        element: withSuspense(LiffLoginSelectPage),
+        errorElement: <ErrorBoundary />,
+    },
+    {
+        path: '/liff/email-login',
+        element: withSuspense(LiffEmailLoginPage),
+        errorElement: <ErrorBoundary />,
+    },
 ];
 
 export const router = createBrowserRouter(routes);
 
 export default router;
+
