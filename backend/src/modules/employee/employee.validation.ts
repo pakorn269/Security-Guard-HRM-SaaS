@@ -88,9 +88,24 @@ export const updateCertificationSchema = z.object({
     notes: z.string().optional().nullable(),
 });
 
+// Send LINE message validation schema
+export const sendLineMessageSchema = z.object({
+    message: z.string().min(1, 'Message is required').max(5000, 'Message must be less than 5000 characters'),
+    messageTh: z.string().max(5000).optional(),
+});
+
+// Bulk LINE message validation schema
+export const bulkLineMessageSchema = z.object({
+    employeeIds: z.array(z.string().uuid('Invalid employee ID')).min(1, 'At least one employee is required'),
+    message: z.string().min(1, 'Message is required').max(5000, 'Message must be less than 5000 characters'),
+    messageTh: z.string().max(5000).optional(),
+});
+
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
 export type TerminateEmployeeInput = z.infer<typeof terminateEmployeeSchema>;
 export type ListEmployeesQueryInput = z.infer<typeof listEmployeesQuerySchema>;
 export type CreateCertificationInput = z.infer<typeof createCertificationSchema>;
 export type UpdateCertificationInput = z.infer<typeof updateCertificationSchema>;
+export type SendLineMessageInput = z.infer<typeof sendLineMessageSchema>;
+export type BulkLineMessageInput = z.infer<typeof bulkLineMessageSchema>;
