@@ -1,5 +1,5 @@
 import api from './api';
-import type { CompanySettings, UpdateCompanySettingsRequest, PublicCompanyInfo } from '../types/company.types';
+import type { CompanySettings, UpdateCompanySettingsRequest, PublicCompanyInfo, Company } from '../types/company.types';
 
 // Response types
 interface ApiResponse<T> {
@@ -11,6 +11,11 @@ interface ApiResponse<T> {
 
 export const getPublicBySlug = async (slug: string): Promise<PublicCompanyInfo> => {
     const response = await api.get<ApiResponse<PublicCompanyInfo>>(`/companies/by-slug/${slug}/public`);
+    return response.data.data;
+};
+
+export const getById = async (companyId: string): Promise<Company> => {
+    const response = await api.get<ApiResponse<Company>>(`/companies/${companyId}`);
     return response.data.data;
 };
 
@@ -26,6 +31,7 @@ export const updateSettings = async (companyId: string, data: UpdateCompanySetti
 
 const companyService = {
     getPublicBySlug,
+    getById,
     getSettings,
     updateSettings,
 };

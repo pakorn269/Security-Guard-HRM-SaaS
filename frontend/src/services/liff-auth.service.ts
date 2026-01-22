@@ -150,6 +150,23 @@ export const liffAuthService = {
 
         throw new Error(response.data.error?.message || 'Failed to unlink LINE account');
     },
+
+    /**
+     * Link LINE account to current user
+     * Requires authentication
+     */
+    async linkLine(idToken: string, liffId: string): Promise<AuthUser> {
+        const response = await api.post<ApiResponse<AuthUser>>(
+            `${AUTH_BASE}/link-line`,
+            { idToken, liffId }
+        );
+
+        if (response.data.success && response.data.data) {
+            return response.data.data;
+        }
+
+        throw new Error(response.data.error?.message || 'Failed to link LINE account');
+    },
 };
 
 export default liffAuthService;
