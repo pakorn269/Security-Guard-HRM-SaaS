@@ -40,17 +40,11 @@ export function ProtectedRoute({ children, allowedRoles, redirectTo }: Protected
 
     // Check role-based access
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-        // If user is a guard trying to access admin pages, redirect to LIFF
+        // If a guard tries to access a non-allowed page (likely dashboard), redirect to LIFF
         if (user.role === 'guard') {
-            return <Navigate to="/liff/schedule" replace />;
+            return <Navigate to="/liff/clock" replace />;
         }
 
-        // If custom redirect is specified, use it
-        if (redirectTo) {
-            return <Navigate to={redirectTo} replace />;
-        }
-
-        // Default: show access denied
         return (
             <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
                 <div className="text-center">
