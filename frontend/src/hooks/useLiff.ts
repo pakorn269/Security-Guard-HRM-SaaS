@@ -7,6 +7,15 @@ interface LiffState {
   isReady: boolean;
   liffId: string | null;
   error: Error | null;
+  isDevMode: boolean;
+}
+
+/**
+ * Check if LIFF development mode is enabled
+ * When enabled, allows accessing LIFF pages through regular browser for testing
+ */
+function isLiffDevModeEnabled(): boolean {
+  return import.meta.env.VITE_LIFF_DEV_MODE === 'true';
 }
 
 /**
@@ -15,18 +24,23 @@ interface LiffState {
  * This hook initializes the LIFF SDK and provides context about
  * whether the app is running inside LINE or a regular browser.
  *
+ * When VITE_LIFF_DEV_MODE=true, the hook allows browser access for testing.
+ *
  * Usage:
- * const { isInClient, isReady, liffId } = useLiff();
+ * const { isInClient, isReady, liffId, isDevMode } = useLiff();
  *
  * @returns {LiffState} LIFF context state
  */
 export function useLiff(): LiffState {
+  const devMode = isLiffDevModeEnabled();
+
   const [state, setState] = useState<LiffState>({
     isInClient: false,
     isLoggedIn: false,
     isReady: false,
     liffId: null,
     error: null,
+    isDevMode: devMode,
   });
 
   useEffect(() => {
@@ -46,23 +60,52 @@ export function useLiff(): LiffState {
 
         if (!mounted) return;
 
+        const actuallyInClient = liff.isInClient();
+
+        // In dev mode, simulate being in client for browser testing
         setState({
-          isInClient: liff.isInClient(),
+          isInClient: devMode || actuallyInClient,
           isLoggedIn: liff.isLoggedIn(),
           isReady: true,
           liffId: liff.id || null,
           error: null,
+          isDevMode: devMode,
         });
+
+        if (devMode && !actuallyInClient) {
+          console.warn(
+            '🔧 LIFF Dev Mode: Running in browser with simulated LIFF context. ' +
+            'Set VITE_LIFF_DEV_MODE=false for production.'
+          );
+        }
       } catch (error) {
         if (!mounted) return;
 
-        setState({
-          isInClient: false,
-          isLoggedIn: false,
-          isReady: true,
-          liffId: null,
-          error: error instanceof Error ? error : new Error('LIFF initialization failed'),
-        });
+        // In dev mode, allow continuing even if LIFF init fails
+        if (devMode) {
+          console.warn(
+            '🔧 LIFF Dev Mode: LIFF initialization failed, but dev mode is enabled. ' +
+            'Proceeding with simulated context.',
+            error
+          );
+          setState({
+            isInClient: true, // Simulate being in client
+            isLoggedIn: false,
+            isReady: true,
+            liffId: null,
+            error: null, // Don't report error in dev mode
+            isDevMode: devMode,
+          });
+        } else {
+          setState({
+            isInClient: false,
+            isLoggedIn: false,
+            isReady: true,
+            liffId: null,
+            error: error instanceof Error ? error : new Error('LIFF initialization failed'),
+            isDevMode: devMode,
+          });
+        }
       }
     };
 
@@ -71,7 +114,7 @@ export function useLiff(): LiffState {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [devMode]);
 
   return state;
 }
