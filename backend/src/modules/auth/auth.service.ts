@@ -100,7 +100,7 @@ class AuthService {
     }
 
     // Create session and generate tokens
-    private async createSessionAndTokens(
+    public async createSessionAndTokens(
         payload: JwtPayload,
         options?: {
             userAgent?: string;
@@ -1033,7 +1033,7 @@ class AuthService {
     }
 
     // Verify LINE ID Token
-    private async verifyLineIdToken(idToken: string, liffIdOrChannelId: string): Promise<LineIdTokenPayload> {
+    public async verifyLineIdToken(idToken: string, liffIdOrChannelId: string): Promise<LineIdTokenPayload> {
         try {
             // Extract channel ID from LIFF ID if provided (format: {channelId}-{appId})
             // LIFF ID looks like "2008914377-NDoaNvUa", we need just "2008914377"

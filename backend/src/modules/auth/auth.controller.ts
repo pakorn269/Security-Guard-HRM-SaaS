@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { authService } from './auth.service.js';
+import { lineLinkingService } from './line-linking.service.js';
 import { sendSuccess, sendCreated } from '../../utils/response.js';
 import { ValidationError, NotFoundError } from '../../utils/errors.js';
 import { createLiffContextFromRequest } from '../../middleware/liff-context.middleware.js';
@@ -18,6 +19,7 @@ import {
     linkLineSchema,
     lineVerifySchema,
     linkEmployeeSchema,
+    autoLinkSchema,
     linkCredentialsSchema,
     liffEmployeeLoginSchema,
     changePasswordSchema,
@@ -302,6 +304,27 @@ class AuthController {
                 validation.data.phone,
                 validation.data.companySlug,
                 sessionContext
+            );
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/line/auto-link - Auto-link LINE to employee via code + phone
+    async autoLink(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = autoLinkSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await lineLinkingService.autoLinkEmployee(
+                validation.data.idToken,
+                validation.data.liffId,
+                validation.data.employeeCode,
+                validation.data.phone,
+                validation.data.companySlug
             );
             sendSuccess(res, result);
         } catch (error) {

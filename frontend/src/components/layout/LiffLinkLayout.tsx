@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { getCurrentLiffId } from '../../hooks/useLiff';
-import liffAuthService, { type LineProfile } from '../../services/liff-auth.service';
+import liffAuthService, { type LineProfile, type AutoLinkResult } from '../../services/liff-auth.service';
 import { clearTokens, getAccessToken } from '../../services/api';
 import type { AuthUser } from '../../types/auth';
 import api from '../../services/api';
@@ -37,6 +37,7 @@ interface LiffLinkContextValue extends LiffLinkState {
     // Methods
     loginWithLine: () => void;
     linkWithEmployeeCode: (employeeCode: string, phone: string, companySlug: string) => Promise<boolean>;
+    autoLinkEmployee: (employeeCode: string, phone: string, companySlug?: string) => Promise<AutoLinkResult>;
     linkWithCredentials: (email: string, password: string) => Promise<boolean>;
     retry: () => void;
     clearError: () => void;
@@ -225,6 +226,55 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
     }, [state.idToken, state.liffId]);
 
+    // Auto-link with employee code + phone
+    const autoLinkEmployee = useCallback(async (
+        employeeCode: string,
+        phone: string,
+        companySlug?: string
+    ): Promise<AutoLinkResult> => {
+        if (!state.idToken || !state.liffId) {
+            setState(prev => ({ ...prev, error: 'ไม่พบข้อมูล LINE token' }));
+            return { success: false, message: 'ไม่พบข้อมูล LINE token' };
+        }
+
+        try {
+            setState(prev => ({ ...prev, status: 'verifying', error: null }));
+
+            const result = await liffAuthService.autoLinkEmployee({
+                idToken: state.idToken,
+                liffId: state.liffId,
+                employeeCode,
+                phone,
+                companySlug,
+            });
+
+            if (result.success && result.data) {
+                // Linked successfully
+                setState(prev => ({
+                    ...prev,
+                    status: 'linked',
+                    user: result.data!.user,
+                }));
+            } else {
+                // Pending approval or require company slug or other cases
+                // We return the result so the page can handle UI
+                setState(prev => ({
+                    ...prev,
+                    status: 'not_linked',
+                    error: null // Clear error as we handle it in UI
+                }));
+            }
+            return result;
+        } catch (err) {
+            setState(prev => ({
+                ...prev,
+                status: 'not_linked',
+                error: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
+            }));
+            return { success: false, message: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    }, [state.idToken, state.liffId]);
+
     // Link with credentials
     const linkWithCredentials = useCallback(async (
         email: string,
@@ -280,6 +330,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         ...state,
         loginWithLine,
         linkWithEmployeeCode,
+        autoLinkEmployee,
         linkWithCredentials,
         retry,
         clearError,

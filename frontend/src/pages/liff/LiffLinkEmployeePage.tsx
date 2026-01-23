@@ -3,14 +3,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Building2, Phone, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User, Building2, Phone, Loader2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useLiffLink } from '../../components/layout/LiffLinkLayout';
 
 export default function LiffLinkEmployeePage() {
     const navigate = useNavigate();
-    const { linkWithEmployeeCode, error, clearError, isLoading } = useLiffLink();
-
-
+    const { autoLinkEmployee, error, clearError, isLoading } = useLiffLink();
 
     const [formData, setFormData] = useState({
         companySlug: '',
@@ -20,11 +18,13 @@ export default function LiffLinkEmployeePage() {
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [pendingApproval, setPendingApproval] = useState(false);
+    const [requireCompanySlug, setRequireCompanySlug] = useState(false);
 
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
 
-        if (!formData.companySlug.trim()) {
+        if (requireCompanySlug && !formData.companySlug.trim()) {
             errors.companySlug = 'กรุณาระบุรหัสบริษัท';
         }
 
@@ -54,18 +54,23 @@ export default function LiffLinkEmployeePage() {
             // Normalize phone number (remove dashes and spaces)
             const normalizedPhone = formData.phone.replace(/[-\s]/g, '');
 
-            const success = await linkWithEmployeeCode(
+            const result = await autoLinkEmployee(
                 formData.employeeCode.trim(),
                 normalizedPhone,
-                formData.companySlug.trim().toLowerCase()
+                requireCompanySlug ? formData.companySlug.trim().toLowerCase() : undefined
             );
 
-            if (success) {
+            if (result.success && result.data) {
                 setSuccess(true);
                 // Redirect to clock page after success
                 setTimeout(() => {
                     navigate('/liff/clock');
                 }, 1500);
+            } else if (result.pendingApproval) {
+                setPendingApproval(true);
+            } else if (result.requireCompanySlug) {
+                setRequireCompanySlug(true);
+                // Maybe focus on company slug input?
             }
         } finally {
             setIsSubmitting(false);
@@ -106,6 +111,35 @@ export default function LiffLinkEmployeePage() {
         );
     }
 
+    // Pending Approval state
+    if (pendingApproval) {
+        return (
+            <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center p-4 safe-area-inset">
+                <div className="text-center max-w-sm mx-auto">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-warning-100 dark:bg-warning-900/30 flex items-center justify-center animate-pulse">
+                        <Clock size={40} className="text-warning-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
+                        รอการตรวจสอบ
+                    </h2>
+                    <p className="text-neutral-500 dark:text-neutral-400 mb-6">
+                        ข้อมูลของคุณถูกส่งไปยังผู้ดูแลระบบแล้ว กรุณารอการอนุมัติ
+                        <br />
+                        <span className="text-xs mt-2 block">
+                            (Your request has been sent for approval)
+                        </span>
+                    </p>
+                    <button
+                        onClick={() => navigate('/liff/link')}
+                        className="w-full h-12 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white font-medium rounded-lg transition-colors touch-target"
+                    >
+                        กลับหน้าหลัก
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col safe-area-inset">
             {/* Header */}
@@ -131,41 +165,6 @@ export default function LiffLinkEmployeePage() {
             {/* Form */}
             <form onSubmit={handleSubmit} className="flex-1 p-4">
                 <div className="space-y-4">
-                    {/* Company Slug */}
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
-                            <span className="flex items-center gap-1.5">
-                                <Building2 size={14} />
-                                รหัสบริษัท / Company Code
-                            </span>
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.companySlug}
-                            onChange={(e) => handleInputChange('companySlug', e.target.value)}
-                            placeholder="เช่น abc-security"
-                            className={`
-                                w-full h-12 px-4 
-                                bg-white dark:bg-neutral-900 
-                                border rounded-lg
-                                text-neutral-900 dark:text-white
-                                placeholder:text-neutral-400
-                                focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                                ${formErrors.companySlug
-                                    ? 'border-error-500'
-                                    : 'border-neutral-300 dark:border-neutral-700'
-                                }
-                            `}
-                            disabled={isSubmitting || isLoading}
-                        />
-                        {formErrors.companySlug && (
-                            <p className="text-sm text-error-500 mt-1">{formErrors.companySlug}</p>
-                        )}
-                        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                            สอบถามรหัสบริษัทได้จากฝ่ายบุคคล
-                        </p>
-                    </div>
-
                     {/* Employee Code */}
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
@@ -233,6 +232,49 @@ export default function LiffLinkEmployeePage() {
                             เบอร์โทรศัพท์ที่ลงทะเบียนไว้ในระบบ
                         </p>
                     </div>
+
+                    {/* Company Slug (Only if required) */}
+                    {requireCompanySlug && (
+                        <div className="animate-fade-in">
+                             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-3">
+                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                    ไม่พบข้อมูล หรือมีข้อมูลซ้ำกัน กรุณาระบุรหัสบริษัทเพิ่มเติม
+                                </p>
+                             </div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                                <span className="flex items-center gap-1.5">
+                                    <Building2 size={14} />
+                                    รหัสบริษัท / Company Code
+                                </span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.companySlug}
+                                onChange={(e) => handleInputChange('companySlug', e.target.value)}
+                                placeholder="เช่น abc-security"
+                                className={`
+                                    w-full h-12 px-4
+                                    bg-white dark:bg-neutral-900
+                                    border rounded-lg
+                                    text-neutral-900 dark:text-white
+                                    placeholder:text-neutral-400
+                                    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                                    ${formErrors.companySlug
+                                        ? 'border-error-500'
+                                        : 'border-neutral-300 dark:border-neutral-700'
+                                    }
+                                `}
+                                disabled={isSubmitting || isLoading}
+                                autoFocus
+                            />
+                            {formErrors.companySlug && (
+                                <p className="text-sm text-error-500 mt-1">{formErrors.companySlug}</p>
+                            )}
+                            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                                สอบถามรหัสบริษัทได้จากฝ่ายบุคคล
+                            </p>
+                        </div>
+                    )}
 
                     {/* API Error */}
                     {error && (
