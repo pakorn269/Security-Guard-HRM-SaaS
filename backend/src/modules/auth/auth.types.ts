@@ -177,3 +177,14 @@ export interface PinResetRequest {
     resolvedBy?: string;
     notes?: string;
 }
+
+// ============================================================
+// First-Time PIN Setup Types (Public - for users whose PIN was reset by admin)
+// ============================================================
+
+export interface SetupPinRequest {
+    companySlug: string;
+    phone: string;
+    newPin: string;
+}
+

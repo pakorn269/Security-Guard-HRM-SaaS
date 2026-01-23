@@ -12,6 +12,7 @@ import {
     updateCertificationSchema,
     sendLineMessageSchema,
     bulkLineMessageSchema,
+    createUserAccountSchema,
 } from './employee.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -183,6 +184,39 @@ class EmployeeController {
             const employeeId = req.params.id as string;
             const employee = await employeeService.reactivate(employeeId, req.user.companyId);
             sendSuccess(res, employee);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/employees/:id/create-user - Create user account for existing employee
+    async createUserAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.companyId) {
+                throw new ForbiddenError('No company associated with user');
+            }
+
+            // Only admins and managers can create user accounts
+            if (!['super_admin', 'company_admin', 'manager'].includes(req.user.role)) {
+                throw new ForbiddenError(
+                    'Only admins and managers can create user accounts',
+                    'เฉพาะผู้ดูแลระบบและผู้จัดการเท่านั้นที่สามารถสร้างบัญชีผู้ใช้'
+                );
+            }
+
+            const employeeId = req.params.id as string;
+
+            const validation = createUserAccountSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const employee = await employeeService.createUserAccount(
+                employeeId,
+                req.user.companyId,
+                validation.data
+            );
+            sendCreated(res, employee);
         } catch (error) {
             next(error);
         }

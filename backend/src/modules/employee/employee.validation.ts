@@ -13,6 +13,7 @@ export const createEmployeeSchema = z.object({
     hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
     notes: z.string().optional(),
     profileImageUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+    position: z.string().max(255).optional(),
     // Optional: create user account with employee
     createUserAccount: z.boolean().optional().default(false),
     userRole: z.enum(['manager', 'guard']).optional(),
@@ -39,6 +40,7 @@ export const updateEmployeeSchema = z.object({
     emergencyContactName: z.string().max(255).optional().nullable(),
     emergencyContactPhone: z.string().max(20).optional().nullable(),
     hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
+    position: z.string().max(255).optional().nullable(),
     status: z.enum(['active', 'on_leave', 'terminated']).optional(),
     notes: z.string().optional().nullable(),
     profileImageUrl: z.string().url('Invalid URL').optional().or(z.literal('')).nullable(),
@@ -101,6 +103,13 @@ export const bulkLineMessageSchema = z.object({
     messageTh: z.string().max(5000).optional(),
 });
 
+// Create user account validation schema
+export const createUserAccountSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    role: z.enum(['manager', 'guard']),
+});
+
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
 export type TerminateEmployeeInput = z.infer<typeof terminateEmployeeSchema>;
@@ -109,3 +118,4 @@ export type CreateCertificationInput = z.infer<typeof createCertificationSchema>
 export type UpdateCertificationInput = z.infer<typeof updateCertificationSchema>;
 export type SendLineMessageInput = z.infer<typeof sendLineMessageSchema>;
 export type BulkLineMessageInput = z.infer<typeof bulkLineMessageSchema>;
+export type CreateUserAccountInput = z.infer<typeof createUserAccountSchema>;

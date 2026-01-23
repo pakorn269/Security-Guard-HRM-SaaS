@@ -17,6 +17,7 @@ export interface Employee {
     status: EmploymentStatus;
     profileImageUrl?: string;
     notes?: string;
+    position?: string;
     createdAt: string;
     updatedAt: string;
 }

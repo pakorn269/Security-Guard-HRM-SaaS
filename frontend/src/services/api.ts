@@ -104,8 +104,29 @@ api.interceptors.response.use(
     async (error: AxiosError<ApiResponse>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        // Handle 401 Unauthorized - try to refresh token
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // List of auth endpoints that should NOT trigger token refresh on 401
+        // These endpoints return 401 for invalid credentials, which is expected behavior
+        const authEndpoints = [
+            '/auth/login',
+            '/auth/login-phone',
+            '/auth/register',
+            '/auth/line',
+            '/auth/line/verify',
+            '/auth/line/link-employee',
+            '/auth/line/link-credentials',
+            '/auth/liff/employee-login',
+            '/auth/forgot-pin',
+            '/auth/setup-pin',
+            '/auth/verify-reset-code',
+            '/auth/request-pin-reset',
+        ];
+
+        // Check if the request URL is an auth endpoint
+        const requestUrl = originalRequest?.url || '';
+        const isAuthEndpoint = authEndpoints.some(endpoint => requestUrl.includes(endpoint));
+
+        // Handle 401 Unauthorized - try to refresh token (but NOT for auth endpoints)
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -149,7 +170,23 @@ api.interceptors.response.use(
             } catch (refreshError) {
                 processQueue(refreshError as AxiosError, null);
                 clearTokens();
-                window.location.href = '/login';
+
+                // Check if we're on a LIFF path - redirect to LIFF login instead of web login
+                const currentPath = window.location.pathname;
+                if (currentPath.startsWith('/liff/')) {
+                    // Extract company slug if present (e.g., /liff/security-group/login)
+                    const pathParts = currentPath.split('/');
+                    if (pathParts.length >= 3 && pathParts[2] !== 'link' && pathParts[2] !== 'schedule' && pathParts[2] !== 'clock' && pathParts[2] !== 'leave' && pathParts[2] !== 'profile') {
+                        // This is a company-specific LIFF path, redirect to company login
+                        const companySlug = pathParts[2];
+                        window.location.href = `/liff/${companySlug}/login`;
+                    } else {
+                        // Generic LIFF path, redirect to LIFF link page
+                        window.location.href = '/liff/link';
+                    }
+                } else {
+                    window.location.href = '/login';
+                }
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

@@ -21,6 +21,7 @@ router.delete('/:id', employeeController.terminate);
 
 // Employee actions
 router.post('/:id/reactivate', employeeController.reactivate);
+router.post('/:id/create-user', employeeController.createUserAccount);
 router.post('/:id/link-user', employeeController.linkToUser);
 router.post('/:id/reset-pin', employeeController.resetPin);
 router.post('/:id/line-message', employeeController.sendLineMessage);

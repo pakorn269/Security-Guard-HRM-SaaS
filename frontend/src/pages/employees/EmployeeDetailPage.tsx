@@ -9,6 +9,7 @@ import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
 import CertificationFormModal from './CertificationFormModal';
 import LineMessageModal from './LineMessageModal';
+import UserAccountFormModal from './UserAccountFormModal';
 
 // Status badge component
 function StatusBadge({ status }: { status: string }) {
@@ -74,14 +75,12 @@ function NotificationToggle({
                     disabled={disabled}
                     className="sr-only peer"
                 />
-                <div className={`w-9 h-5 rounded-full transition-colors ${
-                    checked
-                        ? 'bg-primary-500'
-                        : 'bg-surface-300 dark:bg-surface-600'
-                } ${disabled ? 'opacity-50' : ''}`}>
-                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                        checked ? 'translate-x-4' : 'translate-x-0'
-                    }`} />
+                <div className={`w-9 h-5 rounded-full transition-colors ${checked
+                    ? 'bg-primary-500'
+                    : 'bg-surface-300 dark:bg-surface-600'
+                    } ${disabled ? 'opacity-50' : ''}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
                 </div>
             </div>
             <div className="flex-1 min-w-0">
@@ -113,6 +112,7 @@ export default function EmployeeDetailPage() {
     const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
     const [terminationNotes, setTerminationNotes] = useState('');
     const [isTerminating, setIsTerminating] = useState(false);
+    const [isUserAccountModalOpen, setIsUserAccountModalOpen] = useState(false);
     const [isLineMessageModalOpen, setIsLineMessageModalOpen] = useState(false);
 
     // LINE Notification Preferences
@@ -581,7 +581,7 @@ export default function EmployeeDetailPage() {
                                 <p className="text-surface-500 dark:text-surface-400 text-sm mb-3">
                                     {t('employees.noUserAccount', 'No user account linked')}
                                 </p>
-                                <Button size="sm" variant="outline">
+                                <Button size="sm" variant="outline" onClick={() => setIsUserAccountModalOpen(true)}>
                                     {t('employees.createAccount', 'Create Account')}
                                 </Button>
                             </div>
@@ -904,6 +904,15 @@ export default function EmployeeDetailPage() {
                 onClose={() => setIsLineMessageModalOpen(false)}
                 employee={employee}
             />
+            {isUserAccountModalOpen && (
+                <UserAccountFormModal
+                    isOpen={isUserAccountModalOpen}
+                    onClose={() => setIsUserAccountModalOpen(false)}
+                    onSuccess={() => fetchEmployee()}
+                    employeeId={employee.id}
+                    employeeEmail={employee.email}
+                />
+            )}
         </div >
     );
 }

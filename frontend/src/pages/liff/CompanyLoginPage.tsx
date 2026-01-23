@@ -56,6 +56,9 @@ const CompanyLoginPage = () => {
     const handleSubmit = async () => {
         if (!company || !companySlug) return;
 
+        // Clear any previous errors
+        setLoginError(null);
+
         // Basic validation
         const normalizedPhone = phone.replace(/\D/g, '');
         if (normalizedPhone.length < 9) {
@@ -71,32 +74,16 @@ const CompanyLoginPage = () => {
             companySlug,
             phone: normalizedPhone,
             pin,
-            // turnstileToken: '...' // skipped for now
         });
 
         if (success) {
-            // Check if PIN set required or redirect to clock
-            // AuthContext sets user. If user needs to set PIN, backend might have thrown error?
-            // Actually, backend throws "PIN not set" error if password_hash is null.
-            // But phoneLogin logic checks password_hash and throws error if not set.
-            // So we need to handle that specific error to redirect to set-pin.
-            // However, useAuth catches error and sets it in state. We need to check the error message.
-            // The `phoneLogin` in AuthContext returns boolean. If false, check `error`.
-            // BUT, `phoneLogin` service throws Error.
-
-            // Wait, if login succeeds, we go to /liff/clock usually.
+            // Login succeeded - navigate to clock page
             navigate('/liff/clock');
         } else {
-            // We need to access the error from context or local handling.
-            // phoneLogin action in AuthContext returns false on error and sets state.error.
-            // But we might want to catch specific error codes.
-            // Refactoring AuthContext to return error or throw would be better, but sticking to existing pattern:
-            // We can check `error` from useAuth, but it's updated asynchronously? 
-            // Actually, the `phoneLogin` promise resolves AFTER dispatch updates state? 
-            // React state updates are batched/async.
-            // Let's modify `handleSubmit` to assume generic failure if false, 
-            // but ideally we should detect "PIN not set".
-            // For now, let's just show the error message.
+            // Login failed - clear PIN only for security (keep phone number)
+            setPin('');
+            // The authError from context will be displayed via displayError
+            // No need for timeout - the error is set synchronously after phoneLogin returns
         }
     };
 
@@ -112,14 +99,20 @@ const CompanyLoginPage = () => {
         }
     }, [pin, phone]);
 
-    // Check for "PIN not set" error to redirect
+    // Check for "PIN not set" error to redirect to first-time PIN setup
     // This hook must be called BEFORE any early returns to maintain consistent hook order
     useEffect(() => {
         if (authError && (authError.includes('PIN not set') || authError.includes('ยังไม่ได้ตั้งรหัส PIN'))) {
-            // Redirect to set-pin
-            navigate(`/liff/${companySlug}/set-pin`);
+            // Redirect to set-pin with the phone number in state
+            // This allows the set-pin page to call the public setup-pin endpoint
+            navigate(`/liff/${companySlug}/set-pin`, {
+                state: {
+                    phone: phone.replace(/\D/g, ''), // normalized phone
+                    isFirstTimeSetup: true
+                }
+            });
         }
-    }, [authError, companySlug, navigate]);
+    }, [authError, companySlug, navigate, phone]);
 
     if (isLoadingCompany) {
         return (
