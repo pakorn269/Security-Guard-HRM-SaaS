@@ -2,9 +2,19 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+// User role type for reuse across the application
+export type UserRole = 'super_admin' | 'company_admin' | 'manager' | 'guard';
+
+// Roles that can access admin/dashboard pages
+export const ADMIN_ROLES: UserRole[] = ['super_admin', 'company_admin', 'manager'];
+
+// Roles that should only access LIFF pages
+export const LIFF_ONLY_ROLES: UserRole[] = ['guard'];
+
 interface ProtectedRouteProps {
     children: ReactNode;
-    allowedRoles?: Array<'super_admin' | 'company_admin' | 'manager' | 'guard'>;
+    allowedRoles?: UserRole[];
+    redirectTo?: string; // Custom redirect for unauthorized users
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -30,6 +40,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
     // Check role-based access
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+        // If a guard tries to access a non-allowed page (likely dashboard), redirect to LIFF
+        if (user.role === 'guard') {
+            return <Navigate to="/liff/clock" replace />;
+        }
+
         return (
             <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
                 <div className="text-center">

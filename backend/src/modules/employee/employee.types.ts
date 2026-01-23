@@ -23,6 +23,7 @@ export interface EmployeeRow {
     license_number?: string | null;
     license_issued_at?: string | null;
     license_expires_at?: string | null;
+    position: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -48,6 +49,7 @@ export interface Employee {
     licenseNumber?: string | null;
     licenseIssuedAt?: string | null;
     licenseExpiresAt?: string | null;
+    position: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -108,10 +110,18 @@ export interface CreateEmployeeRequest {
     licenseNumber?: string;
     licenseIssuedAt?: string;
     licenseExpiresAt?: string;
+    position?: string;
     // Optional: create user account with employee
     createUserAccount?: boolean;
     userRole?: 'manager' | 'guard';
     userPassword?: string;
+}
+
+// Create user account for existing employee request
+export interface CreateUserAccountRequest {
+    email: string;
+    password: string;
+    role: 'manager' | 'guard';
 }
 
 // Update employee request
@@ -131,6 +141,7 @@ export interface UpdateEmployeeRequest {
     licenseNumber?: string | null;
     licenseIssuedAt?: string | null;
     licenseExpiresAt?: string | null;
+    position?: string | null;
 }
 
 // List employees query

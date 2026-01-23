@@ -24,7 +24,7 @@ import type {
     ForgotPinRequest,
     VerifyResetCodeRequest,
 } from './auth.types.js';
-import type { JwtPayload } from '../../middleware/auth.middleware.js';
+import type { JwtPayload, LiffContext } from '../../middleware/auth.middleware.js';
 import { PhoneUtils } from '../../utils/phone.js';
 
 // Constants
@@ -52,16 +52,26 @@ const parseTimeToSeconds = (time: string): number => {
 
 class AuthService {
     // Generate JWT tokens
-    private generateTokens(payload: JwtPayload): TokenPair {
+    private generateTokens(payload: JwtPayload, liffContext?: LiffContext): TokenPair {
         const accessExpiresInSeconds = parseTimeToSeconds(ACCESS_TOKEN_EXPIRY);
         const refreshExpiresInSeconds = parseTimeToSeconds(REFRESH_TOKEN_EXPIRY);
 
-        const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+        // Add LIFF context to payload if provided
+        const fullPayload = liffContext
+            ? { ...payload, liffContext }
+            : payload;
+
+        const accessToken = jwt.sign(fullPayload, env.JWT_SECRET, {
             expiresIn: accessExpiresInSeconds,
         });
 
+        // Refresh token also includes LIFF context for inheritance
         const refreshToken = jwt.sign(
-            { userId: payload.userId, type: 'refresh' },
+            {
+                userId: payload.userId,
+                type: 'refresh',
+                liffContext,
+            },
             env.JWT_SECRET,
             { expiresIn: refreshExpiresInSeconds }
         );
@@ -341,7 +351,7 @@ class AuthService {
         // We look up employee first because guards might not know their email/username
         const { data: employee, error: employeeError } = await supabaseAdmin
             .from('employees')
-            .select('user_id')
+            .select('id, user_id')
             .eq('company_id', company.id)
             .eq('phone', normalizedPhone)
             .single();
@@ -429,15 +439,24 @@ class AuthService {
             );
         }
 
-        // Reset failed attempts on success
+        // Reset failed attempts on success AND ensure employee_id is linked
+        const updateData: any = {
+            pin_attempts: 0,
+            pin_locked_until: null,
+            last_login_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        // Self-heal: If user record is missing employee_id, link it now
+        if (!user.employee_id && employee.id) {
+            updateData.employee_id = employee.id;
+            // Update local user object for token generation
+            user.employee_id = employee.id;
+        }
+
         await supabaseAdmin
             .from('users')
-            .update({
-                pin_attempts: 0,
-                pin_locked_until: null,
-                last_login_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('id', user.id);
 
         // Generate tokens
@@ -508,6 +527,115 @@ class AuthService {
             .eq('id', userId);
 
         logger.info('PIN set successfully', { userId });
+    }
+
+    // Setup PIN (First-time setup without authentication)
+    // This is for users whose PIN was reset by admin
+    async setupPin(data: { companySlug: string; phone: string; newPin: string }): Promise<LoginResponse> {
+        const { companySlug, phone, newPin } = data;
+        const normalizedPhone = PhoneUtils.normalize(phone);
+
+        // Find company by slug
+        const { data: company, error: companyError } = await supabaseAdmin
+            .from('companies')
+            .select('id')
+            .eq('slug', companySlug)
+            .single();
+
+        if (companyError || !company) {
+            throw new UnauthorizedError(
+                'Invalid phone number',
+                'เบอร์โทรศัพท์ไม่ถูกต้อง'
+            );
+        }
+
+        // Find employee by phone and company
+        const { data: employee, error: employeeError } = await supabaseAdmin
+            .from('employees')
+            .select('id, user_id')
+            .eq('company_id', company.id)
+            .eq('phone', normalizedPhone)
+            .single();
+
+        if (employeeError || !employee || !employee.user_id) {
+            throw new UnauthorizedError(
+                'Invalid phone number',
+                'เบอร์โทรศัพท์ไม่ถูกต้อง'
+            );
+        }
+
+        // Get user details
+        const { data: user, error: userError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', employee.user_id)
+            .single();
+
+        if (userError || !user) {
+            throw new UnauthorizedError(
+                'Invalid phone number',
+                'เบอร์โทรศัพท์ไม่ถูกต้อง'
+            );
+        }
+
+        // Check account status
+        if (!user.is_active) {
+            throw new UnauthorizedError(
+                'Account is deactivated',
+                'บัญชีถูกระงับ'
+            );
+        }
+
+        // IMPORTANT: Only allow if PIN is not set (password_hash is null)
+        // This prevents unauthorized PIN changes
+        if (user.password_hash) {
+            throw new UnauthorizedError(
+                'PIN is already set. Please use login to access your account.',
+                'รหัส PIN ถูกตั้งค่าแล้ว กรุณาเข้าสู่ระบบด้วยรหัส PIN ของคุณ'
+            );
+        }
+
+        // Hash new PIN
+        const pinHash = await this.hashPassword(newPin);
+
+        // Update user with new PIN AND ensure employee_id is linked
+        const updateData: any = {
+            password_hash: pinHash,
+            pin_set_at: new Date().toISOString(),
+            pin_attempts: 0,
+            pin_locked_until: null,
+            last_login_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        // Self-heal: If user record is missing employee_id, link it now
+        if (!user.employee_id && employee.id) {
+            updateData.employee_id = employee.id;
+            // Update local user object for token generation
+            user.employee_id = employee.id;
+        }
+
+        await supabaseAdmin
+            .from('users')
+            .update(updateData)
+            .eq('id', user.id);
+
+        // Generate tokens (auto-login after PIN setup)
+        const tokens = this.generateTokens({
+            userId: user.id,
+            companyId: user.company_id,
+            role: user.role,
+            email: user.email,
+            employeeId: user.employee_id,
+            lineUserId: user.line_user_id,
+        });
+
+        logger.info('First-time PIN setup successful', { userId: user.id, companyId: company.id });
+
+        return {
+            user: this.mapToAuthUser({ ...user, password_hash: pinHash }),
+            tokens,
+        };
     }
 
     // Forgot PIN - Send Reset Code

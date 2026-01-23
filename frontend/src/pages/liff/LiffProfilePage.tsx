@@ -21,6 +21,7 @@ import {
     Link,
     Unlink,
     RefreshCw,
+    MapPin,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import employeeService from '../../services/employee.service';
@@ -43,30 +44,42 @@ export default function LiffProfilePage() {
     // Fetch data on mount or when user changes
     useEffect(() => {
         const fetchData = async () => {
-            if (user?.employeeId) {
-                setIsDataLoading(true);
-                try {
-                    const [empData, certsData] = await Promise.all([
+            setIsDataLoading(true);
+            try {
+                if (user?.employeeId) {
+                    const [empResult, certResult] = await Promise.allSettled([
                         employeeService.getById(user.employeeId),
                         employeeService.getCertifications(user.employeeId)
                     ]);
-                    setEmployee(empData);
-                    setCertifications(certsData);
-                } catch (err) {
-                    console.error('Failed to fetch profile data:', err);
-                }
-            }
 
-            if (user?.companyId) {
-                try {
-                    const companyData = await companyService.getById(user.companyId);
-                    setCompany(companyData);
-                } catch (err) {
-                    console.error('Failed to fetch company data:', err);
+                    if (empResult.status === 'fulfilled') {
+                        setEmployee(empResult.value);
+                    } else {
+                        console.error('Failed to fetch employee:', empResult.reason);
+                    }
+
+                    if (certResult.status === 'fulfilled') {
+                        setCertifications(certResult.value);
+                    } else {
+                        console.error('Failed to fetch certifications:', certResult.reason);
+                    }
                 }
+
+                if (user?.companyId) {
+                    try {
+                        const companyData = await companyService.getById(user.companyId);
+                        setCompany(companyData);
+                    } catch (err) {
+                        console.error('Failed to fetch company data:', err);
+                    }
+                }
+            } catch (err) {
+                console.error('Error in fetchData:', err);
+            } finally {
+                setIsDataLoading(false);
             }
-            setIsDataLoading(false);
         };
+
         fetchData();
     }, [user?.employeeId, user?.companyId]);
 
@@ -74,12 +87,22 @@ export default function LiffProfilePage() {
         setIsDataLoading(true);
         try {
             if (user?.employeeId) {
-                const [empData, certsData] = await Promise.all([
+                const [empResult, certResult] = await Promise.allSettled([
                     employeeService.getById(user.employeeId),
                     employeeService.getCertifications(user.employeeId)
                 ]);
-                setEmployee(empData);
-                setCertifications(certsData);
+
+                if (empResult.status === 'fulfilled') {
+                    setEmployee(empResult.value);
+                } else {
+                    console.error('Failed to fetch employee:', empResult.reason);
+                }
+
+                if (certResult.status === 'fulfilled') {
+                    setCertifications(certResult.value);
+                } else {
+                    console.error('Failed to fetch certifications:', certResult.reason);
+                }
             }
 
             if (user?.companyId) {
@@ -87,7 +110,7 @@ export default function LiffProfilePage() {
                 setCompany(companyData);
             }
         } catch (err) {
-            console.error('Failed to fetch profile data:', err);
+            console.error('Failed to refresh data:', err);
         } finally {
             setIsDataLoading(false);
         }
@@ -118,7 +141,8 @@ export default function LiffProfilePage() {
         employeeCode: employee?.employeeCode || (user?.employeeId ? `EMP-${user.employeeId.slice(0, 6).toUpperCase()}` : 'N/A'),
         phone: employee?.phone || '081-xxx-xxxx',
         email: employee?.email || user?.email || 'N/A',
-        position: 'เจ้าหน้าที่รักษาความปลอดภัย', // Pending: Position field in Employee model
+        address: employee?.address || 'N/A',
+        position: employee?.position || 'เจ้าหน้าที่รักษาความปลอดภัย', // Fallback to default if not set
         hireDate: employee?.hireDate ? formatDate(employee.hireDate) : 'N/A',
     };
 
@@ -265,6 +289,15 @@ export default function LiffProfilePage() {
                             วันเริ่มงาน
                         </span>
                         <span className="text-neutral-800 dark:text-white font-medium">{profile.hireDate}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                        <span className="text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
+                            <MapPin size={16} />
+                            ที่อยู่
+                        </span>
+                        <span className="text-neutral-800 dark:text-white font-medium text-right max-w-[60%] line-clamp-2">
+                            {profile.address}
+                        </span>
                     </div>
 
                     {/* Emergency Contact - Phase 4 */}

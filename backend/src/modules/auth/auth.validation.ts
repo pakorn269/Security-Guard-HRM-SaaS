@@ -203,3 +203,31 @@ export const requestPinResetSchema = z.object({
 
 export type RequestPinResetInput = z.infer<typeof requestPinResetSchema>;
 
+// ============================================================
+// First-Time PIN Setup (Public - for users whose PIN was reset by admin)
+// ============================================================
+
+// Setup PIN validation schema (first-time setup without authentication)
+export const setupPinSchema = z.object({
+    companySlug: z.string().min(1, 'Company is required / กรุณาระบุบริษัท'),
+    phone: z.string().min(9, 'Phone number must be at least 9 digits / เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก'),
+    newPin: z
+        .string()
+        .length(6, 'PIN must be 6 digits / รหัส PIN ต้องมี 6 หลัก')
+        .regex(/^[0-9]+$/, 'PIN must contain only digits / รหัส PIN ต้องเป็นตัวเลขเท่านั้น')
+        .refine((pin) => {
+            // Check for repeated digits (e.g. 111111)
+            if (/^(\d)\1+$/.test(pin)) return false;
+
+            // Check for sequential digits (e.g. 123456, 654321)
+            const sequential = '01234567890123456789';
+            const reverseSequential = '98765432109876543210';
+            if (sequential.includes(pin) || reverseSequential.includes(pin)) return false;
+
+            return true;
+        }, 'PIN is too simple (avoid repeated or sequential digits) / รหัส PIN ง่ายเกินไป'),
+});
+
+export type SetupPinInput = z.infer<typeof setupPinSchema>;
+
+

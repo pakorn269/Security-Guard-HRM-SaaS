@@ -36,7 +36,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
                 return (
                     <button
-                        key={key}
+                        key={key || index}
                         onClick={() => handlePress(key)}
                         disabled={disabled}
                         type="button" // Prevent form submission

@@ -1,7 +1,8 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/common';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { LiffProtectedRoute } from './components/auth/LiffProtectedRoute';
+import { NonLiffProtectedRoute } from './components/auth/NonLiffProtectedRoute';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -83,13 +84,13 @@ const routes: RouteObject[] = [
         errorElement: <ErrorBoundary />,
     },
 
-    // Dashboard routes (admin/manager)
+    // Dashboard routes (admin/manager) - Non-LIFF only (blocks guards)
     {
         path: '/',
         element: (
-            <ProtectedRoute>
+            <NonLiffProtectedRoute>
                 {withSuspense(DashboardLayout)}
-            </ProtectedRoute>
+            </NonLiffProtectedRoute>
         ),
         errorElement: <ErrorBoundary />,
         children: [
@@ -149,10 +150,14 @@ const routes: RouteObject[] = [
         ],
     },
 
-    // LIFF routes (guard)
+    // LIFF routes (guard only) - Must be in LIFF context
     {
         path: '/liff',
-        element: withSuspense(LiffLayout),
+        element: (
+            <LiffProtectedRoute>
+                {withSuspense(LiffLayout)}
+            </LiffProtectedRoute>
+        ),
         errorElement: <ErrorBoundary />,
         children: [
             {

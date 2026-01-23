@@ -3,11 +3,13 @@ import { ZodError } from 'zod';
 import { authService } from './auth.service.js';
 import { sendSuccess, sendCreated } from '../../utils/response.js';
 import { ValidationError } from '../../utils/errors.js';
+import { createLiffContextFromRequest } from '../../middleware/liff-context.middleware.js';
 import {
     registerSchema,
     loginSchema,
     phoneLoginSchema,
     setPinSchema,
+    setupPinSchema,
     forgotPinSchema,
     verifyResetCodeSchema,
     lineLoginSchema,
@@ -95,6 +97,21 @@ class AuthController {
                 message: 'PIN updated successfully',
                 message_th: 'ตั้งรหัส PIN สำเร็จ'
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /api/v1/auth/setup-pin - First-time PIN setup (public, for users whose PIN was reset by admin)
+    async setupPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const validation = setupPinSchema.safeParse(req.body);
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const result = await authService.setupPin(validation.data);
+            sendSuccess(res, result);
         } catch (error) {
             next(error);
         }
