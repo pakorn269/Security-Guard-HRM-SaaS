@@ -195,11 +195,17 @@ class LeaveService {
         if (missingBalances.length > 0) {
             const { error: insertError } = await supabaseAdmin
                 .from('leave_balances')
-                .insert(missingBalances);
+                .upsert(missingBalances, {
+                    onConflict: 'company_id, employee_id, leave_type_id, year',
+                    ignoreDuplicates: true
+                });
 
             if (insertError) {
                 logger.error('Error creating missing leave balances:', insertError);
-                throw insertError;
+                // If it's still a duplicate error (shouldn't be with upsert), we can ignore it
+                if (insertError.code !== '23505') {
+                    throw insertError;
+                }
             }
         }
     }

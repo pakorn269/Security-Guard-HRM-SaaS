@@ -55,18 +55,29 @@ export const authService = {
      * Login with Phone + PIN
      */
     async phoneLogin(credentials: PhoneLoginCredentials): Promise<LoginResponse> {
-        const response = await api.post<ApiResponse<LoginResponse>>(
-            `${AUTH_BASE}/login-phone`,
-            credentials
-        );
+        try {
+            const response = await api.post<ApiResponse<LoginResponse>>(
+                `${AUTH_BASE}/login-phone`,
+                credentials
+            );
 
-        if (response.data.success && response.data.data) {
-            const { tokens } = response.data.data;
-            setTokens(tokens.accessToken, tokens.refreshToken);
-            return response.data.data;
+            if (response.data.success && response.data.data) {
+                const { tokens } = response.data.data;
+                setTokens(tokens.accessToken, tokens.refreshToken);
+                return response.data.data;
+            }
+
+            // Use Thai message if available
+            const errorMessage = response.data.error?.message_th || response.data.error?.message || 'Login failed';
+            throw new Error(errorMessage);
+        } catch (error) {
+            // Handle API error which comes as an object with message and message_th
+            if (error && typeof error === 'object' && 'message' in error) {
+                const apiError = error as { message: string; message_th?: string };
+                throw new Error(apiError.message_th || apiError.message);
+            }
+            throw error;
         }
-
-        throw new Error(response.data.error?.message || 'Login failed');
     },
 
     /**
@@ -83,6 +94,56 @@ export const authService = {
         }
 
         throw new Error(response.data.error?.message || 'Failed to set PIN');
+    },
+
+    /**
+     * Setup PIN (First-time setup for users whose PIN was reset by admin)
+     * This is a public endpoint - no authentication required
+     */
+    async setupPin(data: { companySlug: string; phone: string; newPin: string }): Promise<LoginResponse> {
+        try {
+            const response = await api.post<ApiResponse<LoginResponse>>(
+                `${AUTH_BASE}/setup-pin`,
+                data
+            );
+
+            if (response.data.success && response.data.data) {
+                const { tokens } = response.data.data;
+                setTokens(tokens.accessToken, tokens.refreshToken);
+                return response.data.data;
+            }
+
+            // Extract validation error message
+            const errorDetails = response.data.error?.details;
+            if (errorDetails && errorDetails.length > 0) {
+                // Get the first validation error message (prefer Thai)
+                const detail = errorDetails[0];
+                throw new Error(detail.message_th || detail.message);
+            }
+
+            const errorMessage = response.data.error?.message_th || response.data.error?.message || 'Failed to setup PIN';
+            throw new Error(errorMessage);
+        } catch (error) {
+            // Handle API error which comes as an object with message, message_th, and details
+            if (error && typeof error === 'object') {
+                const apiError = error as {
+                    message: string;
+                    message_th?: string;
+                    details?: Array<{ field: string; message: string; message_th?: string }>;
+                };
+
+                // Check for validation details first
+                if (apiError.details && apiError.details.length > 0) {
+                    const detail = apiError.details[0];
+                    throw new Error(detail.message_th || detail.message);
+                }
+
+                if ('message' in error) {
+                    throw new Error(apiError.message_th || apiError.message);
+                }
+            }
+            throw error;
+        }
     },
 
     /**

@@ -84,3 +84,11 @@ export interface AuthState {
     isLoading: boolean;
     error: string | null;
 }
+
+// First-time PIN setup (for users whose PIN was reset by admin)
+export interface SetupPinData {
+    companySlug: string;
+    phone: string;
+    newPin: string;
+}
+

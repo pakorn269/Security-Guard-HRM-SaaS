@@ -46,6 +46,12 @@ export interface CreateEmployeeData {
     userPassword?: string;
 }
 
+export interface CreateUserAccountData {
+    email: string;
+    password: string;
+    role: 'manager' | 'guard';
+}
+
 export interface UpdateEmployeeData {
     employeeCode?: string;
     fullName?: string;
@@ -163,6 +169,17 @@ export const employeeService = {
             return response.data;
         }
         throw new Error('Failed to reactivate employee');
+    },
+
+    /**
+     * Create user account for employee
+     */
+    async createUserAccount(employeeId: string, data: CreateUserAccountData): Promise<Employee> {
+        const response = await apiPost<Employee>(`${EMPLOYEES_BASE}/${employeeId}/create-user`, data);
+        if (response.success && response.data) {
+            return response.data;
+        }
+        throw new Error('Failed to create user account');
     },
 
     /**

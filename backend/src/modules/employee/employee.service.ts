@@ -18,9 +18,11 @@ import type {
     SendLineMessageRequest,
     BulkLineMessageRequest,
     LineMessageResult,
+    CreateUserAccountRequest,
 } from './employee.types.js';
 import { messagingApiClient, isLineConfigured } from '../../config/line.js';
 import { lineService } from '../line/line.service.js';
+import { PhoneUtils } from '../../utils/phone.js';
 
 class EmployeeService {
     // Map database row to Employee
@@ -47,6 +49,7 @@ class EmployeeService {
             licenseNumber: row.license_number,
             licenseIssuedAt: row.license_issued_at,
             licenseExpiresAt: row.license_expires_at,
+            position: row.position,
         };
     }
 
@@ -153,7 +156,7 @@ class EmployeeService {
                     email: userData.email,
                     role: userData.role,
                     isActive: userData.is_active,
-                    hasPin: !!userData.password_hash,
+                    hasPin: !!userData.pin_set_at,
                     pinSetAt: userData.pin_set_at,
                     isPinLocked: userData.pin_locked_until
                         ? new Date(userData.pin_locked_until) > new Date()
@@ -272,7 +275,7 @@ class EmployeeService {
                         email: userData.email,
                         role: userData.role,
                         isActive: userData.is_active,
-                        hasPin: !!userData.password_hash,
+                        hasPin: !!userData.pin_set_at,
                         pinSetAt: userData.pin_set_at,
                         isPinLocked: userData.pin_locked_until
                             ? new Date(userData.pin_locked_until) > new Date()
@@ -328,7 +331,7 @@ class EmployeeService {
                 employee_code: data.employeeCode,
                 full_name: data.fullName,
                 full_name_th: data.fullNameTh || null,
-                phone: data.phone || null,
+                phone: data.phone ? PhoneUtils.normalize(data.phone) : null,
                 email: data.email || null,
                 address: data.address || null,
                 emergency_contact_name: data.emergencyContactName || null,
@@ -339,6 +342,7 @@ class EmployeeService {
                 license_number: data.licenseNumber || null,
                 license_issued_at: data.licenseIssuedAt || null,
                 license_expires_at: data.licenseExpiresAt || null,
+                position: data.position || null,
             })
             .select()
             .single();
@@ -388,7 +392,7 @@ class EmployeeService {
         if (data.employeeCode !== undefined) updateData.employee_code = data.employeeCode;
         if (data.fullName !== undefined) updateData.full_name = data.fullName;
         if (data.fullNameTh !== undefined) updateData.full_name_th = data.fullNameTh;
-        if (data.phone !== undefined) updateData.phone = data.phone;
+        if (data.phone !== undefined) updateData.phone = data.phone ? PhoneUtils.normalize(data.phone) : null;
         if (data.email !== undefined) updateData.email = data.email;
         if (data.address !== undefined) updateData.address = data.address;
         if (data.emergencyContactName !== undefined)
@@ -403,6 +407,7 @@ class EmployeeService {
         if (data.licenseNumber !== undefined) updateData.license_number = data.licenseNumber;
         if (data.licenseIssuedAt !== undefined) updateData.license_issued_at = data.licenseIssuedAt;
         if (data.licenseExpiresAt !== undefined) updateData.license_expires_at = data.licenseExpiresAt;
+        if (data.position !== undefined) updateData.position = data.position;
 
         const { data: employee, error } = await supabaseAdmin
             .from('employees')
@@ -485,6 +490,44 @@ class EmployeeService {
         logger.info('Employee reactivated', { employeeId });
 
         return this.mapToEmployee(employee as EmployeeRow);
+    }
+
+
+    // Create user account for existing employee
+    async createUserAccount(
+        employeeId: string,
+        companyId: string,
+        data: CreateUserAccountRequest
+    ): Promise<Employee> {
+        // Verify employee exists
+        const employee = await this.getById(employeeId, companyId);
+
+        if (employee.userId) {
+            throw new ConflictError('Employee already has a user account', 'พนักงานมีบัญชีผู้ใช้อยู่แล้ว');
+        }
+
+        // Self-heal: Normalize phone number if it exists and isn't normalized
+        // This ensures login works correctly
+        if (employee.phone) {
+            const normalizedPhone = PhoneUtils.normalize(employee.phone);
+            if (normalizedPhone !== employee.phone) {
+                await supabaseAdmin
+                    .from('employees')
+                    .update({ phone: normalizedPhone, updated_at: new Date().toISOString() })
+                    .eq('id', employeeId);
+            }
+        }
+
+        // Create user
+        const user = await userService.create(companyId, {
+            email: data.email,
+            password: data.password,
+            role: data.role,
+            language: 'th',
+        });
+
+        // Link with linkToUser logic
+        return this.linkToUser(employeeId, user.id, companyId);
     }
 
     // Link employee to user

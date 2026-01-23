@@ -33,12 +33,14 @@ function DevModeBanner() {
  * Non-LIFF access is redirected to login select page (unless dev mode enabled).
  */
 export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated: isAuthAuthenticated, isLoading: authLoading, user } = useAuth();
   const { isInClient, isReady: liffReady, error: liffError, isDevMode } = useLiff();
   const location = useLocation();
 
+  const isLinkingPage = location.pathname.startsWith('/liff/link');
+
   // Show loading while checking both auth and LIFF status
-  if (authLoading || !liffReady) {
+  if (authLoading || (!liffReady && !isDevMode)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
@@ -103,14 +105,17 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // Check authentication
-  if (!isAuthenticated) {
+  // Use isAuthAuthenticated directly from useAuth context
+  if (!isAuthAuthenticated && !isLinkingPage) {
     // Redirect to LIFF account linking page
+    console.log('[LiffProtectedRoute] Not authenticated, redirecting to link page from', location.pathname);
     return <Navigate to="/liff/link" state={{ from: location }} replace />;
   }
 
   // Check if user is guard (guards use LIFF exclusively)
   // In dev mode, allow all roles to access for testing
-  if (user && user.role !== 'guard' && !isDevMode) {
+  // But skip this check if on linking page (since role might be unknown or irrelevant during linking flow)
+  if (isAuthAuthenticated && user && user.role !== 'guard' && !isDevMode && !isLinkingPage) {
     // Non-guard users should use web dashboard, not LIFF
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">

@@ -21,17 +21,22 @@ const GUARD_ALLOWED_PATHS = [
     /^\/api\/v\d+\/attendance\/today$/,
 
     // Shifts
-    /^\/api\/v\d+\/shifts\/my-shifts$/,
+    /^\/api\/v\d+\/shifts\/my$/, // Correct endpoint from routes
+    /^\/api\/v\d+\/shifts\/upcoming$/,
     /^\/api\/v\d+\/shifts\/upcoming$/,
 
     // Leave
     /^\/api\/v\d+\/leave-requests$/, // GET (own), POST
+    /^\/api\/v\d+\/leave-requests\/my$/, // GET my requests explicit
     /^\/api\/v\d+\/leave-requests\/.*$/, // GET specific, DELETE (cancel)
     /^\/api\/v\d+\/leave-balances$/,
+    /^\/api\/v\d+\/leave-balances\/my$/, // GET my balances
     /^\/api\/v\d+\/leave-types$/,
+    /^\/api\/v\d+\/leave\/my$/, // GET my summary data
 
     // Companies (for settings/info)
     /^\/api\/v\d+\/companies\/current$/,
+    /^\/api\/v\d+\/companies\/[^\/]+$/, // Get company by ID
 
     // Notifications
     /^\/api\/v\d+\/notifications$/,
@@ -42,6 +47,13 @@ const GUARD_ALLOWED_PATHS = [
 
     // Reports (Guards might need to submit incident reports? Assuming yes for now)
     /^\/api\/v\d+\/reports\/incident$/,
+
+    // Employee Profile (for viewing own details)
+    /^\/api\/v\d+\/employees\/[^\/]+$/, // Get By ID
+    /^\/api\/v\d+\/employees\/[^\/]+\/certifications$/, // Get Certifications
+
+    // Account Linking
+    /^\/api\/v\d+\/auth\/link-line$/,
 ];
 
 export const enforceGuardRestrictions = (

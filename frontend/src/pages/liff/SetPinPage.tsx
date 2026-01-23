@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/auth.service';
 import PinInput from '../../components/auth/PinInput';
@@ -10,24 +10,35 @@ import { Alert } from '../../components/feedback';
 
 type PinStep = 'current' | 'new' | 'confirm';
 
+// Location state from CompanyLoginPage when redirecting for first-time setup
+interface LocationState {
+    phone?: string;
+    isFirstTimeSetup?: boolean;
+}
+
 const SetPinPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { companySlug } = useParams<{ companySlug: string }>();
+    const { user, isLoading: isAuthLoading, checkAuth } = useAuth();
     const { i18n } = useTranslation();
 
     const resetToken = searchParams.get('resetToken');
 
+    // Get state from navigation (from CompanyLoginPage when PIN is not set)
+    const locationState = location.state as LocationState | null;
+    const isFirstTimeSetup = locationState?.isFirstTimeSetup || false;
+    const phoneFromState = locationState?.phone || '';
+
     // Detect if we're in the LIFF profile change-pin flow
     const isFromProfile = useMemo(() => location.pathname === '/liff/change-pin', [location.pathname]);
 
-
     // Determine initial step
-    // If we have a reset token OR user has no PIN set, start with 'new'
+    // If we have a reset token OR user has no PIN set OR first-time setup, start with 'new'
     // Otherwise, require current PIN
     const [step, setStep] = useState<PinStep>(() => {
-        if (resetToken || (user && !user.hasPin)) {
+        if (resetToken || isFirstTimeSetup || (user && !user.hasPin)) {
             return 'new';
         }
         return 'current';
@@ -90,8 +101,28 @@ const SetPinPage = () => {
             setStep('new');
         } else if (step === 'new') {
             if (newPin.length !== 6) return;
-            // Simple check: Don't allow same as current (optional)
-            // if (newPin === currentPin) ...
+
+            // Validate PIN complexity
+            // Check for repeated digits (e.g. 111111)
+            if (/^(\d)\1+$/.test(newPin)) {
+                setError(i18n.language === 'th'
+                    ? 'รหัส PIN ง่ายเกินไป กรุณาหลีกเลี่ยงตัวเลขซ้ำ'
+                    : 'PIN is too simple. Avoid repeated digits.');
+                setNewPin('');
+                return;
+            }
+
+            // Check for sequential digits (e.g. 123456, 654321)
+            const sequential = '01234567890123456789';
+            const reverseSequential = '98765432109876543210';
+            if (sequential.includes(newPin) || reverseSequential.includes(newPin)) {
+                setError(i18n.language === 'th'
+                    ? 'รหัส PIN ง่ายเกินไป กรุณาหลีกเลี่ยงตัวเลขเรียงกัน'
+                    : 'PIN is too simple. Avoid sequential digits.');
+                setNewPin('');
+                return;
+            }
+
             setStep('confirm');
         } else if (step === 'confirm') {
             if (confirmPin.length !== 6) return;
@@ -109,23 +140,43 @@ const SetPinPage = () => {
     const submitPin = async () => {
         setIsSubmitting(true);
         try {
-            await authService.setPin({
-                currentPin: step !== 'new' && !resetToken && user?.hasPin ? currentPin : undefined,
-                newPin,
-                resetToken: resetToken || undefined,
-            });
+            // Check if this is first-time setup (from CompanyLoginPage redirect)
+            if (isFirstTimeSetup && companySlug && phoneFromState) {
+                // Use the public setup-pin endpoint (no auth required)
+                await authService.setupPin({
+                    companySlug,
+                    phone: phoneFromState.replace(/\D/g, ''), // Ensure normalized
+                    newPin,
+                });
 
-            // Show success state briefly before navigation
-            setIsSuccess(true);
-            setTimeout(() => {
-                if (isFromProfile) {
-                    // Navigate back to profile if coming from profile page
-                    navigate('/liff/profile');
-                } else {
-                    // Default navigation for company login flow
+                // Re-check auth to update the user state with the new tokens
+                await checkAuth();
+
+                // Show success state briefly before navigation
+                setIsSuccess(true);
+                setTimeout(() => {
                     navigate('/liff/clock');
-                }
-            }, 1500);
+                }, 1500);
+            } else {
+                // Authenticated user changing PIN
+                await authService.setPin({
+                    currentPin: step !== 'new' && !resetToken && user?.hasPin ? currentPin : undefined,
+                    newPin,
+                    resetToken: resetToken || undefined,
+                });
+
+                // Show success state briefly before navigation
+                setIsSuccess(true);
+                setTimeout(() => {
+                    if (isFromProfile) {
+                        // Navigate back to profile if coming from profile page
+                        navigate('/liff/profile');
+                    } else {
+                        // Default navigation for company login flow
+                        navigate('/liff/clock');
+                    }
+                }, 1500);
+            }
         } catch (err) {
             console.error(err);
             const message = err instanceof Error ? err.message : 'Failed to set PIN';
