@@ -1,7 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/common';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { ProtectedRoute, ADMIN_ROLES } from './components/auth/ProtectedRoute';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -83,11 +83,11 @@ const routes: RouteObject[] = [
         errorElement: <ErrorBoundary />,
     },
 
-    // Dashboard routes (admin/manager)
+    // Dashboard routes (admin/manager only - guards will be redirected to LIFF)
     {
         path: '/',
         element: (
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 {withSuspense(DashboardLayout)}
             </ProtectedRoute>
         ),
