@@ -5,7 +5,7 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import liff from '@line/liff';
-import { getCurrentLiffId } from '../hooks/useLiff';
+import { getCurrentLiffId, clearStoredLiffId } from '../hooks/useLiff';
 import liffAuthService, { type LineProfile } from '../services/liff-auth.service';
 import api, { clearTokens, getAccessToken } from '../services/api';
 import type { AuthUser } from '../types/auth';
@@ -444,6 +444,7 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
     // Logout
     const logout = useCallback(async () => {
         clearTokens();
+        clearStoredLiffId(); // Clear the stored LIFF ID for new session
 
         // Only logout from LIFF if user was authenticated via LINE (not email)
         if (!state.isEmailAuth && liff.isLoggedIn()) {

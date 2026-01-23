@@ -31,16 +31,60 @@ function isLiffDevModeEnabled(): boolean {
  *
  * @returns {LiffState} LIFF context state
  */
+
+const LIFF_ID_STORAGE_KEY = 'liff_session_id';
+
+/**
+ * Get the current LIFF ID based on the path.
+ * 
+ * IMPORTANT: Once a LIFF ID is determined, it is stored in sessionStorage
+ * and reused for the entire session. This prevents the infinite login loop
+ * that occurs when navigating between pages (e.g., /liff/clock → /liff/link)
+ * where different LIFF IDs might be resolved, causing the SDK to think
+ * the user isn't logged in.
+ */
 export function getCurrentLiffId(): string | null {
+  // First, check if we already have a LIFF ID stored in session
+  // This ensures consistency across navigation within the same session
+  const storedLiffId = sessionStorage.getItem(LIFF_ID_STORAGE_KEY);
+  if (storedLiffId) {
+    console.log('[useLiff] Using stored LIFF ID:', storedLiffId);
+    return storedLiffId;
+  }
+
   const path = window.location.pathname;
   const env = import.meta.env;
 
-  if (path.includes('/liff/schedule') && env.VITE_LIFF_SCHEDULE_ID) return env.VITE_LIFF_SCHEDULE_ID;
-  if (path.includes('/liff/clock') && env.VITE_LIFF_CLOCK_ID) return env.VITE_LIFF_CLOCK_ID;
-  if (path.includes('/liff/leave') && env.VITE_LIFF_LEAVE_ID) return env.VITE_LIFF_LEAVE_ID;
-  if (path.includes('/liff/profile') && env.VITE_LIFF_PROFILE_ID) return env.VITE_LIFF_PROFILE_ID;
+  let liffId: string | null = null;
 
-  return env.VITE_LIFF_ID || null;
+  // Determine LIFF ID based on path
+  if (path.includes('/liff/schedule') && env.VITE_LIFF_SCHEDULE_ID) {
+    liffId = env.VITE_LIFF_SCHEDULE_ID;
+  } else if (path.includes('/liff/clock') && env.VITE_LIFF_CLOCK_ID) {
+    liffId = env.VITE_LIFF_CLOCK_ID;
+  } else if (path.includes('/liff/leave') && env.VITE_LIFF_LEAVE_ID) {
+    liffId = env.VITE_LIFF_LEAVE_ID;
+  } else if (path.includes('/liff/profile') && env.VITE_LIFF_PROFILE_ID) {
+    liffId = env.VITE_LIFF_PROFILE_ID;
+  } else {
+    // Fallback to default LIFF ID
+    liffId = env.VITE_LIFF_ID || null;
+  }
+
+  // Store the LIFF ID for this session to ensure consistency
+  if (liffId) {
+    console.log('[useLiff] Storing LIFF ID for session:', liffId);
+    sessionStorage.setItem(LIFF_ID_STORAGE_KEY, liffId);
+  }
+
+  return liffId;
+}
+
+/**
+ * Clear the stored LIFF ID (call this on logout)
+ */
+export function clearStoredLiffId(): void {
+  sessionStorage.removeItem(LIFF_ID_STORAGE_KEY);
 }
 
 export function useLiff(): LiffState {
