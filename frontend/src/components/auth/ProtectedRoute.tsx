@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
     redirectTo?: string; // Custom redirect for unauthorized users
 }
 
-export function ProtectedRoute({ children, allowedRoles, redirectTo }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
     const { isAuthenticated, isLoading, user } = useAuth();
     const location = useLocation();
 
