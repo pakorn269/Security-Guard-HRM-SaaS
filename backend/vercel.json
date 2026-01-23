@@ -16,8 +16,5 @@
             "src": "/(.*)",
             "dest": "/api"
         }
-    ],
-    "env": {
-        "NODE_ENV": "production"
-    }
+    ]
 }
