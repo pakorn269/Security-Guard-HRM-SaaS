@@ -230,4 +230,26 @@ export const setupPinSchema = z.object({
 
 export type SetupPinInput = z.infer<typeof setupPinSchema>;
 
+// ============================================================
+// Session Management Validation
+// ============================================================
+
+// Revoke session validation schema
+export const revokeSessionSchema = z.object({
+    sessionId: z.string().uuid('Invalid session ID'),
+});
+
+// Revoke all sessions validation schema
+export const revokeAllSessionsSchema = z.object({
+    excludeCurrent: z.boolean().optional().default(true),
+});
+
+// Logout validation schema
+export const logoutSchema = z.object({
+    refreshToken: z.string().optional(),
+});
+
+export type RevokeSessionInput = z.infer<typeof revokeSessionSchema>;
+export type RevokeAllSessionsInput = z.infer<typeof revokeAllSessionsSchema>;
+export type LogoutInput = z.infer<typeof logoutSchema>;
 

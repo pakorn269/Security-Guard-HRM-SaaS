@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { authService } from './auth.service.js';
 import { sendSuccess, sendCreated } from '../../utils/response.js';
-import { ValidationError } from '../../utils/errors.js';
+import { ValidationError, NotFoundError } from '../../utils/errors.js';
 import { createLiffContextFromRequest } from '../../middleware/liff-context.middleware.js';
+import type { SessionContext } from './auth.types.js';
 import {
     registerSchema,
     loginSchema,
@@ -21,6 +22,9 @@ import {
     liffEmployeeLoginSchema,
     changePasswordSchema,
     requestPinResetSchema,
+    revokeSessionSchema,
+    revokeAllSessionsSchema,
+    logoutSchema,
 } from './auth.validation.js';
 
 // Helper to convert Zod error to ValidationError
@@ -32,6 +36,24 @@ const formatZodError = (error: ZodError): ValidationError => {
             message: issue.message,
         }))
     );
+};
+
+// Helper to extract session context from request
+const getSessionContext = (req: Request): SessionContext => {
+    // Get IP address, handling proxies
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ipAddress = forwardedFor
+        ? (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor.split(',')[0]).trim()
+        : req.ip || req.socket.remoteAddress;
+
+    // Check if request is from LIFF
+    const isLiff = !!(req.headers['x-liff-id'] || req.headers['x-liff-context']);
+
+    return {
+        userAgent: req.headers['user-agent'],
+        ipAddress,
+        isLiff,
+    };
 };
 
 class AuthController {
@@ -58,7 +80,8 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
-            const result = await authService.login(validation.data);
+            const sessionContext = getSessionContext(req);
+            const result = await authService.login(validation.data, sessionContext);
             sendSuccess(res, result);
         } catch (error) {
             next(error);
@@ -73,7 +96,8 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
-            const result = await authService.phoneLogin(validation.data);
+            const sessionContext = getSessionContext(req);
+            const result = await authService.phoneLogin(validation.data, sessionContext);
             sendSuccess(res, result);
         } catch (error) {
             next(error);
@@ -159,7 +183,8 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
-            const result = await authService.lineLogin(validation.data);
+            const sessionContext = getSessionContext(req);
+            const result = await authService.lineLogin(validation.data, sessionContext);
             sendSuccess(res, result);
         } catch (error) {
             next(error);
@@ -181,11 +206,18 @@ class AuthController {
         }
     }
 
-    // POST /api/v1/auth/logout - Logout (client-side token removal)
-    async logout(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    // POST /api/v1/auth/logout - Logout (revoke session)
+    async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            // JWT tokens are stateless - client removes them
-            // For added security, we could implement a token blacklist with Redis
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const validation = logoutSchema.safeParse(req.body);
+            const refreshToken = validation.success ? validation.data.refreshToken : undefined;
+
+            await authService.logout(req.user.userId, refreshToken);
+
             sendSuccess(res, {
                 message: 'Logged out successfully',
                 message_th: 'ออกจากระบบสำเร็จ',
@@ -262,12 +294,14 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
+            const sessionContext = getSessionContext(req);
             const result = await authService.linkEmployee(
                 validation.data.idToken,
                 validation.data.liffId,
                 validation.data.employeeCode,
                 validation.data.phone,
-                validation.data.companySlug
+                validation.data.companySlug,
+                sessionContext
             );
             sendSuccess(res, result);
         } catch (error) {
@@ -283,11 +317,13 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
+            const sessionContext = getSessionContext(req);
             const result = await authService.linkCredentials(
                 validation.data.idToken,
                 validation.data.liffId,
                 validation.data.email,
-                validation.data.password
+                validation.data.password,
+                sessionContext
             );
             sendSuccess(res, result);
         } catch (error) {
@@ -352,11 +388,13 @@ class AuthController {
                 throw formatZodError(validation.error);
             }
 
+            const sessionContext = getSessionContext(req);
             const result = await authService.liffEmployeeLogin(
                 validation.data.employeeCode,
                 validation.data.phone,
                 validation.data.password,
-                validation.data.companySlug
+                validation.data.companySlug,
+                sessionContext
             );
             sendSuccess(res, result);
         } catch (error) {
@@ -432,6 +470,79 @@ class AuthController {
 
             const count = await authService.getPendingPinResetCount(req.user.companyId);
             sendSuccess(res, { count });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ============================================================
+    // Session Management Endpoints
+    // ============================================================
+
+    // GET /api/v1/auth/sessions - Get all active sessions for current user
+    async getSessions(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            // Get current session ID from token
+            const currentSessionId = req.user.sessionId;
+
+            const sessions = await authService.getUserSessions(req.user.userId, currentSessionId);
+            sendSuccess(res, { sessions });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // DELETE /api/v1/auth/sessions/:sessionId - Revoke a specific session
+    async revokeSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const validation = revokeSessionSchema.safeParse({ sessionId: req.params.sessionId });
+            if (!validation.success) {
+                throw formatZodError(validation.error);
+            }
+
+            const revoked = await authService.revokeSession(validation.data.sessionId, req.user.userId);
+
+            if (!revoked) {
+                throw new NotFoundError('Session', 'ไม่พบ Session');
+            }
+
+            sendSuccess(res, {
+                message: 'Session revoked successfully',
+                message_th: 'ยกเลิก Session สำเร็จ',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // DELETE /api/v1/auth/sessions - Revoke all sessions except current
+    async revokeAllSessions(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new Error('User not authenticated');
+            }
+
+            const validation = revokeAllSessionsSchema.safeParse(req.body);
+            const excludeCurrent = validation.success ? validation.data.excludeCurrent : true;
+
+            // Get current session ID from token
+            const currentSessionId = excludeCurrent ? req.user.sessionId : undefined;
+
+            const count = await authService.revokeAllSessions(req.user.userId, currentSessionId);
+
+            sendSuccess(res, {
+                message: `${count} session(s) revoked successfully`,
+                message_th: `ยกเลิก ${count} Session สำเร็จ`,
+                count,
+            });
         } catch (error) {
             next(error);
         }
