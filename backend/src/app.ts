@@ -90,6 +90,23 @@ app.get('/health', (_req, res) => {
     });
 });
 
+// Debug endpoint (non-production only) - shows env config status
+app.get('/debug/env', (_req, res) => {
+    if (env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+    }
+    res.json({
+        NODE_ENV: env.NODE_ENV,
+        hasSupabaseUrl: !!env.SUPABASE_URL,
+        supabaseUrlPrefix: env.SUPABASE_URL?.substring(0, 30) + '...',
+        hasServiceRoleKey: !!env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKeyPrefix: env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) + '...',
+        hasAnonKey: !!env.SUPABASE_ANON_KEY,
+        hasJwtSecret: !!env.JWT_SECRET,
+        corsOrigin: env.CORS_ORIGIN,
+    });
+});
+
 // API routes
 const apiRouter = express.Router();
 
