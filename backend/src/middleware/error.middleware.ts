@@ -57,9 +57,7 @@ export const errorMiddleware = (
 
     // Handle unknown errors
     const statusCode = 500;
-    const message = env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : err.message || 'Internal server error';
+    const message = err.message || 'Internal server error';
     const messageTh = 'เกิดข้อผิดพลาดภายในระบบ';
 
     return sendError(res, 'INTERNAL_ERROR', message, statusCode, messageTh);
