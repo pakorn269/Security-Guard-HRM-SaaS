@@ -3,11 +3,11 @@
 
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, ChevronRight, Link2 } from 'lucide-react';
-import { useLiffAuth } from '../../context/LiffAuthContext';
+import { useLiffLink } from '../../components/layout/LiffLinkLayout';
 
 export default function LiffLinkPage() {
     const navigate = useNavigate();
-    const { lineProfile } = useLiffAuth();
+    const { lineProfile } = useLiffLink();
 
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col safe-area-inset">

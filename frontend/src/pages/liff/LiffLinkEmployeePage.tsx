@@ -4,13 +4,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Building2, Phone, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
-import { useLiffAuth } from '../../context/LiffAuthContext';
-import { useAuth } from '../../context/AuthContext';
+import { useLiffLink } from '../../components/layout/LiffLinkLayout';
 
 export default function LiffLinkEmployeePage() {
     const navigate = useNavigate();
-    const { linkWithEmployeeCode, error, clearError, isLoading } = useLiffAuth();
-    const { checkAuth } = useAuth();
+    const { linkWithEmployeeCode, error, clearError, isLoading } = useLiffLink();
+
 
 
     const [formData, setFormData] = useState({
@@ -63,8 +62,6 @@ export default function LiffLinkEmployeePage() {
 
             if (success) {
                 setSuccess(true);
-                // Sync AuthContext with newly stored tokens
-                await checkAuth();
                 // Redirect to clock page after success
                 setTimeout(() => {
                     navigate('/liff/clock');
