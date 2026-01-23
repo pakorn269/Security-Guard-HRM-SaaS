@@ -1,20 +1,8 @@
 /**
  * Debug page to inspect environment variables
- * Only accessible in non-production environments
+ * Temporarily showing in all modes for debugging
  */
 export default function DebugEnvPage() {
-    const isDev = import.meta.env.DEV;
-    const mode = import.meta.env.MODE;
-
-    if (mode === 'production' && !isDev) {
-        return (
-            <div className="p-8">
-                <h1 className="text-2xl font-bold text-red-600">Not Found</h1>
-                <p>This page is only available in development mode.</p>
-            </div>
-        );
-    }
-
     const envVars = {
         MODE: import.meta.env.MODE,
         DEV: import.meta.env.DEV,
