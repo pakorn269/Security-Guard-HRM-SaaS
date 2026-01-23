@@ -188,3 +188,69 @@ export interface SetupPinRequest {
     newPin: string;
 }
 
+// ============================================================
+// Session Management Types
+// ============================================================
+
+export type DeviceType = 'web' | 'mobile' | 'tablet' | 'liff';
+
+export interface SessionInfo {
+    id: string;
+    deviceName: string | null;
+    deviceType: DeviceType;
+    ipAddress: string | null;
+    lastActivityAt: string;
+    createdAt: string;
+    isCurrent: boolean;
+}
+
+export interface SessionRow {
+    id: string;
+    user_id: string;
+    company_id: string;
+    refresh_token_hash: string;
+    device_name: string | null;
+    device_type: string;
+    user_agent: string | null;
+    ip_address: string | null;
+    last_activity_at: string;
+    created_at: string;
+    expires_at: string;
+    revoked_at: string | null;
+    revoked_reason: string | null;
+}
+
+export interface CreateSessionData {
+    userId: string;
+    companyId: string;
+    refreshToken: string;
+    deviceName?: string;
+    deviceType?: DeviceType;
+    userAgent?: string;
+    ipAddress?: string;
+    expiresAt: Date;
+}
+
+export interface SessionListResponse {
+    sessions: SessionInfo[];
+}
+
+export interface RevokeSessionRequest {
+    sessionId: string;
+}
+
+export interface RevokeAllSessionsRequest {
+    excludeCurrent?: boolean;
+}
+
+export interface LogoutRequest {
+    refreshToken?: string;
+}
+
+// Session context passed from request
+export interface SessionContext {
+    userAgent?: string;
+    ipAddress?: string;
+    isLiff?: boolean;
+}
+

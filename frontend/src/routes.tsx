@@ -62,7 +62,7 @@ const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 spinner" />
-            <p className="text-surface-500 animate-pulse">Loading...</p>
+            <p className="text-surface-500 dark:text-surface-400 animate-pulse">Loading...</p>
         </div>
     </div>
 );

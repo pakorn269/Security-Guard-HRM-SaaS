@@ -20,7 +20,8 @@ export interface JwtPayload {
     email: string;
     employeeId?: string;
     lineUserId?: string;
-    liffContext?: LiffContext; // NEW: Track if token issued from LIFF
+    sessionId?: string;        // Session ID for session management
+    liffContext?: LiffContext; // Track if token issued from LIFF
 }
 
 // Extend Express Request type

@@ -219,21 +219,21 @@ export default function EmployeeFormModal({
 
                     {/* Create User Account */}
                     {!isEditing && (
-                        <div className="border-t border-surface-200 dark:border-surface-700 pt-4 mt-4">
+                        <div className="border-t border-neutral-200 dark:border-neutral-700 pt-4 mt-4">
                             <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={formData.createUserAccount}
                                     onChange={(e) => handleChange('createUserAccount', e.target.checked)}
-                                    className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                                    className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                                 />
-                                <span className="text-sm font-medium text-surface-700 dark:text-surface-300">
+                                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                                     {t('employees.createUserAccount', 'Create user account for this employee')}
                                 </span>
                             </label>
 
                             {formData.createUserAccount && (
-                                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-lg">
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg">
                                     <Select
                                         label={t('employees.userRole', 'User Role')}
                                         options={roleOptions}

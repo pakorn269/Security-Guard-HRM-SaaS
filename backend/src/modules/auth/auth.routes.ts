@@ -10,7 +10,7 @@ router.post('/login', authController.login);
 router.post('/login-phone', authController.phoneLogin);
 router.post('/line', authController.lineLogin);
 router.post('/refresh', authController.refresh);
-router.post('/logout', authController.logout);
+router.post('/logout', authMiddleware, authController.logout);
 router.post('/forgot-pin', authController.forgotPin);
 router.post('/setup-pin', authController.setupPin);
 router.post('/verify-reset-code', authController.verifyResetCode);
@@ -24,6 +24,13 @@ router.post('/password', authMiddleware, authController.changePassword);
 router.post('/set-pin', authMiddleware, authController.setPin);
 router.get('/pin-reset-requests', authMiddleware, authController.getPinResetRequests);
 router.get('/pin-reset-requests/count', authMiddleware, authController.getPendingPinResetCount);
+
+// ============================================================
+// Session Management Routes (Protected)
+// ============================================================
+router.get('/sessions', authMiddleware, authController.getSessions);
+router.delete('/sessions/:sessionId', authMiddleware, authController.revokeSession);
+router.delete('/sessions', authMiddleware, authController.revokeAllSessions);
 
 // ============================================================
 // LIFF Account Linking Routes

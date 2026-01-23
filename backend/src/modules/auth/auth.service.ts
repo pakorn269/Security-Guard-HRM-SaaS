@@ -23,9 +23,12 @@ import type {
     SetPinRequest,
     ForgotPinRequest,
     VerifyResetCodeRequest,
+    SessionInfo,
+    SessionContext,
 } from './auth.types.js';
 import type { JwtPayload, LiffContext } from '../../middleware/auth.middleware.js';
 import { PhoneUtils } from '../../utils/phone.js';
+import { sessionService } from './session.service.js';
 
 // Constants
 const SALT_ROUNDS = 12;
@@ -52,23 +55,30 @@ const parseTimeToSeconds = (time: string): number => {
 
 class AuthService {
     // Generate JWT tokens
-    private generateTokens(payload: JwtPayload, liffContext?: LiffContext): TokenPair {
+    private generateTokens(
+        payload: JwtPayload,
+        sessionId: string,
+        liffContext?: LiffContext
+    ): TokenPair {
         const accessExpiresInSeconds = parseTimeToSeconds(ACCESS_TOKEN_EXPIRY);
         const refreshExpiresInSeconds = parseTimeToSeconds(REFRESH_TOKEN_EXPIRY);
 
-        // Add LIFF context to payload if provided
-        const fullPayload = liffContext
-            ? { ...payload, liffContext }
-            : payload;
+        // Add LIFF context and sessionId to payload
+        const fullPayload = {
+            ...payload,
+            sessionId,
+            ...(liffContext && { liffContext }),
+        };
 
         const accessToken = jwt.sign(fullPayload, env.JWT_SECRET, {
             expiresIn: accessExpiresInSeconds,
         });
 
-        // Refresh token also includes LIFF context for inheritance
+        // Refresh token includes sessionId and LIFF context for inheritance
         const refreshToken = jwt.sign(
             {
                 userId: payload.userId,
+                sessionId,
                 type: 'refresh',
                 liffContext,
             },
@@ -81,6 +91,43 @@ class AuthService {
             refreshToken,
             expiresIn: accessExpiresInSeconds,
         };
+    }
+
+    // Get refresh token expiry date
+    private getRefreshTokenExpiryDate(): Date {
+        const expiresInSeconds = parseTimeToSeconds(REFRESH_TOKEN_EXPIRY);
+        return new Date(Date.now() + expiresInSeconds * 1000);
+    }
+
+    // Create session and generate tokens
+    private async createSessionAndTokens(
+        payload: JwtPayload,
+        options?: {
+            userAgent?: string;
+            ipAddress?: string;
+            isLiff?: boolean;
+            liffContext?: LiffContext;
+        }
+    ): Promise<TokenPair> {
+        const expiresAt = this.getRefreshTokenExpiryDate();
+
+        // Generate tokens first (we need the refresh token for hashing)
+        // We'll use a temporary sessionId, then create the session with the token hash
+        const tempTokens = this.generateTokens(payload, 'temp', options?.liffContext);
+
+        // Create session and get the real sessionId
+        const sessionId = await sessionService.createSession({
+            userId: payload.userId,
+            companyId: payload.companyId,
+            refreshToken: tempTokens.refreshToken,
+            deviceType: options?.isLiff ? 'liff' : sessionService.detectDeviceType(options?.userAgent),
+            userAgent: options?.userAgent,
+            ipAddress: options?.ipAddress,
+            expiresAt,
+        });
+
+        // Generate final tokens with real sessionId
+        return this.generateTokens(payload, sessionId, options?.liffContext);
     }
 
     // Generate company slug from name
@@ -226,8 +273,8 @@ class AuthService {
         // Create default shift templates
         await this.createDefaultShiftTemplates(company.id);
 
-        // Generate tokens
-        const tokens = this.generateTokens({
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens({
             userId: user.id,
             companyId: company.id,
             role: 'company_admin',
@@ -256,7 +303,7 @@ class AuthService {
     }
 
     // Email/password login
-    async login(data: LoginRequest): Promise<LoginResponse> {
+    async login(data: LoginRequest, sessionContext?: SessionContext): Promise<LoginResponse> {
         const { email, password } = data;
 
         // Find user by email
@@ -303,15 +350,22 @@ class AuthService {
             .update({ last_login_at: new Date().toISOString() })
             .eq('id', user.id);
 
-        // Generate tokens
-        const tokens = this.generateTokens({
-            userId: user.id,
-            companyId: user.company_id,
-            role: user.role,
-            email: user.email,
-            employeeId: user.employee_id,
-            lineUserId: user.line_user_id,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: user.id,
+                companyId: user.company_id,
+                role: user.role,
+                email: user.email,
+                employeeId: user.employee_id,
+                lineUserId: user.line_user_id,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: sessionContext?.isLiff,
+            }
+        );
 
         logger.info('User logged in', { userId: user.id, email: user.email });
 
@@ -322,7 +376,7 @@ class AuthService {
     }
 
     // Phone + PIN Login
-    async phoneLogin(data: PhoneLoginRequest): Promise<LoginResponse> {
+    async phoneLogin(data: PhoneLoginRequest, sessionContext?: SessionContext): Promise<LoginResponse> {
         const { companySlug, phone, pin, turnstileToken } = data;
 
         // Verify Turnstile (skip in dev/test for now, or assume frontend handles it)
@@ -459,15 +513,22 @@ class AuthService {
             .update(updateData)
             .eq('id', user.id);
 
-        // Generate tokens
-        const tokens = this.generateTokens({
-            userId: user.id,
-            companyId: user.company_id,
-            role: user.role,
-            email: user.email,
-            employeeId: user.employee_id,
-            lineUserId: user.line_user_id,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: user.id,
+                companyId: user.company_id,
+                role: user.role,
+                email: user.email,
+                employeeId: user.employee_id,
+                lineUserId: user.line_user_id,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: sessionContext?.isLiff,
+            }
+        );
 
         logger.info('User logged in via phone', { userId: user.id, companyId: company.id });
 
@@ -620,8 +681,8 @@ class AuthService {
             .update(updateData)
             .eq('id', user.id);
 
-        // Generate tokens (auto-login after PIN setup)
-        const tokens = this.generateTokens({
+        // Create session and generate tokens (auto-login after PIN setup)
+        const tokens = await this.createSessionAndTokens({
             userId: user.id,
             companyId: user.company_id,
             role: user.role,
@@ -752,10 +813,9 @@ class AuthService {
             })
             .eq('id', user.id);
 
-        // Generate temporary access token for setting PIN
-        // We give them a normal token but they will be redirected to set-pin page by frontend
-
-        const tokens = this.generateTokens({
+        // Create session and generate tokens (auto-login after reset code verification)
+        // User will be redirected to set-pin page by frontend
+        const tokens = await this.createSessionAndTokens({
             userId: user.id,
             companyId: user.company_id,
             role: user.role,
@@ -801,7 +861,7 @@ class AuthService {
     }
 
     // LINE Login
-    async lineLogin(data: LineLoginRequest): Promise<LoginResponse> {
+    async lineLogin(data: LineLoginRequest, sessionContext?: SessionContext): Promise<LoginResponse> {
         const { idToken, liffId } = data;
 
         logger.info('LINE login attempt', { liffId });
@@ -845,14 +905,22 @@ class AuthService {
                 );
             }
 
-            const tokens = this.generateTokens({
-                userId: existingUser.id,
-                companyId: existingUser.company_id,
-                role: existingUser.role,
-                email: existingUser.email,
-                employeeId: existingUser.employee_id,
-                lineUserId: existingUser.line_user_id,
-            });
+            // Create session and generate tokens
+            const tokens = await this.createSessionAndTokens(
+                {
+                    userId: existingUser.id,
+                    companyId: existingUser.company_id,
+                    role: existingUser.role,
+                    email: existingUser.email,
+                    employeeId: existingUser.employee_id,
+                    lineUserId: existingUser.line_user_id,
+                },
+                {
+                    userAgent: sessionContext?.userAgent,
+                    ipAddress: sessionContext?.ipAddress,
+                    isLiff: true, // LINE login is always LIFF
+                }
+            );
 
             logger.info('LINE user logged in', {
                 userId: existingUser.id,
@@ -932,14 +1000,22 @@ class AuthService {
                 .eq('id', newUser.id);
         }
 
-        const tokens = this.generateTokens({
-            userId: newUser.id,
-            companyId: company.id,
-            role: 'guard',
-            email: newUser.email,
-            employeeId: newEmployee?.id,
-            lineUserId: lineUser.sub,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: newUser.id,
+                companyId: company.id,
+                role: 'guard',
+                email: newUser.email,
+                employeeId: newEmployee?.id,
+                lineUserId: lineUser.sub,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: true,
+            }
+        );
 
         logger.info('Created new guard user via LINE', {
             userId: newUser.id,
@@ -1000,16 +1076,24 @@ class AuthService {
         }
     }
 
-    // Refresh access token
+    // Refresh access token with session validation and rotation
     async refreshToken(refreshToken: string): Promise<RefreshResponse> {
         try {
             const decoded = jwt.verify(refreshToken, env.JWT_SECRET) as {
                 userId: string;
+                sessionId: string;
                 type: string;
+                liffContext?: LiffContext;
             };
 
             if (decoded.type !== 'refresh') {
                 throw new UnauthorizedError('Invalid token type');
+            }
+
+            // Validate session exists and token matches
+            const session = await sessionService.validateRefreshToken(refreshToken, decoded.sessionId);
+            if (!session) {
+                throw new UnauthorizedError('Session expired or revoked', 'Session หมดอายุหรือถูกยกเลิก');
             }
 
             // Get user
@@ -1024,18 +1108,28 @@ class AuthService {
             }
 
             if (!user.is_active) {
+                // Revoke session since user is deactivated
+                await sessionService.revokeSession(decoded.sessionId, user.id, 'user_deactivated');
                 throw new UnauthorizedError('Account is deactivated', 'บัญชีถูกระงับ');
             }
 
-            // Generate new tokens
-            const tokens = this.generateTokens({
-                userId: user.id,
-                companyId: user.company_id,
-                role: user.role,
-                email: user.email,
-                employeeId: user.employee_id,
-                lineUserId: user.line_user_id,
-            });
+            // Generate new tokens with same sessionId
+            const tokens = this.generateTokens(
+                {
+                    userId: user.id,
+                    companyId: user.company_id,
+                    role: user.role,
+                    email: user.email,
+                    employeeId: user.employee_id,
+                    lineUserId: user.line_user_id,
+                },
+                decoded.sessionId,
+                decoded.liffContext
+            );
+
+            // Rotate refresh token in database
+            const newExpiresAt = this.getRefreshTokenExpiryDate();
+            await sessionService.rotateRefreshToken(decoded.sessionId, tokens.refreshToken, newExpiresAt);
 
             return tokens;
         } catch (error) {
@@ -1264,14 +1358,20 @@ class AuthService {
                 })
                 .eq('id', existingUser.id);
 
-            const tokens = this.generateTokens({
-                userId: existingUser.id,
-                companyId: existingUser.company_id,
-                role: existingUser.role,
-                email: existingUser.email,
-                employeeId: existingUser.employee_id,
-                lineUserId: existingUser.line_user_id,
-            });
+            // Create session and generate tokens
+            const tokens = await this.createSessionAndTokens(
+                {
+                    userId: existingUser.id,
+                    companyId: existingUser.company_id,
+                    role: existingUser.role,
+                    email: existingUser.email,
+                    employeeId: existingUser.employee_id,
+                    lineUserId: existingUser.line_user_id,
+                },
+                {
+                    isLiff: true,
+                }
+            );
 
             logger.info('LINE user verified - already linked', {
                 userId: existingUser.id,
@@ -1310,7 +1410,8 @@ class AuthService {
         liffId: string,
         employeeCode: string,
         phone: string,
-        companySlug: string
+        companySlug: string,
+        sessionContext?: SessionContext
     ): Promise<LoginResponse> {
         logger.info('Link employee attempt', { employeeCode, companySlug });
 
@@ -1445,14 +1546,22 @@ class AuthService {
             user = newUser;
         }
 
-        const tokens = this.generateTokens({
-            userId: user.id,
-            companyId: company.id,
-            role: user.role,
-            email: user.email,
-            employeeId: employee.id,
-            lineUserId: lineUser.sub,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: user.id,
+                companyId: company.id,
+                role: user.role,
+                email: user.email,
+                employeeId: employee.id,
+                lineUserId: lineUser.sub,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: true,
+            }
+        );
 
         logger.info('Employee linked to LINE', {
             userId: user.id,
@@ -1474,7 +1583,8 @@ class AuthService {
         idToken: string,
         liffId: string,
         email: string,
-        password: string
+        password: string,
+        sessionContext?: SessionContext
     ): Promise<LoginResponse> {
         logger.info('Link credentials attempt', { email });
 
@@ -1560,14 +1670,22 @@ class AuthService {
             throw new Error('Failed to link LINE account');
         }
 
-        const tokens = this.generateTokens({
-            userId: updatedUser.id,
-            companyId: updatedUser.company_id,
-            role: updatedUser.role,
-            email: updatedUser.email,
-            employeeId: updatedUser.employee_id,
-            lineUserId: lineUser.sub,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: updatedUser.id,
+                companyId: updatedUser.company_id,
+                role: updatedUser.role,
+                email: updatedUser.email,
+                employeeId: updatedUser.employee_id,
+                lineUserId: lineUser.sub,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: true,
+            }
+        );
 
         logger.info('Credentials linked to LINE', {
             userId: updatedUser.id,
@@ -1615,7 +1733,8 @@ class AuthService {
         employeeCode: string,
         phone: string,
         password: string,
-        companySlug: string
+        companySlug: string,
+        sessionContext?: SessionContext
     ): Promise<LoginResponse> {
         logger.info('LIFF employee login attempt', { employeeCode, companySlug });
 
@@ -1708,14 +1827,22 @@ class AuthService {
             );
         }
 
-        const tokens = this.generateTokens({
-            userId: user.id,
-            companyId: company.id,
-            role: user.role,
-            email: user.email,
-            employeeId: employee.id,
-            lineUserId: user.line_user_id,
-        });
+        // Create session and generate tokens
+        const tokens = await this.createSessionAndTokens(
+            {
+                userId: user.id,
+                companyId: company.id,
+                role: user.role,
+                email: user.email,
+                employeeId: employee.id,
+                lineUserId: user.line_user_id,
+            },
+            {
+                userAgent: sessionContext?.userAgent,
+                ipAddress: sessionContext?.ipAddress,
+                isLiff: sessionContext?.isLiff ?? true, // LIFF login defaults to true
+            }
+        );
 
         logger.info('LIFF employee login successful', {
             userId: user.id,
@@ -2026,6 +2153,33 @@ class AuthService {
         }
 
         return count || 0;
+    }
+
+    // ============================================================
+    // Session Management Methods
+    // ============================================================
+
+    // Get all active sessions for current user
+    async getUserSessions(userId: string, currentSessionId?: string): Promise<SessionInfo[]> {
+        return sessionService.getUserSessions(userId, currentSessionId);
+    }
+
+    // Revoke a specific session
+    async revokeSession(sessionId: string, userId: string): Promise<boolean> {
+        return sessionService.revokeSession(sessionId, userId, 'remote_logout');
+    }
+
+    // Revoke all sessions except current
+    async revokeAllSessions(userId: string, excludeCurrentSession?: string): Promise<number> {
+        return sessionService.revokeAllSessions(userId, 'logout_all', excludeCurrentSession);
+    }
+
+    // Logout - revoke current session
+    async logout(userId: string, refreshToken?: string): Promise<void> {
+        if (refreshToken) {
+            await sessionService.revokeSessionByToken(refreshToken, userId, 'user_logout');
+        }
+        logger.info('User logged out', { userId });
     }
 }
 

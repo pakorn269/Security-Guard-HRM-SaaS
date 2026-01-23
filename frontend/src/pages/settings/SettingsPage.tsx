@@ -201,10 +201,10 @@ export default function SettingsPage() {
         <div className="space-y-4 sm:space-y-6 animate-fade-in">
             {/* Page header */}
             <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-surface-800 dark:text-white">
+                <h1 className="text-xl sm:text-2xl font-bold text-neutral-800 dark:text-white">
                     {i18n.language === 'th' ? 'ตั้งค่า' : 'Settings'}
                 </h1>
-                <p className="text-sm sm:text-base text-surface-500 mt-1 hidden sm:block">
+                <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mt-1 hidden sm:block">
                     {i18n.language === 'th' ? 'จัดการการตั้งค่าระบบและบริษัท' : 'Manage system and company settings'}
                 </p>
             </div>
@@ -234,7 +234,7 @@ export default function SettingsPage() {
                                 onClick={() => navigate(`/settings/${tabItem.id}`)}
                                 className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all flex-shrink-0 touch-target ${activeTab === tabItem.id
                                     ? 'bg-primary-500 text-white shadow-sm'
-                                    : 'bg-white dark:bg-surface-800 text-surface-600 dark:text-surface-400 border border-surface-200 dark:border-surface-700'
+                                    : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700'
                                     }`}
                             >
                                 {tabItem.icon}
@@ -246,14 +246,14 @@ export default function SettingsPage() {
 
                 {/* Desktop: Sidebar tabs */}
                 <div className="hidden lg:block lg:w-64 flex-shrink-0">
-                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-2">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm p-2">
                         {tabs.map((tabItem) => (
                             <button
                                 key={tabItem.id}
                                 onClick={() => navigate(`/settings/${tabItem.id}`)}
                                 className={`w-full px-4 py-3 rounded-lg text-left flex items-center gap-3 transition-all ${activeTab === tabItem.id
                                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-700'
+                                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-700'
                                     }`}
                             >
                                 {tabItem.icon}
@@ -265,30 +265,30 @@ export default function SettingsPage() {
 
                 {/* Content area */}
                 <div className="flex-1 min-w-0">
-                    <div className="bg-white dark:bg-surface-800 rounded-xl shadow-sm p-4 sm:p-6">
+                    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm p-4 sm:p-6">
                         {/* Company Profile */}
                         {activeTab === 'profile' && profile && (
                             <div className="space-y-6">
-                                <h2 className="text-lg font-semibold text-surface-800 dark:text-white">
+                                <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                     {i18n.language === 'th' ? 'ข้อมูลบริษัท' : 'Company Profile'}
                                 </h2>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'ชื่อบริษัท' : 'Company Name'}
                                         </label>
                                         <input
                                             type="text"
                                             value={profile.name}
                                             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
                                     </div>
 
                                     {/* Company Code - for employee email login */}
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'รหัสบริษัท (Company Code)' : 'Company Code'}
                                         </label>
                                         <div className="flex gap-2">
@@ -296,7 +296,7 @@ export default function SettingsPage() {
                                                 type="text"
                                                 value={profile.slug}
                                                 readOnly
-                                                className="flex-1 px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-100 dark:bg-surface-800 text-surface-800 dark:text-white cursor-not-allowed"
+                                                className="flex-1 px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-white cursor-not-allowed"
                                             />
                                             <button
                                                 type="button"
@@ -305,13 +305,13 @@ export default function SettingsPage() {
                                                     setCopied(true);
                                                     setTimeout(() => setCopied(false), 2000);
                                                 }}
-                                                className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-600 transition-colors"
+                                                className="px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600 transition-colors"
                                                 title={i18n.language === 'th' ? 'คัดลอก' : 'Copy'}
                                             >
                                                 {copied ? <Check size={18} className="text-success-500" /> : <Copy size={18} />}
                                             </button>
                                         </div>
-                                        <p className="mt-1 text-xs text-surface-500">
+                                        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                                             {i18n.language === 'th'
                                                 ? 'แจ้งรหัสนี้ให้พนักงานเพื่อใช้เข้าสู่ระบบผ่านอีเมล (สำหรับผู้ที่ไม่ใช้ LINE)'
                                                 : 'Share this code with employees for email login (for those who don\'t use LINE)'}
@@ -320,10 +320,10 @@ export default function SettingsPage() {
 
                                     {/* Company Login URL & QR Code */}
                                     <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'ลิงก์เข้าสู่ระบบสำหรับพนักงาน' : 'Employee Login Link'}
                                         </label>
-                                        <div className="p-4 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                                        <div className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
                                             <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                                                 <div className="bg-white p-2 rounded-lg shadow-sm">
                                                     <QRCodeSVG
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                                                     />
                                                 </div>
                                                 <div className="flex-1 w-full space-y-3">
-                                                    <p className="text-sm text-surface-600 dark:text-surface-400">
+                                                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
                                                         {i18n.language === 'th'
                                                             ? 'สแกน QR Code หรือใช้ลิงก์ด้านล่างเพื่อเข้าสู่ระบบพนักงาน'
                                                             : 'Scan QR Code or use the link below to login as an employee.'}
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                                                             type="text"
                                                             value={`${window.location.origin}/liff/${profile.slug}/login`}
                                                             readOnly
-                                                            className="flex-1 px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white text-sm"
+                                                            className="flex-1 px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white text-sm"
                                                         />
                                                         <button
                                                             type="button"
@@ -351,7 +351,7 @@ export default function SettingsPage() {
                                                                 setCopied(true);
                                                                 setTimeout(() => setCopied(false), 2000);
                                                             }}
-                                                            className="px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-600 transition-colors"
+                                                            className="px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600 transition-colors"
                                                             title={i18n.language === 'th' ? 'คัดลอก' : 'Copy'}
                                                         >
                                                             {copied ? <Check size={18} className="text-success-500" /> : <Copy size={18} />}
@@ -363,44 +363,44 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'อีเมล' : 'Email'}
                                         </label>
                                         <input
                                             type="email"
                                             value={profile.email || ''}
                                             onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'โทรศัพท์' : 'Phone'}
                                         </label>
                                         <input
                                             type="tel"
                                             value={profile.phone || ''}
                                             onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
                                     </div>
 
                                     <div className="md:col-span-2 pb-16 sm:pb-0">
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'ที่อยู่' : 'Address'}
                                         </label>
                                         <textarea
                                             value={profile.address || ''}
                                             onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                                             rows={3}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 
-                                    fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
+                                <div className="flex justify-end border-t border-neutral-200 dark:border-neutral-700 pt-4 sm:pt-4 
+                                    fixed bottom-[64px] left-0 right-0 bg-white dark:bg-neutral-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveProfile}
                                         disabled={saving}
@@ -424,13 +424,13 @@ export default function SettingsPage() {
                         {/* Attendance Settings */}
                         {activeTab === 'attendance' && (
                             <div className="space-y-6">
-                                <h2 className="text-lg font-semibold text-surface-800 dark:text-white">
+                                <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                     {i18n.language === 'th' ? 'การตั้งค่าการลงเวลา' : 'Attendance Settings'}
                                 </h2>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'เกณฑ์มาสาย (นาที)' : 'Late Threshold (minutes)'}
                                         </label>
                                         <input
@@ -439,9 +439,9 @@ export default function SettingsPage() {
                                             max="60"
                                             value={settings.lateThresholdMinutes}
                                             onChange={(e) => setSettings({ ...settings, lateThresholdMinutes: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
-                                        <p className="mt-1 text-sm text-surface-500">
+                                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                                             {i18n.language === 'th'
                                                 ? 'ลงเวลาหลังจากเวลาเริ่มกะกี่นาทีถือว่ามาสาย'
                                                 : 'Minutes after shift start to be marked as late'}
@@ -449,7 +449,7 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'เกณฑ์ทำงานล่วงเวลา (นาที)' : 'Overtime Threshold (minutes)'}
                                         </label>
                                         <input
@@ -458,9 +458,9 @@ export default function SettingsPage() {
                                             max="120"
                                             value={settings.overtimeThresholdMinutes}
                                             onChange={(e) => setSettings({ ...settings, overtimeThresholdMinutes: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
-                                        <p className="mt-1 text-sm text-surface-500">
+                                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                                             {i18n.language === 'th'
                                                 ? 'ทำงานหลังจากเวลาสิ้นสุดกะกี่นาทีถือว่าทำงานล่วงเวลา'
                                                 : 'Minutes after shift end to count as overtime'}
@@ -468,7 +468,7 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'รัศมี GPS (เมตร)' : 'GPS Radius (meters)'}
                                         </label>
                                         <input
@@ -477,9 +477,9 @@ export default function SettingsPage() {
                                             max="1000"
                                             value={settings.gpsRadiusMeters}
                                             onChange={(e) => setSettings({ ...settings, gpsRadiusMeters: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
-                                        <p className="mt-1 text-sm text-surface-500">
+                                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                                             {i18n.language === 'th'
                                                 ? 'รัศมีที่อนุญาตให้ลงเวลาจากสถานที่ทำงาน'
                                                 : 'Allowed radius from work location for clock-in'}
@@ -487,7 +487,7 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'ลงเวลาออกอัตโนมัติ (ชั่วโมง)' : 'Auto Clock-out (hours)'}
                                         </label>
                                         <input
@@ -496,9 +496,9 @@ export default function SettingsPage() {
                                             max="24"
                                             value={settings.autoClockOutHours}
                                             onChange={(e) => setSettings({ ...settings, autoClockOutHours: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         />
-                                        <p className="mt-1 text-sm text-surface-500 pb-16 sm:pb-0">
+                                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400 pb-16 sm:pb-0">
                                             {i18n.language === 'th'
                                                 ? 'ลงเวลาออกอัตโนมัติหลังจากลงเวลาเข้ากี่ชั่วโมง'
                                                 : 'Auto clock-out after how many hours from clock-in'}
@@ -506,7 +506,7 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
+                                <div className="flex justify-end border-t border-neutral-200 dark:border-neutral-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-neutral-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}
@@ -530,17 +530,17 @@ export default function SettingsPage() {
                         {/* Notification Settings */}
                         {activeTab === 'notifications' && (
                             <div className="space-y-6">
-                                <h2 className="text-lg font-semibold text-surface-800 dark:text-white">
+                                <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                     {i18n.language === 'th' ? 'การตั้งค่าการแจ้งเตือน' : 'Notification Settings'}
                                 </h2>
 
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
                                         <div>
-                                            <p className="font-medium text-surface-800 dark:text-white">
+                                            <p className="font-medium text-neutral-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนก่อนกะงาน' : 'Shift Reminder'}
                                             </p>
-                                            <p className="text-sm text-surface-500">
+                                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
                                                 {i18n.language === 'th'
                                                     ? 'ส่งการแจ้งเตือนก่อนเริ่มกะงาน'
                                                     : 'Send notification before shift starts'}
@@ -559,13 +559,13 @@ export default function SettingsPage() {
                                                 })}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-11 h-6 bg-surface-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-surface-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                            <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                                         </label>
                                     </div>
 
                                     {settings.notificationPreferences.shiftReminder && (
-                                        <div className="ml-4 p-4 rounded-lg border border-surface-200 dark:border-surface-600">
-                                            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <div className="ml-4 p-4 rounded-lg border border-neutral-200 dark:border-neutral-600">
+                                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนล่วงหน้า (ชั่วโมง)' : 'Remind Before (hours)'}
                                             </label>
                                             <input
@@ -580,17 +580,17 @@ export default function SettingsPage() {
                                                         shiftReminderHours: Number(e.target.value),
                                                     },
                                                 })}
-                                                className="w-32 px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                                className="w-32 px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                             />
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700">
                                         <div>
-                                            <p className="font-medium text-surface-800 dark:text-white">
+                                            <p className="font-medium text-neutral-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนสถานะการลา' : 'Leave Status Change'}
                                             </p>
-                                            <p className="text-sm text-surface-500">
+                                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
                                                 {i18n.language === 'th'
                                                     ? 'แจ้งเตือนเมื่อสถานะการลาเปลี่ยนแปลง'
                                                     : 'Notify when leave request status changes'}
@@ -609,16 +609,16 @@ export default function SettingsPage() {
                                                 })}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-11 h-6 bg-surface-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-surface-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                            <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                                         </label>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-surface-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700 mb-16 sm:mb-0">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800 border border-transparent dark:border-neutral-700 mb-16 sm:mb-0">
                                         <div>
-                                            <p className="font-medium text-surface-800 dark:text-white">
+                                            <p className="font-medium text-neutral-800 dark:text-white">
                                                 {i18n.language === 'th' ? 'แจ้งเตือนการลงเวลา' : 'Attendance Alerts'}
                                             </p>
-                                            <p className="text-sm text-surface-500">
+                                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
                                                 {i18n.language === 'th'
                                                     ? 'แจ้งเตือนเมื่อพนักงานมาสายหรือไม่มา'
                                                     : 'Alert when employees are late or absent'}
@@ -637,12 +637,12 @@ export default function SettingsPage() {
                                                 })}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-11 h-6 bg-surface-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-surface-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                            <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-neutral-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                                         </label>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
+                                <div className="flex justify-end border-t border-neutral-200 dark:border-neutral-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-neutral-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}
@@ -666,19 +666,19 @@ export default function SettingsPage() {
                         {/* Leave Settings */}
                         {activeTab === 'leave' && (
                             <div className="space-y-6">
-                                <h2 className="text-lg font-semibold text-surface-800 dark:text-white">
+                                <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
                                     {i18n.language === 'th' ? 'การตั้งค่าการลา' : 'Leave Settings'}
                                 </h2>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                                             {i18n.language === 'th' ? 'เดือนรีเซ็ตวันลา' : 'Leave Reset Month'}
                                         </label>
                                         <select
                                             value={settings.leaveResetMonth}
                                             onChange={(e) => setSettings({ ...settings, leaveResetMonth: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-white focus:ring-2 focus:ring-primary-500"
+                                            className="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white focus:ring-2 focus:ring-primary-500"
                                         >
                                             {months.map((month) => (
                                                 <option key={month.value} value={month.value}>
@@ -686,7 +686,7 @@ export default function SettingsPage() {
                                                 </option>
                                             ))}
                                         </select>
-                                        <p className="mt-1 text-sm text-surface-500">
+                                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                                             {i18n.language === 'th'
                                                 ? 'เดือนที่จะรีเซ็ตวันลาของพนักงานทุกคน'
                                                 : 'Month when all employee leave balances reset'}
@@ -703,7 +703,7 @@ export default function SettingsPage() {
                                     </p>
                                 </div>
 
-                                <div className="flex justify-end border-t border-surface-200 dark:border-surface-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-surface-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
+                                <div className="flex justify-end border-t border-neutral-200 dark:border-neutral-700 pt-4 sm:pt-4 fixed bottom-[64px] left-0 right-0 bg-white dark:bg-neutral-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 sm:static sm:bg-transparent sm:shadow-none sm:p-0 sm:border-t">
                                     <button
                                         onClick={handleSaveSettings}
                                         disabled={saving}

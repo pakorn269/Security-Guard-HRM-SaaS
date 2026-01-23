@@ -77,18 +77,18 @@ function NotificationToggle({
                 />
                 <div className={`w-9 h-5 rounded-full transition-colors ${checked
                     ? 'bg-primary-500'
-                    : 'bg-surface-300 dark:bg-surface-600'
+                    : 'bg-neutral-300 dark:bg-neutral-600'
                     } ${disabled ? 'opacity-50' : ''}`}>
                     <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'
                         }`} />
                 </div>
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-surface-900 dark:text-white">
+                <p className="text-sm font-medium text-neutral-900 dark:text-white">
                     {label}
                 </p>
                 {description && (
-                    <p className="text-xs text-surface-500 dark:text-surface-400">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
                         {description}
                     </p>
                 )}
@@ -310,17 +310,17 @@ export default function EmployeeDetailPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/employees')}
-                        className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
+                        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
                             {employee.fullName}
                         </h1>
-                        <p className="text-surface-500 dark:text-surface-400 mt-0.5">
+                        <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">
                             {employee.employeeCode} {employee.fullNameTh && `• ${employee.fullNameTh}`}
                         </p>
                     </div>
@@ -351,44 +351,44 @@ export default function EmployeeDetailPage() {
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.hireDate', 'Hire Date')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {new Date(employee.hireDate).toLocaleDateString()}
                                 </p>
                             </div>
                             {employee.terminationDate && (
                                 <div>
-                                    <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                         {t('employees.terminationDate', 'Termination Date')}
                                     </label>
-                                    <p className="text-surface-900 dark:text-white mt-1">
+                                    <p className="text-neutral-900 dark:text-white mt-1">
                                         {new Date(employee.terminationDate).toLocaleDateString()}
                                     </p>
                                 </div>
                             )}
                             <div>
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.phone', 'Phone')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {employee.phone || '-'}
                                 </p>
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.email', 'Email')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {employee.email || '-'}
                                 </p>
                             </div>
                             <div className="md:col-span-2">
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.address', 'Address')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {employee.address || '-'}
                                 </p>
                             </div>
@@ -399,18 +399,18 @@ export default function EmployeeDetailPage() {
                         <CardHeader title={t('employees.emergencyContact', 'Emergency Contact')} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.contactName', 'Contact Name')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {employee.emergencyContactName || '-'}
                                 </p>
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                     {t('employees.contactPhone', 'Contact Phone')}
                                 </label>
-                                <p className="text-surface-900 dark:text-white mt-1">
+                                <p className="text-neutral-900 dark:text-white mt-1">
                                     {employee.emergencyContactPhone || '-'}
                                 </p>
                             </div>
@@ -420,7 +420,7 @@ export default function EmployeeDetailPage() {
                     {employee.notes && (
                         <Card>
                             <CardHeader title={t('employees.notes', 'Notes')} />
-                            <p className="text-surface-700 dark:text-surface-300 whitespace-pre-wrap">
+                            <p className="text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">
                                 {employee.notes}
                             </p>
                         </Card>
@@ -433,7 +433,7 @@ export default function EmployeeDetailPage() {
                                 title={t('line.messageHistory', 'LINE Message History')}
                                 action={
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-surface-500">
+                                        <span className="text-xs text-surface-500 dark:text-surface-400">
                                             {historyTotal} {t('line.messages', 'messages')}
                                         </span>
                                         <History size={16} className="text-surface-400" />
@@ -457,7 +457,7 @@ export default function EmployeeDetailPage() {
                                                         {msg.message}
                                                     </p>
                                                     {msg.templateName && (
-                                                        <p className="text-xs text-surface-500 mt-1">
+                                                        <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
                                                             {t('line.template', 'Template')}: {msg.templateName}
                                                         </p>
                                                     )}
@@ -470,7 +470,7 @@ export default function EmployeeDetailPage() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between mt-2 text-xs text-surface-500">
+                                            <div className="flex items-center justify-between mt-2 text-xs text-surface-500 dark:text-surface-400">
                                                 <span>
                                                     {msg.sentByName || t('line.system', 'System')}
                                                 </span>
@@ -527,38 +527,38 @@ export default function EmployeeDetailPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full ${employee.user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
-                                        <span className="text-sm text-surface-600 dark:text-surface-400">
+                                        <span className="text-sm text-neutral-600 dark:text-neutral-400">
                                             {employee.user.isActive ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-surface-900 dark:text-white">
+                                    <p className="text-sm text-neutral-900 dark:text-white">
                                         {employee.user.email}
                                     </p>
-                                    <p className="text-xs text-surface-500">
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                         Role: {employee.user.role}
                                     </p>
                                 </div>
 
-                                <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
-                                    <h4 className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-2">
+                                <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                                    <h4 className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
                                         PIN Status
                                     </h4>
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-surface-600 dark:text-surface-400">Status:</span>
+                                            <span className="text-neutral-600 dark:text-neutral-400">Status:</span>
                                             <span className={employee.user.hasPin ? 'text-green-600' : 'text-yellow-600'}>
                                                 {employee.user.hasPin ? 'Set' : 'Not Set'}
                                             </span>
                                         </div>
                                         {employee.user.isPinLocked && (
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-surface-600 dark:text-surface-400">Locked:</span>
+                                                <span className="text-neutral-600 dark:text-neutral-400">Locked:</span>
                                                 <span className="text-red-600 font-medium">Yes</span>
                                             </div>
                                         )}
                                         {employee.user.failedPinAttempts > 0 && (
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-surface-600 dark:text-surface-400">Failed Attempts:</span>
+                                                <span className="text-neutral-600 dark:text-neutral-400">Failed Attempts:</span>
                                                 <span className="text-orange-600">{employee.user.failedPinAttempts}</span>
                                             </div>
                                         )}
@@ -578,7 +578,7 @@ export default function EmployeeDetailPage() {
                             </div>
                         ) : (
                             <div className="text-center py-4">
-                                <p className="text-surface-500 dark:text-surface-400 text-sm mb-3">
+                                <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-3">
                                     {t('employees.noUserAccount', 'No user account linked')}
                                 </p>
                                 <Button size="sm" variant="outline" onClick={() => setIsUserAccountModalOpen(true)}>
@@ -619,7 +619,7 @@ export default function EmployeeDetailPage() {
                                         </div>
                                     )}
                                     <div>
-                                        <p className="font-medium text-surface-900 dark:text-white">
+                                        <p className="font-medium text-neutral-900 dark:text-white">
                                             {employee.user.lineDisplayName || 'LINE User'}
                                         </p>
                                         <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-sm">
@@ -630,7 +630,7 @@ export default function EmployeeDetailPage() {
                                 </div>
 
                                 {employee.user.lineLinkedAt && (
-                                    <div className="text-xs text-surface-500">
+                                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
                                         {t('line.linkedAt', 'Linked on')}: {new Date(employee.user.lineLinkedAt).toLocaleDateString()}
                                     </div>
                                 )}
@@ -647,16 +647,16 @@ export default function EmployeeDetailPage() {
                             </div>
                         ) : (
                             <div className="text-center py-4">
-                                <div className="w-12 h-12 rounded-full bg-surface-100 dark:bg-surface-700 flex items-center justify-center mx-auto mb-3">
-                                    <Unlink size={20} className="text-surface-400" />
+                                <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center mx-auto mb-3">
+                                    <Unlink size={20} className="text-neutral-400" />
                                 </div>
-                                <p className="text-surface-500 dark:text-surface-400 text-sm">
+                                <p className="text-neutral-500 dark:text-neutral-400 text-sm">
                                     {employee.user
                                         ? t('line.notLinked', 'LINE account not linked')
                                         : t('line.noUserAccount', 'No user account to link LINE')}
                                 </p>
                                 {employee.user && (
-                                    <p className="text-xs text-surface-400 mt-2">
+                                    <p className="text-xs text-neutral-400 mt-2">
                                         {t('line.linkInstructions', 'Employee can link LINE via LIFF app')}
                                     </p>
                                 )}
@@ -670,7 +670,7 @@ export default function EmployeeDetailPage() {
                             <CardHeader
                                 title={t('line.notificationPrefs', 'Notification Preferences')}
                                 action={
-                                    <Bell size={16} className="text-surface-400" />
+                                    <Bell size={16} className="text-neutral-400" />
                                 }
                             />
                             {isLoadingPrefs ? (
@@ -726,10 +726,10 @@ export default function EmployeeDetailPage() {
                                     </div>
 
                                     {/* Quiet Hours */}
-                                    <div className="pt-3 border-t border-surface-200 dark:border-surface-700">
+                                    <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Clock size={14} className="text-surface-400" />
-                                            <span className="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+                                            <Clock size={14} className="text-neutral-400" />
+                                            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                                 {t('line.prefs.quietHours', 'Quiet Hours')}
                                             </span>
                                         </div>
@@ -746,15 +746,15 @@ export default function EmployeeDetailPage() {
                                                     type="time"
                                                     value={notificationPrefs.quietHoursStart}
                                                     onChange={(e) => handleUpdateQuietHours(true, e.target.value, notificationPrefs.quietHoursEnd)}
-                                                    className="px-2 py-1 text-xs rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800"
+                                                    className="px-2 py-1 text-xs rounded border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800"
                                                     disabled={isSavingPrefs}
                                                 />
-                                                <span className="text-xs text-surface-500">-</span>
+                                                <span className="text-xs text-neutral-500 dark:text-neutral-400">-</span>
                                                 <input
                                                     type="time"
                                                     value={notificationPrefs.quietHoursEnd}
                                                     onChange={(e) => handleUpdateQuietHours(true, notificationPrefs.quietHoursStart, e.target.value)}
-                                                    className="px-2 py-1 text-xs rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800"
+                                                    className="px-2 py-1 text-xs rounded border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800"
                                                     disabled={isSavingPrefs}
                                                 />
                                             </div>
@@ -762,7 +762,7 @@ export default function EmployeeDetailPage() {
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-center text-surface-500 dark:text-surface-400 text-sm py-4">
+                                <p className="text-center text-neutral-500 dark:text-neutral-400 text-sm py-4">
                                     {t('line.prefs.unavailable', 'Preferences unavailable')}
                                 </p>
                             )}
@@ -786,15 +786,15 @@ export default function EmployeeDetailPage() {
                                 {certifications.map((cert) => (
                                     <div
                                         key={cert.id}
-                                        className="p-3 rounded-lg bg-surface-50 dark:bg-surface-700/50 group"
+                                        className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-700/50 group"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div>
-                                                <p className="font-medium text-surface-900 dark:text-white text-sm">
+                                                <p className="font-medium text-neutral-900 dark:text-white text-sm">
                                                     {cert.type}
                                                 </p>
                                                 {cert.licenseNumber && (
-                                                    <p className="text-xs text-surface-500">
+                                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                                         #{cert.licenseNumber}
                                                     </p>
                                                 )}
@@ -802,7 +802,7 @@ export default function EmployeeDetailPage() {
                                             <CertStatusBadge status={cert.status} />
                                         </div>
                                         {cert.expiryDate && (
-                                            <p className="text-xs text-surface-500 mt-2">
+                                            <p className="text-xs text-surface-500 dark:text-surface-400 mt-2">
                                                 Expires: {new Date(cert.expiryDate).toLocaleDateString()}
                                             </p>
                                         )}
