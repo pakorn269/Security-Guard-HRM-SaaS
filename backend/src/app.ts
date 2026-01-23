@@ -10,7 +10,7 @@ import logger from './utils/logger.js';
 
 // Route imports
 import healthRoutes from './modules/health/health.routes.js';
-import { authRoutes } from './modules/auth/index.js';
+import { authRoutes, linkRequestsRoutes } from './modules/auth/index.js';
 import { companyRoutes } from './modules/company/index.js';
 import { userRoutes } from './modules/user/index.js';
 import { employeeRoutes } from './modules/employee/index.js';
@@ -118,6 +118,7 @@ apiRouter.use('/health', healthRoutes);
 
 // Sprint 1: Authentication & Company Setup
 apiRouter.use('/auth', authRoutes);
+apiRouter.use('/link-requests', linkRequestsRoutes);
 apiRouter.use('/companies', companyRoutes);
 
 // Sprint 2: Employee Management
