@@ -54,6 +54,9 @@ const CompanyLoginPage = lazy(() => import('./pages/liff/CompanyLoginPage'));
 const SetPinPage = lazy(() => import('./pages/liff/SetPinPage'));
 const ForgotPinPage = lazy(() => import('./pages/liff/ForgotPinPage'));
 
+// Debug page
+const DebugEnvPage = lazy(() => import('./pages/debug/DebugEnvPage'));
+
 // Loading component
 const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
@@ -223,6 +226,13 @@ const routes: RouteObject[] = [
     {
         path: '/liff/:companySlug/forgot-pin',
         element: withSuspense(ForgotPinPage),
+        errorElement: <ErrorBoundary />,
+    },
+
+    // Debug route (non-production only)
+    {
+        path: '/debug/env',
+        element: withSuspense(DebugEnvPage),
         errorElement: <ErrorBoundary />,
     },
 ];
