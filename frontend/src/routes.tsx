@@ -33,6 +33,7 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 // Layouts
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
 const LiffLayout = lazy(() => import('./components/layout/LiffLayout'));
+const LiffLinkLayout = lazy(() => import('./components/layout/LiffLinkLayout'));
 
 // LIFF pages
 const LiffSchedulePage = lazy(() => import('./pages/liff/LiffSchedulePage'));
@@ -184,20 +185,43 @@ const routes: RouteObject[] = [
                 path: 'change-pin',
                 element: withSuspense(SetPinPage),
             },
-            // Account Linking pages
-            {
-                path: 'link',
-                element: withSuspense(LiffLinkPage),
-            },
-            {
-                path: 'link/employee',
-                element: withSuspense(LiffLinkEmployeePage),
-            },
-            {
-                path: 'link/credentials',
-                element: withSuspense(LiffLinkCredentialsPage),
-            },
         ],
+    },
+
+    // LIFF Account Linking routes (outside LiffLayout to prevent auto-redirect loop)
+    // These pages handle LIFF initialization manually with user-controlled flow
+    {
+        path: '/liff/link',
+        element: (
+            <Suspense fallback={<PageLoader />}>
+                <LiffLinkLayout>
+                    <LiffLinkPage />
+                </LiffLinkLayout>
+            </Suspense>
+        ),
+        errorElement: <ErrorBoundary />,
+    },
+    {
+        path: '/liff/link/employee',
+        element: (
+            <Suspense fallback={<PageLoader />}>
+                <LiffLinkLayout>
+                    <LiffLinkEmployeePage />
+                </LiffLinkLayout>
+            </Suspense>
+        ),
+        errorElement: <ErrorBoundary />,
+    },
+    {
+        path: '/liff/link/credentials',
+        element: (
+            <Suspense fallback={<PageLoader />}>
+                <LiffLinkLayout>
+                    <LiffLinkCredentialsPage />
+                </LiffLinkLayout>
+            </Suspense>
+        ),
+        errorElement: <ErrorBoundary />,
     },
 
     // LIFF Email Login routes (outside LiffLayout to bypass LINE auth)
