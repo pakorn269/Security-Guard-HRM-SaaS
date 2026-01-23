@@ -8,21 +8,33 @@ interface LiffProtectedRouteProps {
 }
 
 /**
+ * Dev Mode Banner Component
+ * Shows a warning banner when LIFF dev mode is enabled
+ */
+function DevModeBanner() {
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-yellow-900 text-center text-xs py-1 font-medium">
+      🔧 LIFF Dev Mode: Browser testing enabled | Set VITE_LIFF_DEV_MODE=false for production
+    </div>
+  );
+}
+
+/**
  * LIFF Protected Route Component
  *
  * Protects routes that should only be accessible from LINE LIFF.
  * Enforces that:
- * 1. User is running in LIFF client (LINE app)
+ * 1. User is running in LIFF client (LINE app) or dev mode is enabled
  * 2. User is authenticated
  * 3. User has 'guard' role (guards use LIFF exclusively)
  *
  * Non-guard users are redirected to web dashboard.
  * Unauthenticated users are redirected to LIFF linking page.
- * Non-LIFF access is redirected to login select page.
+ * Non-LIFF access is redirected to login select page (unless dev mode enabled).
  */
 export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { isInClient, isReady: liffReady, error: liffError } = useLiff();
+  const { isInClient, isReady: liffReady, error: liffError, isDevMode } = useLiff();
   const location = useLocation();
 
   // Show loading while checking both auth and LIFF status
@@ -37,8 +49,8 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
     );
   }
 
-  // Check if LIFF initialization failed
-  if (liffError) {
+  // Check if LIFF initialization failed (only show error if not in dev mode)
+  if (liffError && !isDevMode) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
         <div className="text-center max-w-md">
@@ -56,8 +68,8 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
     );
   }
 
-  // Check if running in LIFF context
-  if (!isInClient) {
+  // Check if running in LIFF context (bypass if dev mode enabled)
+  if (!isInClient && !isDevMode) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
         <div className="text-center max-w-md">
@@ -97,7 +109,8 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // Check if user is guard (guards use LIFF exclusively)
-  if (user && user.role !== 'guard') {
+  // In dev mode, allow all roles to access for testing
+  if (user && user.role !== 'guard' && !isDevMode) {
     // Non-guard users should use web dashboard, not LIFF
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
@@ -120,7 +133,15 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // All checks passed - render protected content
-  return <>{children}</>;
+  return (
+    <>
+      {isDevMode && <DevModeBanner />}
+      <div className={isDevMode ? 'pt-6' : ''}>
+        {children}
+      </div>
+    </>
+  );
 }
 
 export default LiffProtectedRoute;
+
