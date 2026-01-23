@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import { getLiffHeaders } from '../hooks/useLiff';
 
 // Types for API responses
 export interface ApiResponse<T = unknown> {
@@ -49,7 +50,7 @@ const api: AxiosInstance = axios.create({
     },
 });
 
-// Request interceptor - add auth token
+// Request interceptor - add auth token and LIFF headers
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const token = getAccessToken();
@@ -61,6 +62,16 @@ api.interceptors.request.use(
         const language = localStorage.getItem('i18nextLng') || 'th';
         if (config.headers) {
             config.headers['Accept-Language'] = language;
+        }
+
+        // Add LIFF context headers if in LIFF environment
+        try {
+            const liffHeaders = getLiffHeaders();
+            if (config.headers && liffHeaders) {
+                Object.assign(config.headers, liffHeaders);
+            }
+        } catch (error) {
+            // Ignore LIFF header errors (not in LIFF context)
         }
 
         return config;

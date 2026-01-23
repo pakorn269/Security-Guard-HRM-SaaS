@@ -24,7 +24,7 @@ import type {
     ForgotPinRequest,
     VerifyResetCodeRequest,
 } from './auth.types.js';
-import type { JwtPayload } from '../../middleware/auth.middleware.js';
+import type { JwtPayload, LiffContext } from '../../middleware/auth.middleware.js';
 import { PhoneUtils } from '../../utils/phone.js';
 
 // Constants
@@ -52,16 +52,26 @@ const parseTimeToSeconds = (time: string): number => {
 
 class AuthService {
     // Generate JWT tokens
-    private generateTokens(payload: JwtPayload): TokenPair {
+    private generateTokens(payload: JwtPayload, liffContext?: LiffContext): TokenPair {
         const accessExpiresInSeconds = parseTimeToSeconds(ACCESS_TOKEN_EXPIRY);
         const refreshExpiresInSeconds = parseTimeToSeconds(REFRESH_TOKEN_EXPIRY);
 
-        const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+        // Add LIFF context to payload if provided
+        const fullPayload = liffContext
+            ? { ...payload, liffContext }
+            : payload;
+
+        const accessToken = jwt.sign(fullPayload, env.JWT_SECRET, {
             expiresIn: accessExpiresInSeconds,
         });
 
+        // Refresh token also includes LIFF context for inheritance
         const refreshToken = jwt.sign(
-            { userId: payload.userId, type: 'refresh' },
+            {
+                userId: payload.userId,
+                type: 'refresh',
+                liffContext,
+            },
             env.JWT_SECRET,
             { expiresIn: refreshExpiresInSeconds }
         );
