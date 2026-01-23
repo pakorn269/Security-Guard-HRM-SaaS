@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { authService } from './auth.service.js';
 import { sendSuccess, sendCreated } from '../../utils/response.js';
 import { ValidationError } from '../../utils/errors.js';
+import { createLiffContextFromRequest } from '../../middleware/liff-context.middleware.js';
 import {
     registerSchema,
     loginSchema,
