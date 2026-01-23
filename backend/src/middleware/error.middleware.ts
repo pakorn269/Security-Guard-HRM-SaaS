@@ -60,6 +60,22 @@ export const errorMiddleware = (
     const message = err.message || 'Internal server error';
     const messageTh = 'เกิดข้อผิดพลาดภายในระบบ';
 
+    // In non-production, expose more error details for debugging
+    if (env.NODE_ENV !== 'production') {
+        return res.status(statusCode).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message,
+                message_th: messageTh,
+                debug: {
+                    name: err.name,
+                    stack: err.stack,
+                },
+            },
+        });
+    }
+
     return sendError(res, 'INTERNAL_ERROR', message, statusCode, messageTh);
 };
 
