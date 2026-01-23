@@ -1,7 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/common';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LiffProtectedRoute } from './components/auth/LiffProtectedRoute';
 import { NonLiffProtectedRoute } from './components/auth/NonLiffProtectedRoute';
 
