@@ -87,7 +87,7 @@ const routes: RouteObject[] = [
     {
         path: '/',
         element: (
-            <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+            <ProtectedRoute allowedRoles={['super_admin', 'company_admin', 'manager']}>
                 {withSuspense(DashboardLayout)}
             </ProtectedRoute>
         ),
@@ -152,7 +152,11 @@ const routes: RouteObject[] = [
     // LIFF routes (guard)
     {
         path: '/liff',
-        element: withSuspense(LiffLayout),
+        element: (
+            <ProtectedRoute allowedRoles={['guard', 'super_admin', 'company_admin']}>
+                {withSuspense(LiffLayout)}
+            </ProtectedRoute>
+        ),
         errorElement: <ErrorBoundary />,
         children: [
             {
