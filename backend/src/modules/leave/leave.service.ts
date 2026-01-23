@@ -1206,6 +1206,7 @@ class LeaveService {
                 ? `คำขอลา ${request.leaveType?.nameTh || request.leaveType?.name} ของคุณตั้งแต่วันที่ ${request.startDate} ถึง ${request.endDate} ได้รับการอนุมัติแล้ว`
                 : `คำขอลา ${request.leaveType?.nameTh || request.leaveType?.name} ของคุณตั้งแต่วันที่ ${request.startDate} ถึง ${request.endDate} ถูกปฏิเสธ`;
 
+            // Send in-app notification
             await NotificationService.createNotification({
                 companyId,
                 userId: user.id,
@@ -1223,6 +1224,10 @@ class LeaveService {
                 },
                 channels: ['in_app', 'line']
             });
+
+            // Send LINE notification using the dedicated LINE notification job
+            const { sendLeaveNotification } = await import('../../jobs/lineNotifications.js');
+            await sendLeaveNotification(companyId, request.id, status);
         } catch (error) {
             logger.error('Error sending leave notification', error);
         }
