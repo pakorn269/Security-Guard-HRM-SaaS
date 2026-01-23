@@ -30,6 +30,9 @@ import { lineRoutes } from './modules/line/index.js';
 // Create Express app
 const app: Application = express();
 
+// Trust proxy for Vercel/Heroku/etc.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
