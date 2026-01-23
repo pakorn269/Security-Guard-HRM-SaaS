@@ -5,10 +5,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useLiffAuth } from '../../context/LiffAuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LiffLinkCredentialsPage() {
     const navigate = useNavigate();
     const { linkWithCredentials, error, clearError, isLoading } = useLiffAuth();
+    const { checkAuth } = useAuth();
 
     const [formData, setFormData] = useState({
         email: '',
@@ -52,6 +54,8 @@ export default function LiffLinkCredentialsPage() {
 
             if (success) {
                 setSuccess(true);
+                // Sync AuthContext with newly stored tokens
+                await checkAuth();
                 // Redirect to clock page after success
                 setTimeout(() => {
                     navigate('/liff/clock');
