@@ -31,6 +31,18 @@ function isLiffDevModeEnabled(): boolean {
  *
  * @returns {LiffState} LIFF context state
  */
+export function getCurrentLiffId(): string | null {
+  const path = window.location.pathname;
+  const env = import.meta.env;
+
+  if (path.includes('/liff/schedule') && env.VITE_LIFF_SCHEDULE_ID) return env.VITE_LIFF_SCHEDULE_ID;
+  if (path.includes('/liff/clock') && env.VITE_LIFF_CLOCK_ID) return env.VITE_LIFF_CLOCK_ID;
+  if (path.includes('/liff/leave') && env.VITE_LIFF_LEAVE_ID) return env.VITE_LIFF_LEAVE_ID;
+  if (path.includes('/liff/profile') && env.VITE_LIFF_PROFILE_ID) return env.VITE_LIFF_PROFILE_ID;
+
+  return env.VITE_LIFF_ID || null;
+}
+
 export function useLiff(): LiffState {
   const devMode = isLiffDevModeEnabled();
 
@@ -48,9 +60,8 @@ export function useLiff(): LiffState {
 
     const initializeLiff = async () => {
       try {
-        // Get LIFF ID from environment
-        // Default to schedule LIFF ID, but can be dynamic
-        const liffId = import.meta.env.VITE_LIFF_SCHEDULE_ID;
+        // Get LIFF ID from environment based on current path
+        const liffId = getCurrentLiffId();
 
         if (!liffId) {
           throw new Error('LIFF ID not configured');

@@ -5,6 +5,7 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import liff from '@line/liff';
+import { getCurrentLiffId } from '../hooks/useLiff';
 import liffAuthService, { type LineProfile } from '../services/liff-auth.service';
 import api, { clearTokens, getAccessToken } from '../services/api';
 import type { AuthUser } from '../types/auth';
@@ -213,16 +214,27 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
             // ============================================================
             // No valid JWT token, proceed with LINE authentication
             // ============================================================
-            const liffId = import.meta.env.VITE_LIFF_ID;
-            console.log('[LiffAuth] Initializing LIFF with ID:', liffId);
+            // ============================================================
+            // No valid JWT token, proceed with LINE authentication
+            // ============================================================
+
+            // Check if already initialized
+            let liffId = liff.id;
 
             if (!liffId) {
-                throw new Error('LIFF ID not configured');
-            }
+                liffId = getCurrentLiffId();
+                console.log('[LiffAuth] Initializing LIFF with ID:', liffId);
 
-            // Initialize LIFF SDK
-            await liff.init({ liffId });
-            console.log('[LiffAuth] LIFF initialized');
+                if (!liffId) {
+                    throw new Error('LIFF ID not configured');
+                }
+
+                // Initialize LIFF SDK
+                await liff.init({ liffId });
+                console.log('[LiffAuth] LIFF initialized');
+            } else {
+                console.log('[LiffAuth] LIFF already initialized with ID:', liffId);
+            }
 
             // Check if logged into LINE
             if (!liff.isLoggedIn()) {
