@@ -10,11 +10,16 @@ interface LiffProtectedRouteProps {
  * LIFF Protected Route Component
  *
  * Protects LIFF routes by enforcing:
- * 1. User is authenticated
+ * 1. User is authenticated (via AuthContext OR going through LIFF linking flow)
  * 2. User has 'guard' role (guards use LIFF exclusively)
  *
  * Non-guard users are redirected to web dashboard.
  * Unauthenticated users are redirected to LIFF linking page.
+ *
+ * IMPORTANT: Linking pages (/liff/link/*) are exempt from AuthContext checks
+ * because users going through LIFF linking flow are authenticated via LiffAuthContext
+ * (LINE login) but haven't yet received JWT tokens stored in AuthContext.
+ * The LiffLayout/LiffAuthContext handles the complete linking flow internally.
  *
  * Note: LINE client check has been removed to allow browser access.
  */
@@ -22,9 +27,17 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const { isAuthenticated: isAuthAuthenticated, isLoading: authLoading, user } = useAuth();
   const location = useLocation();
 
+  // Check if we're on any linking page - these bypass AuthContext checks
+  // because the linking flow is managed by LiffAuthContext inside LiffLayout
   const isLinkingPage = location.pathname.startsWith('/liff/link');
 
-  // Show loading while checking auth status
+  // For linking pages, skip AuthContext loading/auth checks entirely
+  // LiffLayout will handle authentication via LiffAuthContext
+  if (isLinkingPage) {
+    return <>{children}</>;
+  }
+
+  // Show loading while checking auth status (only for non-linking pages)
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
@@ -36,17 +49,15 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
     );
   }
 
-  // Check authentication
-  // Use isAuthAuthenticated directly from useAuth context
-  if (!isAuthAuthenticated && !isLinkingPage) {
+  // Check authentication (only for non-linking pages)
+  if (!isAuthAuthenticated) {
     // Redirect to LIFF account linking page
     console.log('[LiffProtectedRoute] Not authenticated, redirecting to link page from', location.pathname);
     return <Navigate to="/liff/link" state={{ from: location }} replace />;
   }
 
   // Check if user is guard (guards use LIFF exclusively)
-  // Skip this check if on linking page (since role might be unknown or irrelevant during linking flow)
-  if (isAuthAuthenticated && user && user.role !== 'guard' && !isLinkingPage) {
+  if (user && user.role !== 'guard') {
     // Non-guard users should use web dashboard, not LIFF
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
