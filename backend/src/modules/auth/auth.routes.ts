@@ -12,6 +12,7 @@ router.post('/line', authController.lineLogin);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/forgot-pin', authController.forgotPin);
+router.post('/setup-pin', authController.setupPin);
 router.post('/verify-reset-code', authController.verifyResetCode);
 router.post('/request-pin-reset', authController.requestPinReset);
 router.post('/me/request-pin-reset', authMiddleware, authController.requestPinResetMe);
