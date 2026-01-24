@@ -109,20 +109,7 @@ class EmployeeService {
             .from('employees')
             .select(`
                 *,
-                users:user_id (
-                    id,
-                    email,
-                    role,
-                    is_active,
-                    password_hash,
-                    pin_set_at,
-                    pin_locked_until,
-                    pin_attempts,
-                    line_user_id,
-                    line_display_name,
-                    line_picture_url,
-                    line_linked_at
-                )
+                users:user_id (*)
             `)
             .eq('id', employeeId)
             .eq('company_id', companyId)
@@ -203,20 +190,7 @@ class EmployeeService {
             .select(
                 `
                 *,
-                users:user_id (
-                    id,
-                    email,
-                    role,
-                    is_active,
-                    password_hash,
-                    pin_set_at,
-                    pin_locked_until,
-                    pin_attempts,
-                    line_user_id,
-                    line_display_name,
-                    line_picture_url,
-                    line_linked_at
-                )
+                users:user_id (*)
             `,
                 { count: 'exact' }
             )
