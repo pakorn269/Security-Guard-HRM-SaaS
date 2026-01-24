@@ -39,6 +39,7 @@ router.delete('/sessions', authMiddleware, authController.revokeAllSessions);
 // Public routes - for LIFF first-time user flow
 router.post('/line/verify', authController.lineVerify);
 router.post('/line/link-employee', authController.linkEmployee);
+router.post('/line/auto-link', authController.autoLink);
 router.post('/line/link-credentials', authController.linkCredentials);
 
 // ============================================================

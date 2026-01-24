@@ -132,6 +132,25 @@ export const linkEmployeeSchema = z.object({
         .max(100),
 });
 
+// Auto-link validation schema
+export const autoLinkSchema = z.object({
+    idToken: z.string().min(1, 'ID token is required / กรุณาระบุ ID token'),
+    liffId: z.string().min(1, 'LIFF ID is required / กรุณาระบุ LIFF ID'),
+    employeeCode: z
+        .string()
+        .min(1, 'Employee code is required / กรุณาระบุรหัสพนักงาน')
+        .max(50),
+    phone: z
+        .string()
+        .min(9, 'Phone number must be at least 9 digits / เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก')
+        .max(20)
+        .regex(/^[0-9]+$/, 'Phone number must contain only digits / เบอร์โทรศัพท์ต้องเป็นตัวเลขเท่านั้น'),
+    companySlug: z
+        .string()
+        .max(100)
+        .optional(),
+});
+
 // Link credentials validation schema (for managers/admins)
 export const linkCredentialsSchema = z.object({
     idToken: z.string().min(1, 'ID token is required / กรุณาระบุ ID token'),
@@ -187,6 +206,7 @@ export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type LinkLineInput = z.infer<typeof linkLineSchema>;
 export type LineVerifyInput = z.infer<typeof lineVerifySchema>;
 export type LinkEmployeeInput = z.infer<typeof linkEmployeeSchema>;
+export type AutoLinkInput = z.infer<typeof autoLinkSchema>;
 export type LinkCredentialsInput = z.infer<typeof linkCredentialsSchema>;
 export type LiffEmployeeLoginInput = z.infer<typeof liffEmployeeLoginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
