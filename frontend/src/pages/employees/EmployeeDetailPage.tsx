@@ -5,6 +5,7 @@ import { MessageCircle, Send, LinkIcon, Unlink, Bell, Clock, History, CheckCircl
 import { Button, Card, CardHeader, LoadingSpinner, Modal, ModalFooter, Input } from '../../components/common';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
 import { lineService, type LineNotificationPreferences, type LineMessageHistory } from '../../services/line.service';
+import { lineLinkService } from '../../services/line-link.service';
 import type { Certification } from '../../types/employee.types';
 import EmployeeFormModal from './EmployeeFormModal';
 import CertificationFormModal from './CertificationFormModal';
@@ -114,6 +115,9 @@ export default function EmployeeDetailPage() {
     const [isTerminating, setIsTerminating] = useState(false);
     const [isUserAccountModalOpen, setIsUserAccountModalOpen] = useState(false);
     const [isLineMessageModalOpen, setIsLineMessageModalOpen] = useState(false);
+    const [isForceUnlinkModalOpen, setIsForceUnlinkModalOpen] = useState(false);
+    const [unlinkReason, setUnlinkReason] = useState('');
+    const [isUnlinking, setIsUnlinking] = useState(false);
 
     // LINE Notification Preferences
     const [notificationPrefs, setNotificationPrefs] = useState<LineNotificationPreferences | null>(null);
@@ -281,6 +285,29 @@ export default function EmployeeDetailPage() {
         } catch (error) {
             console.error('Failed to reset PIN:', error);
             alert('Failed to reset PIN.');
+        }
+    };
+
+    const handleForceUnlink = async () => {
+        if (!employee?.user?.id || !unlinkReason.trim()) return;
+
+        setIsUnlinking(true);
+        try {
+            const result = await lineLinkService.forceUnlink({
+                targetUserId: employee.user.id,
+                reason: unlinkReason,
+            });
+
+            setIsForceUnlinkModalOpen(false);
+            setUnlinkReason('');
+            fetchEmployee(); // Refresh to show unlinked status
+
+            alert(`LINE account unlinked successfully. ${result.revokedSessions} session(s) revoked.`);
+        } catch (error) {
+            console.error('Failed to force unlink:', error);
+            alert('Failed to unlink LINE account.');
+        } finally {
+            setIsUnlinking(false);
         }
     };
 
@@ -637,15 +664,25 @@ export default function EmployeeDetailPage() {
                                     </div>
                                 )}
 
-                                <Button
-                                    size="sm"
-                                    variant="primary"
-                                    className="w-full"
-                                    leftIcon={<Send size={14} />}
-                                    onClick={() => setIsLineMessageModalOpen(true)}
-                                >
-                                    {t('line.sendMessage', 'Send LINE Message')}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="primary"
+                                        className="flex-1"
+                                        leftIcon={<Send size={14} />}
+                                        onClick={() => setIsLineMessageModalOpen(true)}
+                                    >
+                                        {t('line.sendMessage', 'Send LINE Message')}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="danger"
+                                        onClick={() => setIsForceUnlinkModalOpen(true)}
+                                        title="Force unlink LINE account"
+                                    >
+                                        <Unlink size={14} />
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="text-center py-4">
@@ -906,6 +943,64 @@ export default function EmployeeDetailPage() {
                 onClose={() => setIsLineMessageModalOpen(false)}
                 employee={employee}
             />
+
+            {/* Force Unlink Modal */}
+            <Modal
+                isOpen={isForceUnlinkModalOpen}
+                onClose={() => {
+                    setIsForceUnlinkModalOpen(false);
+                    setUnlinkReason('');
+                }}
+                title={t('line.forceUnlink', 'Force Unlink LINE Account')}
+                size="sm"
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                            ⚠️ {t('line.forceUnlinkWarning', 'Warning: This action will immediately:')}
+                        </p>
+                        <ul className="mt-2 text-sm text-red-700 dark:text-red-300 list-disc list-inside space-y-1">
+                            <li>{t('line.forceUnlinkEffect1', 'Unlink the LINE account from this employee')}</li>
+                            <li>{t('line.forceUnlinkEffect2', 'Revoke all active LINE sessions')}</li>
+                            <li>{t('line.forceUnlinkEffect3', 'Deactivate the guard account')}</li>
+                            <li>{t('line.forceUnlinkEffect4', 'Block immediate access to all features')}</li>
+                        </ul>
+                    </div>
+
+                    <Input
+                        label={t('line.unlinkReason', 'Reason for unlinking (required)')}
+                        value={unlinkReason}
+                        onChange={(e) => setUnlinkReason(e.target.value)}
+                        placeholder={t('line.unlinkReasonPlaceholder', 'e.g., Employee terminated, Lost device, Security breach')}
+                        required
+                        minLength={10}
+                    />
+
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {t('line.forceUnlinkNote', 'This action will be logged in the audit trail with your user ID, IP address, and timestamp.')}
+                    </p>
+                </div>
+                <ModalFooter>
+                    <Button
+                        variant="ghost"
+                        onClick={() => {
+                            setIsForceUnlinkModalOpen(false);
+                            setUnlinkReason('');
+                        }}
+                    >
+                        {t('common.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={handleForceUnlink}
+                        isLoading={isUnlinking}
+                        disabled={!unlinkReason.trim() || unlinkReason.length < 10}
+                    >
+                        {t('line.confirmForceUnlink', 'Confirm Force Unlink')}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
             {isUserAccountModalOpen && (
                 <UserAccountFormModal
                     isOpen={isUserAccountModalOpen}

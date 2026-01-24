@@ -26,14 +26,20 @@ import {
 import { useTranslation } from 'react-i18next';
 import employeeService from '../../services/employee.service';
 import companyService from '../../services/company.service';
+import { lineLinkService } from '../../services/line-link.service';
 import type { Employee, Certification } from '../../types/employee.types';
 import type { Company } from '../../types/company.types';
 
 export default function LiffProfilePage() {
     const navigate = useNavigate();
-    const { user, isLoading, logout, unlinkLine, connectLine } = useLiffAuth();
+    const { user, isLoading, logout, connectLine } = useLiffAuth();
     const { i18n } = useTranslation();
     const [isActionLoading, setIsActionLoading] = useState(false);
+
+    // Unlink request modal state
+    const [showUnlinkRequestModal, setShowUnlinkRequestModal] = useState(false);
+    const [unlinkReason, setUnlinkReason] = useState('');
+    const [selectedReasonTemplate, setSelectedReasonTemplate] = useState<string>('');
 
     // Real data state
     const [employee, setEmployee] = useState<Employee | null>(null);
@@ -156,6 +162,46 @@ export default function LiffProfilePage() {
 
     const handleChangePin = () => {
         navigate('/liff/change-pin');
+    };
+
+    const handleUnlinkRequest = async () => {
+        // Get final reason: use template if selected, otherwise use custom reason
+        const finalReason = selectedReasonTemplate === 'other'
+            ? unlinkReason
+            : selectedReasonTemplate || unlinkReason;
+
+        if (!finalReason.trim() || finalReason.length < 10) {
+            alert(i18n.language === 'th'
+                ? 'กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร'
+                : 'Please provide a reason (minimum 10 characters)');
+            return;
+        }
+
+        setIsActionLoading(true);
+        try {
+            await lineLinkService.createUnlinkRequest({
+                reason: finalReason,
+            });
+
+            setShowUnlinkRequestModal(false);
+            setUnlinkReason('');
+            setSelectedReasonTemplate('');
+
+            alert(
+                i18n.language === 'th'
+                    ? 'ส่งคำขอยกเลิกการเชื่อมต่อเรียบร้อยแล้ว\nรอการอนุมัติจากผู้ดูแลระบบ'
+                    : 'Unlink request submitted successfully.\nWaiting for admin approval.'
+            );
+        } catch (error) {
+            console.error('Failed to create unlink request:', error);
+            alert(
+                i18n.language === 'th'
+                    ? 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+                    : 'Failed to submit request. Please try again.'
+            );
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
     const getStatusInfo = (expiryDate?: string) => {
@@ -371,23 +417,12 @@ export default function LiffProfilePage() {
                                 </p>
                             </div>
                             <button
-                                onClick={async () => {
-                                    const confirm = window.confirm(
-                                        i18n.language === 'th'
-                                            ? 'คุณต้องการยกเลิกการเชื่อมต่อ LINE ใช่หรือไม่?\nคุณจะไม่สามารถเข้าสู่ระบบด้วย LINE ได้อีกต่อไป'
-                                            : 'Are you sure you want to unlink LINE?\nYou will no longer be able to login with LINE.'
-                                    );
-                                    if (confirm) {
-                                        setIsActionLoading(true);
-                                        await unlinkLine();
-                                        setIsActionLoading(false);
-                                    }
-                                }}
+                                onClick={() => setShowUnlinkRequestModal(true)}
                                 disabled={isActionLoading}
                                 className="text-sm text-error-600 hover:text-error-700 underline flex items-center gap-1"
                             >
                                 <Unlink size={14} />
-                                {i18n.language === 'th' ? 'ยกเลิกการเชื่อมต่อ' : 'Unlink account'}
+                                {i18n.language === 'th' ? 'ขอยกเลิกการเชื่อมต่อ' : 'Request to unlink'}
                             </button>
                         </div>
                     ) : (
@@ -501,6 +536,147 @@ export default function LiffProfilePage() {
             <p className="text-center text-neutral-400 dark:text-neutral-500 text-sm">
                 Security Guard HRM v1.0.0
             </p>
+
+            {/* Unlink Request Modal */}
+            {showUnlinkRequestModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 max-w-md w-full space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <Unlink size={20} className="text-error-500" />
+                                {i18n.language === 'th' ? 'ขอยกเลิกการเชื่อมต่อ LINE' : 'Request LINE Unlink'}
+                            </h3>
+                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+                                {i18n.language === 'th'
+                                    ? 'กรุณาระบุเหตุผลในการยกเลิกการเชื่อมต่อ LINE (เช่น เปลี่ยนเบอร์โทรศัพท์ใหม่)'
+                                    : 'Please provide a reason for unlinking your LINE account (e.g., changing phone number)'}
+                            </p>
+                        </div>
+
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                ℹ️ {i18n.language === 'th'
+                                    ? 'คำขอของคุณจะต้องได้รับการอนุมัติจากผู้ดูแลระบบก่อน คุณจะยังคงสามารถใช้งานได้ปกติจนกว่าจะได้รับการอนุมัติ'
+                                    : 'Your request requires admin approval. You can continue using the app normally until approved.'}
+                            </p>
+                        </div>
+
+                        {/* Reason Templates */}
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                                {i18n.language === 'th' ? 'เหตุผล' : 'Reason'}
+                            </label>
+                            <div className="space-y-2">
+                                {/* Template: Changing LINE account */}
+                                <label className="flex items-start gap-3 p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="unlinkReason"
+                                        value={i18n.language === 'th' ? 'ต้องการเปลี่ยนบัญชี LINE ใหม่' : 'I want to change to a new LINE account'}
+                                        checked={selectedReasonTemplate === (i18n.language === 'th' ? 'ต้องการเปลี่ยนบัญชี LINE ใหม่' : 'I want to change to a new LINE account')}
+                                        onChange={(e) => {
+                                            setSelectedReasonTemplate(e.target.value);
+                                            setUnlinkReason('');
+                                        }}
+                                        disabled={isActionLoading}
+                                        className="mt-0.5 text-primary-500 focus:ring-primary-500"
+                                    />
+                                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                        {i18n.language === 'th' ? 'ต้องการเปลี่ยนบัญชี LINE ใหม่' : 'I want to change to a new LINE account'}
+                                    </span>
+                                </label>
+
+                                {/* Template: Phone number changed */}
+                                <label className="flex items-start gap-3 p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="unlinkReason"
+                                        value={i18n.language === 'th' ? 'เปลี่ยนเบอร์โทรศัพท์ใหม่แล้ว' : 'My phone number has changed'}
+                                        checked={selectedReasonTemplate === (i18n.language === 'th' ? 'เปลี่ยนเบอร์โทรศัพท์ใหม่แล้ว' : 'My phone number has changed')}
+                                        onChange={(e) => {
+                                            setSelectedReasonTemplate(e.target.value);
+                                            setUnlinkReason('');
+                                        }}
+                                        disabled={isActionLoading}
+                                        className="mt-0.5 text-primary-500 focus:ring-primary-500"
+                                    />
+                                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                        {i18n.language === 'th' ? 'เปลี่ยนเบอร์โทรศัพท์ใหม่แล้ว' : 'My phone number has changed'}
+                                    </span>
+                                </label>
+
+                                {/* Template: Other (custom) */}
+                                <label className="flex items-start gap-3 p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="unlinkReason"
+                                        value="other"
+                                        checked={selectedReasonTemplate === 'other'}
+                                        onChange={(e) => {
+                                            setSelectedReasonTemplate(e.target.value);
+                                        }}
+                                        disabled={isActionLoading}
+                                        className="mt-0.5 text-primary-500 focus:ring-primary-500"
+                                    />
+                                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                                        {i18n.language === 'th' ? 'อื่นๆ (ระบุเหตุผล)' : 'Other (specify reason)'}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Custom Reason Textarea - Only show when "Other" is selected */}
+                        {selectedReasonTemplate === 'other' && (
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                                    {i18n.language === 'th' ? 'ระบุเหตุผล (ขั้นต่ำ 10 ตัวอักษร)' : 'Specify Reason (minimum 10 characters)'}
+                                </label>
+                                <textarea
+                                    value={unlinkReason}
+                                    onChange={(e) => setUnlinkReason(e.target.value)}
+                                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    rows={4}
+                                    placeholder={
+                                        i18n.language === 'th'
+                                            ? 'เช่น ต้องการเปลี่ยนเป็นเบอร์โทรศัพท์ใหม่'
+                                            : 'e.g., I want to change to my new phone number'
+                                    }
+                                    disabled={isActionLoading}
+                                />
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                    {unlinkReason.length} / 10 {i18n.language === 'th' ? 'ตัวอักษร' : 'characters'}
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowUnlinkRequestModal(false);
+                                    setUnlinkReason('');
+                                    setSelectedReasonTemplate('');
+                                }}
+                                disabled={isActionLoading}
+                                className="flex-1 py-2 px-4 rounded-md border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                            >
+                                {i18n.language === 'th' ? 'ยกเลิก' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={handleUnlinkRequest}
+                                disabled={
+                                    isActionLoading ||
+                                    !selectedReasonTemplate ||
+                                    (selectedReasonTemplate === 'other' && unlinkReason.length < 10)
+                                }
+                                className="flex-1 py-2 px-4 rounded-md bg-error-500 hover:bg-error-600 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isActionLoading && <Loader2 size={16} className="animate-spin" />}
+                                {i18n.language === 'th' ? 'ส่งคำขอ' : 'Submit Request'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

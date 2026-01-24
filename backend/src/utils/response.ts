@@ -121,3 +121,39 @@ export const success = <T>(
     return response;
 };
 
+export const successResponse = (
+    data: any,
+    options?: {
+        message?: string;
+        message_th?: string;
+        pagination?: any;
+    }
+) => {
+    return {
+        success: true,
+        message: options?.message || 'Success',
+        ...(options?.message_th && { message_th: options.message_th }),
+        data,
+        ...(options?.pagination && {
+            meta: {
+                pagination: options.pagination
+            }
+        })
+    };
+};
+
+export const errorResponse = (
+    message: string,
+    code: string = 'ERROR',
+    details?: any
+) => {
+    return {
+        success: false,
+        error: {
+            code,
+            message,
+            details
+        }
+    };
+};
+

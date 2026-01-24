@@ -6,6 +6,18 @@ export interface ApiResponse<T = unknown> {
     success: boolean;
     data?: T;
     error?: ApiError;
+    meta?: {
+        page?: number;
+        pageSize?: number;
+        total?: number;
+        totalPages?: number;
+        pagination?: {
+            page: number;
+            pageSize: number;
+            total: number;
+            totalPages: number;
+        };
+    };
 }
 
 export interface ApiError {
