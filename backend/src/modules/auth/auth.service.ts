@@ -1449,7 +1449,7 @@ class AuthService {
         // Find employee by company + employee_code
         const { data: employee, error: employeeError } = await supabaseAdmin
             .from('employees')
-            .select('*, users!employees_user_id_fkey(*)')
+            .select('*, users:user_id(*)')
             .eq('company_id', company.id)
             .eq('employee_code', employeeCode)
             .single();
@@ -1755,7 +1755,7 @@ class AuthService {
         // Find employee by company + employee_code
         const { data: employee, error: employeeError } = await supabaseAdmin
             .from('employees')
-            .select('*, users!employees_user_id_fkey(*)')
+            .select('*, users:user_id(*)')
             .eq('company_id', company.id)
             .eq('employee_code', employeeCode)
             .single();
