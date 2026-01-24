@@ -191,7 +191,7 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
             dispatch({ type: 'INIT_START' });
 
             // ============================================================
-            // Check for existing JWT token first (email login users or already linked via LIFF)
+            // Check for existing JWT token first (email login users)
             // ============================================================
             const existingToken = getAccessToken();
             if (existingToken) {
@@ -200,21 +200,13 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                     // Try to get current user with existing token
                     const response = await api.get('/auth/me');
                     if (response.data?.success && response.data?.data) {
-                        console.log('[LiffAuth] JWT token valid, user authenticated');
-                        // Check if user has LINE linked - use 'linked' status, else 'email_auth'
-                        const user = response.data.data;
-                        if (user.lineUserId) {
-                            console.log('[LiffAuth] User has LINE linked, using linked status');
-                            dispatch({ type: 'LINK_SUCCESS', payload: user });
-                        } else {
-                            console.log('[LiffAuth] User has no LINE linked, using email auth mode');
-                            dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: user });
-                        }
+                        console.log('[LiffAuth] JWT token valid, using email auth mode');
+                        dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: response.data.data });
                         return;
                     }
-                } catch (err) {
+                } catch {
                     // Token invalid/expired, continue with LINE auth
-                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth', err);
+                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth');
                     clearTokens();
                 }
             }

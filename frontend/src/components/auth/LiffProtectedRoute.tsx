@@ -31,34 +31,21 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const [isRechecking, setIsRechecking] = useState(false);
   const hasRecheckedRef = useRef(false);
 
-  // Check if a token exists in localStorage
-  const hasToken = !!getAccessToken();
-
-  // Debug logging
-  console.log('[LiffProtectedRoute] State:', {
-    hasToken,
-    isAuthAuthenticated,
-    authLoading,
-    isRechecking,
-    hasRechecked: hasRecheckedRef.current,
-    path: location.pathname,
-  });
-
   // Check if we need to re-verify auth (token exists but not authenticated)
   // This handles navigation from /liff/link where tokens were just stored
   // Also handles page reloads or direct navigation when tokens exist
   useEffect(() => {
+    const token = getAccessToken();
     // If there's a token but AuthContext says not authenticated (and not loading), re-check
-    if (hasToken && !isAuthAuthenticated && !authLoading && !hasRecheckedRef.current) {
+    if (token && !isAuthAuthenticated && !authLoading && !hasRecheckedRef.current) {
       console.log('[LiffProtectedRoute] Token exists but not authenticated, re-checking auth...');
       hasRecheckedRef.current = true;
       setIsRechecking(true);
       checkAuth().finally(() => {
-        console.log('[LiffProtectedRoute] Re-check completed');
         setIsRechecking(false);
       });
     }
-  }, [hasToken, isAuthAuthenticated, authLoading, checkAuth]);
+  }, [isAuthAuthenticated, authLoading, checkAuth]);
 
   // Check if we're on any linking page - these bypass AuthContext checks
   // because the linking flow is managed by LiffAuthContext inside LiffLayout
@@ -72,8 +59,7 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
 
   // Show loading while checking auth status (only for non-linking pages)
   // Also show loading if we're re-checking auth after tokens were stored
-  // Also show loading if token exists but we haven't authenticated yet (prevents premature redirect)
-  if (authLoading || isRechecking || (hasToken && !isAuthAuthenticated && !hasRecheckedRef.current)) {
+  if (authLoading || isRechecking) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
