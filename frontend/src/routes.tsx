@@ -190,38 +190,29 @@ const routes: RouteObject[] = [
 
     // LIFF Account Linking routes (outside LiffLayout to prevent auto-redirect loop)
     // These pages handle LIFF initialization manually with user-controlled flow
+    // Uses nested routing so all link pages share the same LiffLinkLayout context
     {
         path: '/liff/link',
         element: (
             <Suspense fallback={<PageLoader />}>
-                <LiffLinkLayout>
-                    <LiffLinkPage />
-                </LiffLinkLayout>
+                <LiffLinkLayout />
             </Suspense>
         ),
         errorElement: <ErrorBoundary />,
-    },
-    {
-        path: '/liff/link/employee',
-        element: (
-            <Suspense fallback={<PageLoader />}>
-                <LiffLinkLayout>
-                    <LiffLinkEmployeePage />
-                </LiffLinkLayout>
-            </Suspense>
-        ),
-        errorElement: <ErrorBoundary />,
-    },
-    {
-        path: '/liff/link/credentials',
-        element: (
-            <Suspense fallback={<PageLoader />}>
-                <LiffLinkLayout>
-                    <LiffLinkCredentialsPage />
-                </LiffLinkLayout>
-            </Suspense>
-        ),
-        errorElement: <ErrorBoundary />,
+        children: [
+            {
+                index: true,
+                element: <LiffLinkPage />,
+            },
+            {
+                path: 'employee',
+                element: <LiffLinkEmployeePage />,
+            },
+            {
+                path: 'credentials',
+                element: <LiffLinkCredentialsPage />,
+            },
+        ],
     },
 
     // LIFF Email Login routes (outside LiffLayout to bypass LINE auth)
