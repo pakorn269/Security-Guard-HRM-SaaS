@@ -23,6 +23,7 @@ import { employeeService, type EmployeeWithUser, type ListEmployeesParams } from
 import EmployeeFormModal from './EmployeeFormModal';
 import LineMessageModal from './LineMessageModal';
 import PinResetRequestsPanel from '../../components/admin/PinResetRequestsPanel';
+import LinkRequestsPanel from '../../components/admin/LinkRequestsPanel';
 
 /**
  * Employees Page - Redesigned (Part 5.3)
@@ -324,6 +325,9 @@ export default function EmployeesPage() {
 
       {/* PIN Reset Requests Panel - Shows pending requests from guards */}
       <PinResetRequestsPanel />
+
+      {/* LINE Link Requests Panel */}
+      <LinkRequestsPanel />
 
       {/* Search and Filters */}
       <Card variant="bordered" padding="md" className="mobile-p-sm">

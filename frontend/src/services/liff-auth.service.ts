@@ -37,6 +37,24 @@ export interface LinkEmployeeData {
     companySlug: string;
 }
 
+// Auto-link employee request
+export interface AutoLinkEmployeeData {
+    idToken: string;
+    liffId: string;
+    employeeCode: string;
+    phone: string;
+    companySlug?: string;
+}
+
+export interface AutoLinkResult {
+    success: boolean;
+    data?: LoginResponse;
+    pendingApproval?: boolean;
+    requestId?: string;
+    message?: string;
+    requireCompanySlug?: boolean;
+}
+
 // Link credentials request (for managers/admins)
 export interface LinkCredentialsData {
     idToken: string;
@@ -95,6 +113,31 @@ export const liffAuthService = {
         }
 
         throw new Error(response.data.error?.message_th || response.data.error?.message || 'Failed to link employee');
+    },
+
+    /**
+     * Auto-link LINE account to employee via employee code + phone
+     * Smart matching without requiring company slug initially
+     */
+    async autoLinkEmployee(data: AutoLinkEmployeeData): Promise<AutoLinkResult> {
+        const response = await api.post<ApiResponse<AutoLinkResult>>(
+            `${AUTH_BASE}/line/auto-link`,
+            data
+        );
+
+        if (response.data.success && response.data.data) {
+            const result = response.data.data;
+
+            // If linked successfully, store tokens
+            if (result.success && result.data) {
+                const { tokens } = result.data;
+                setTokens(tokens.accessToken, tokens.refreshToken);
+            }
+
+            return result;
+        }
+
+        throw new Error(response.data.error?.message_th || response.data.error?.message || 'Failed to auto-link employee');
     },
 
     /**
