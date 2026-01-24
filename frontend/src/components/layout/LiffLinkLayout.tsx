@@ -506,13 +506,33 @@ function LiffLinkLayoutContent() {
                             )}
                         </div>
                     </div>
-                    <button
-                        onClick={retry}
-                        className="w-full inline-flex items-center justify-center gap-2 h-12 px-4 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white font-medium rounded-md transition-colors touch-target"
-                    >
-                        <RefreshCw size={18} />
-                        ลองใหม่อีกครั้ง
-                    </button>
+                    <div className="space-y-2">
+                        <button
+                            onClick={retry}
+                            className="w-full inline-flex items-center justify-center gap-2 h-12 px-4 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white font-medium rounded-md transition-colors touch-target"
+                        >
+                            <RefreshCw size={18} />
+                            ลองใหม่อีกครั้ง
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/line/verify`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ idToken: 'test', liffId: 'test' })
+                                    });
+                                    const data = await response.json();
+                                    alert(`Backend Response: ${JSON.stringify(data)}`);
+                                } catch (err) {
+                                    alert(`Fetch Error: ${err instanceof Error ? err.message : String(err)}`);
+                                }
+                            }}
+                            className="w-full text-xs h-10 px-3 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-medium rounded-md transition-colors"
+                        >
+                            Test Backend Connection
+                        </button>
+                    </div>
                 </div>
             </div>
         );
