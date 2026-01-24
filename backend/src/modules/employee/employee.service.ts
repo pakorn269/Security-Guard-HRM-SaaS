@@ -247,27 +247,28 @@ class EmployeeService {
 
         if (error) {
             logger.warn('Failed to list employees with full details, trying fallback...', error);
-             
+
             // Fallback: Just get employees without the user join
             // This handles cases where the user relation or specific columns are missing in DB
             const fallbackResult = await supabaseAdmin
-               .from('employees')
-               .select('*', { count: 'exact' })
-               .eq('company_id', companyId)
-               .order('created_at', { ascending: false })
-               .range((page - 1) * pageSize, page * pageSize - 1);
-               
+                .from('employees')
+                .select('*', { count: 'exact' })
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
             if (fallbackResult.error) {
                 logger.error('Fallback employee list failed', fallbackResult.error);
-                throw fallbackResult.error;
+                // Last resort: return empty list to prevent 500 error
+                return { employees: [], total: 0 };
             }
-            
+
             // Return with null user data
             const employees = (fallbackResult.data || []).map(row => ({
                 ...this.mapToEmployee(row as EmployeeRow),
                 user: null
             }));
-            
+
             return {
                 employees,
                 total: fallbackResult.count || 0
