@@ -78,6 +78,8 @@ interface LiffLinkProviderProps {
     children: ReactNode;
 }
 
+const LIFF_INIT_KEY = 'liff_link_initialized';
+
 export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
     const [state, setState] = useState<LiffLinkState>({
         status: 'initializing',
@@ -89,18 +91,53 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
     });
     const [debugError, setDebugError] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<string[]>([]); // Track initialization steps
-    const hasInitializedRef = useRef(false); // Use ref instead of state to persist across re-renders
+    const hasInitializedRef = useRef(false); // Use ref for re-renders within same page load
 
     const addDebugLog = (message: string) => {
         const timestamp = new Date().toISOString().split('T')[1].substring(0, 12);
         setDebugLogs(prev => [...prev.slice(-10), `[${timestamp}] ${message}`]); // Keep last 10 logs
     };
 
+    // Check if already initialized in this session (survives page reloads)
+    const isSessionInitialized = () => {
+        return sessionStorage.getItem(LIFF_INIT_KEY) === 'true';
+    };
+
+    const markSessionInitialized = () => {
+        sessionStorage.setItem(LIFF_INIT_KEY, 'true');
+    };
+
     const initializeLiff = useCallback(async () => {
-        // Prevent multiple initializations using ref
-        if (hasInitializedRef.current) {
-            console.log('[LiffLink] Already initialized, skipping');
-            addDebugLog('Already initialized, skipping');
+        // Prevent multiple initializations using ref (same page) and sessionStorage (across reloads)
+        if (hasInitializedRef.current || isSessionInitialized()) {
+            console.log('[LiffLink] Already initialized this session, skipping');
+            addDebugLog('Already initialized this session, skipping');
+
+            // Still need to check if user is linked and update state
+            const existingToken = getAccessToken();
+            if (existingToken) {
+                try {
+                    const response = await api.get('/auth/me');
+                    if (response.data?.success && response.data?.data) {
+                        setState(prev => ({
+                            ...prev,
+                            status: 'linked',
+                            user: response.data.data,
+                        }));
+                        return;
+                    }
+                } catch {
+                    // Token invalid, continue to show linking page
+                    clearTokens();
+                }
+            }
+
+            // User not linked yet, show linking page
+            setState(prev => ({
+                ...prev,
+                status: 'not_linked',
+                lineProfile: prev.lineProfile || null,
+            }));
             return;
         }
 
@@ -108,6 +145,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             console.log('[LiffLink] Starting initialization...');
             addDebugLog('Starting initialization...');
             hasInitializedRef.current = true;
+            markSessionInitialized();
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
             // Check for existing JWT token first
@@ -392,10 +430,11 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
     }, [state.idToken, state.liffId]);
 
-    // Retry - reset the initialization flag to allow re-initialization
+    // Retry - reset the initialization flags to allow re-initialization
     const retry = useCallback(() => {
-        console.log('[LiffLink] Retry requested, resetting initialization flag');
+        console.log('[LiffLink] Retry requested, resetting initialization flags');
         hasInitializedRef.current = false;
+        sessionStorage.removeItem(LIFF_INIT_KEY);
         initializeLiff();
     }, [initializeLiff]);
 
