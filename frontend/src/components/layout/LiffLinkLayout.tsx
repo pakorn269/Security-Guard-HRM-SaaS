@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { getCurrentLiffId } from '../../hooks/useLiff';
@@ -394,19 +395,15 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 // Layout Component
 // ============================================================
 
-interface LiffLinkLayoutProps {
-    children: ReactNode;
-}
-
-export default function LiffLinkLayout({ children }: LiffLinkLayoutProps) {
+export default function LiffLinkLayout() {
     return (
         <LiffLinkProvider>
-            <LiffLinkLayoutContent>{children}</LiffLinkLayoutContent>
+            <LiffLinkLayoutContent />
         </LiffLinkProvider>
     );
 }
 
-function LiffLinkLayoutContent({ children }: { children: ReactNode }) {
+function LiffLinkLayoutContent() {
     const { status, error, retry, isLoading, needsLogin, loginWithLine } = useLiffLink();
 
     // Loading state
@@ -488,10 +485,10 @@ function LiffLinkLayoutContent({ children }: { children: ReactNode }) {
         );
     }
 
-    // Render children (the actual linking pages)
+    // Render child routes via Outlet (the actual linking pages)
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-            {children}
+            <Outlet />
         </div>
     );
 }
