@@ -2,7 +2,18 @@
  * Debug page to inspect environment variables
  * Temporarily showing in all modes for debugging
  */
+import { useEffect, useState } from 'react';
+import api from '../../services/api';
+
+/**
+ * Debug page to inspect environment variables and db schema
+ * Temporarily showing in all modes for debugging
+ */
 export default function DebugEnvPage() {
+    const [schemaStatus, setSchemaStatus] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const envVars = {
         MODE: import.meta.env.MODE,
         DEV: import.meta.env.DEV,
@@ -23,15 +34,80 @@ export default function DebugEnvPage() {
         VITE_APP_NAME: import.meta.env.VITE_APP_NAME || '(not set)',
     };
 
+    useEffect(() => {
+        const fetchSchema = async () => {
+            setLoading(true);
+            try {
+                // Fetch schema info manually since it's a new endpoint not in typed client yet
+                const response = await api.get('/health/schema');
+                if (response.data.success) {
+                    setSchemaStatus(response.data.data);
+                } else {
+                    setError('Failed to fetch schema: ' + response.data.error?.message);
+                }
+            } catch (err: any) {
+                setError('Error fetching schema: ' + (err.message || 'Unknown error'));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSchema();
+    }, []);
+
     return (
-        <div className="p-8 max-w-2xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Frontend Debug Environment</h1>
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
-                <pre className="text-sm overflow-auto">
-                    {JSON.stringify(envVars, null, 2)}
-                </pre>
-            </div>
-            <p className="mt-4 text-sm text-gray-500">
+        <div className="p-8 max-w-4xl mx-auto space-y-8">
+            <section>
+                <h1 className="text-2xl font-bold mb-4">Frontend Environment</h1>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+                    <pre className="text-sm overflow-auto">
+                        {JSON.stringify(envVars, null, 2)}
+                    </pre>
+                </div>
+            </section>
+
+            <section>
+                <h2 className="text-xl font-bold mb-4">Backend Schema Health</h2>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+                    {loading && <p>Loading schema status...</p>}
+                    {error && <p className="text-red-500">{error}</p>}
+                    {schemaStatus && (
+                        <div className="space-y-4">
+                            {Object.entries(schemaStatus).map(([table, info]: [string, any]) => (
+                                <div key={table} className="border-b pb-4 last:border-0">
+                                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                                        {table}
+                                        {info.exists ? (
+                                            <span className="text-green-500 text-sm bg-green-100 px-2 py-0.5 rounded">Exists</span>
+                                        ) : (
+                                            <span className="text-red-500 text-sm bg-red-100 px-2 py-0.5 rounded">Missing</span>
+                                        )}
+                                    </h3>
+
+                                    {!info.exists && (
+                                        <p className="text-red-500 text-sm mt-1">{info.error}</p>
+                                    )}
+
+                                    {info.exists && info.columns && (
+                                        <div className="mt-2 grid grid-cols-2 gap-2">
+                                            {Object.entries(info.columns).map(([col, exists]: [string, any]) => (
+                                                <div key={col} className="flex items-center gap-2 text-sm">
+                                                    <div className={`w-2 h-2 rounded-full ${exists ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                    <span className={exists ? 'text-gray-700 dark:text-gray-300' : 'text-red-600 font-medium'}>
+                                                        {col}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            <p className="text-sm text-gray-500">
                 Build time: {new Date().toISOString()}
             </p>
         </div>

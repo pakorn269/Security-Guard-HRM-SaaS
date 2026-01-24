@@ -25,7 +25,7 @@ router.get('/db', async (_req: Request, res: Response) => {
     }
 
     // Check if tables exist
-        const { error: tablesError } = await supabaseAdmin
+    const { error: tablesError } = await supabaseAdmin
       .from('companies')
       .select('id')
       .limit(1);
@@ -125,6 +125,66 @@ router.get('/storage', async (_req: Request, res: Response) => {
   } catch (error) {
     logger.error('Storage health check failed', error);
     return sendError(res, 'STORAGE_HEALTH_CHECK_FAILED', 'Storage health check failed', 500);
+  }
+});
+
+
+/**
+ * @route   GET /api/v1/health/schema
+ * @desc    Check for specific columns in key tables
+ * @access  Public
+ */
+router.get('/schema', async (_req: Request, res: Response) => {
+  try {
+    // We can't easily query information_schema with supabase-js directly without RPC
+    // So we'll try to select specific columns and catch errors
+
+    const checkColumns = {
+      users: [
+        'pin_set_at',
+        'pin_locked_until',
+        'pin_attempts',
+        'line_user_id',
+        'line_linked_at',
+        'reset_code_hash'
+      ],
+      employees: [
+        'user_id',
+        'line_user_id'
+      ],
+      line_link_requests: [
+        'id' // Just check if table exists
+      ],
+      pin_reset_requests: [
+        'id' // Just check if table exists
+      ]
+    };
+
+    const results: Record<string, any> = {};
+
+    for (const [table, columns] of Object.entries(checkColumns)) {
+      const tableResults: Record<string, boolean> = {};
+
+      // Check table existence first
+      const { error: tableError } = await supabaseAdmin.from(table).select('id').limit(1);
+      if (tableError) {
+        results[table] = { exists: false, error: tableError.message };
+        continue;
+      }
+
+      results[table] = { exists: true, columns: {} };
+
+      // Check each column
+      for (const col of columns) {
+        const { error } = await supabaseAdmin.from(table).select(col).limit(1);
+        results[table].columns[col] = !error;
+      }
+    }
+
+    return sendSuccess(res, results);
+  } catch (error) {
+    logger.error('Schema check failed', error);
+    return sendError(res, 'SCHEMA_CHECK_FAILED', 'Schema check failed', 500);
   }
 });
 
