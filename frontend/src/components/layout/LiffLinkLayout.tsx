@@ -79,6 +79,7 @@ interface LiffLinkProviderProps {
 }
 
 const LIFF_INIT_KEY = 'liff_link_initialized';
+const LIFF_PROFILE_KEY = 'liff_line_profile';
 
 export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
     const [state, setState] = useState<LiffLinkState>({
@@ -107,6 +108,27 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         sessionStorage.setItem(LIFF_INIT_KEY, 'true');
     };
 
+    // Store LINE profile to sessionStorage
+    const saveLineProfile = (profile: LineProfile) => {
+        sessionStorage.setItem(LIFF_PROFILE_KEY, JSON.stringify(profile));
+    };
+
+    // Retrieve LINE profile from sessionStorage
+    const getStoredLineProfile = (): LineProfile | null => {
+        const stored = sessionStorage.getItem(LIFF_PROFILE_KEY);
+        if (!stored) return null;
+        try {
+            return JSON.parse(stored) as LineProfile;
+        } catch {
+            return null;
+        }
+    };
+
+    // Clear LINE profile from sessionStorage
+    const clearLineProfile = () => {
+        sessionStorage.removeItem(LIFF_PROFILE_KEY);
+    };
+
     const initializeLiff = useCallback(async () => {
         // Prevent multiple initializations using ref (same page) and sessionStorage (across reloads)
         if (hasInitializedRef.current || isSessionInitialized()) {
@@ -133,10 +155,12 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             }
 
             // User not linked yet, show linking page
+            // Try to restore LINE profile from sessionStorage
+            const storedProfile = getStoredLineProfile();
             setState(prev => ({
                 ...prev,
                 status: 'not_linked',
-                lineProfile: prev.lineProfile || null,
+                lineProfile: storedProfile || prev.lineProfile || null,
             }));
             return;
         }
@@ -220,6 +244,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
                     if (verifyResult.isLinked) {
                         console.log('[LiffLink] User is linked:', verifyResult.user.id);
+                        clearLineProfile(); // Clear stored profile when linked
                         setState(prev => ({
                             ...prev,
                             status: 'linked',
@@ -227,6 +252,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         }));
                     } else {
                         console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
+                        saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
                         setState(prev => ({
                             ...prev,
                             status: 'not_linked',
@@ -274,6 +300,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
             if (verifyResult.isLinked) {
                 console.log('[LiffLink] User is linked:', verifyResult.user.id);
+                clearLineProfile(); // Clear stored profile when linked
                 setState(prev => ({
                     ...prev,
                     status: 'linked',
@@ -281,6 +308,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 }));
             } else {
                 console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
+                saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
                 setState(prev => ({
                     ...prev,
                     status: 'not_linked',
@@ -334,6 +362,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 companySlug,
             });
 
+            clearLineProfile(); // Clear stored profile after successful linking
             setState(prev => ({
                 ...prev,
                 status: 'linked',
@@ -375,6 +404,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
             if (result.success && result.data) {
                 // Linked successfully
+                clearLineProfile(); // Clear stored profile after successful linking
                 setState(prev => ({
                     ...prev,
                     status: 'linked',
@@ -415,6 +445,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 password,
             });
 
+            clearLineProfile(); // Clear stored profile after successful linking
             setState(prev => ({
                 ...prev,
                 status: 'linked',
@@ -435,6 +466,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         console.log('[LiffLink] Retry requested, resetting initialization flags');
         hasInitializedRef.current = false;
         sessionStorage.removeItem(LIFF_INIT_KEY);
+        clearLineProfile(); // Also clear stored profile on retry
         initializeLiff();
     }, [initializeLiff]);
 
