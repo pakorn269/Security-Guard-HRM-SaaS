@@ -123,7 +123,7 @@ apiRouter.use('/health', healthRoutes);
 
 // Sprint 1: Authentication & Company Setup
 apiRouter.use('/auth', authRoutes);
-apiRouter.use('/link-requests', linkRequestsRoutes);
+apiRouter.use('/auth/link-requests', linkRequestsRoutes);
 apiRouter.use('/companies', companyRoutes);
 
 // Sprint 2: Employee Management
