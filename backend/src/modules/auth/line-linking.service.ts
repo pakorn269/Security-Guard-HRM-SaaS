@@ -87,75 +87,44 @@ export class LineLinkingService {
                 throw new NotFoundError('Company not found', 'ไม่พบข้อมูลบริษัท');
             }
             company = comp;
-            logger.info('Company found', { companyId: company.id, slug: companySlug });
 
             // Search in this company
-            // Try exact match first (employee_code + phone)
-            logger.info('Searching for employee', {
-                companyId: company.id,
-                employeeCode,
-                normalizedPhone,
-                searchType: 'exact'
-            });
-
-            const { data: exactMatch, error: exactError } = await supabaseAdmin
+            // Try exact match first
+            const { data: exactMatch } = await supabaseAdmin
                 .from('employees')
-                .select('*, users:user_id(*)')
+                .select('*, users!employees_user_id_fkey(*)')
                 .eq('company_id', company.id)
                 .eq('employee_code', employeeCode)
                 .eq('phone', normalizedPhone)
                 .single();
 
-            if (exactError) {
-                logger.info('Exact match search result', { found: false, error: exactError.code });
-            }
-
             if (exactMatch) {
                 employee = exactMatch;
                 matchType = 'exact';
-                logger.info('Exact match found', { employeeId: employee.id });
             } else {
                 // Try Phone match
-                logger.info('Trying phone-only match', { normalizedPhone });
-                const { data: phoneMatch, error: phoneError } = await supabaseAdmin
+                const { data: phoneMatch } = await supabaseAdmin
                     .from('employees')
-                    .select('*, users:user_id(*)')
+                    .select('*, users!employees_user_id_fkey(*)')
                     .eq('company_id', company.id)
                     .eq('phone', normalizedPhone)
                     .single();
 
-                if (phoneError) {
-                    logger.info('Phone match search result', { found: false, error: phoneError.code });
-                }
-
                 if (phoneMatch) {
                     employee = phoneMatch;
                     matchType = 'phone_only';
-                    logger.info('Phone match found', { employeeId: employee.id, employeeCode: employee.employee_code });
                 } else {
                     // Try Code match
-                    logger.info('Trying code-only match', { employeeCode });
-                    const { data: codeMatch, error: codeError } = await supabaseAdmin
+                    const { data: codeMatch } = await supabaseAdmin
                         .from('employees')
-                        .select('*, users:user_id(*)')
+                        .select('*, users!employees_user_id_fkey(*)')
                         .eq('company_id', company.id)
                         .eq('employee_code', employeeCode)
                         .single();
 
-                    if (codeError) {
-                        logger.info('Code match search result', { found: false, error: codeError.code });
-                    }
-
                     if (codeMatch) {
                         employee = codeMatch;
                         matchType = 'code_only';
-                        logger.info('Code match found', { employeeId: employee.id, phone: employee.phone });
-                    } else {
-                        logger.info('No employee match found in company', {
-                            companyId: company.id,
-                            employeeCode,
-                            normalizedPhone
-                        });
                     }
                 }
             }
@@ -164,7 +133,7 @@ export class LineLinkingService {
             // Try Exact Match (Code + Phone)
             const { data: exactMatches } = await supabaseAdmin
                 .from('employees')
-                .select('*, users:user_id(*)')
+                .select('*, users!employees_user_id_fkey(*)')
                 .eq('employee_code', employeeCode)
                 .eq('phone', normalizedPhone);
 
@@ -183,7 +152,7 @@ export class LineLinkingService {
                 // Try Phone Match (Unique Phone assumption)
                 const { data: phoneMatches } = await supabaseAdmin
                     .from('employees')
-                    .select('*, users:user_id(*)')
+                    .select('*, users!employees_user_id_fkey(*)')
                     .eq('phone', normalizedPhone);
 
                 if (phoneMatches && phoneMatches.length === 1) {
@@ -200,7 +169,7 @@ export class LineLinkingService {
                     // Try Code Match
                     const { data: codeMatches } = await supabaseAdmin
                         .from('employees')
-                        .select('*, users:user_id(*)')
+                        .select('*, users!employees_user_id_fkey(*)')
                         .eq('employee_code', employeeCode);
 
                     if (codeMatches && codeMatches.length === 1) {
