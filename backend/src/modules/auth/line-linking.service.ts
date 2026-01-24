@@ -100,7 +100,7 @@ export class LineLinkingService {
 
             const { data: exactMatch, error: exactError } = await supabaseAdmin
                 .from('employees')
-                .select('*, users!employees_user_id_fkey(*)')
+                .select('*, users:user_id(*)')
                 .eq('company_id', company.id)
                 .eq('employee_code', employeeCode)
                 .eq('phone', normalizedPhone)
@@ -119,7 +119,7 @@ export class LineLinkingService {
                 logger.info('Trying phone-only match', { normalizedPhone });
                 const { data: phoneMatch, error: phoneError } = await supabaseAdmin
                     .from('employees')
-                    .select('*, users!employees_user_id_fkey(*)')
+                    .select('*, users:user_id(*)')
                     .eq('company_id', company.id)
                     .eq('phone', normalizedPhone)
                     .single();
@@ -137,7 +137,7 @@ export class LineLinkingService {
                     logger.info('Trying code-only match', { employeeCode });
                     const { data: codeMatch, error: codeError } = await supabaseAdmin
                         .from('employees')
-                        .select('*, users!employees_user_id_fkey(*)')
+                        .select('*, users:user_id(*)')
                         .eq('company_id', company.id)
                         .eq('employee_code', employeeCode)
                         .single();
@@ -164,7 +164,7 @@ export class LineLinkingService {
             // Try Exact Match (Code + Phone)
             const { data: exactMatches } = await supabaseAdmin
                 .from('employees')
-                .select('*, users!employees_user_id_fkey(*)')
+                .select('*, users:user_id(*)')
                 .eq('employee_code', employeeCode)
                 .eq('phone', normalizedPhone);
 
@@ -183,7 +183,7 @@ export class LineLinkingService {
                 // Try Phone Match (Unique Phone assumption)
                 const { data: phoneMatches } = await supabaseAdmin
                     .from('employees')
-                    .select('*, users!employees_user_id_fkey(*)')
+                    .select('*, users:user_id(*)')
                     .eq('phone', normalizedPhone);
 
                 if (phoneMatches && phoneMatches.length === 1) {
@@ -200,7 +200,7 @@ export class LineLinkingService {
                     // Try Code Match
                     const { data: codeMatches } = await supabaseAdmin
                         .from('employees')
-                        .select('*, users!employees_user_id_fkey(*)')
+                        .select('*, users:user_id(*)')
                         .eq('employee_code', employeeCode);
 
                     if (codeMatches && codeMatches.length === 1) {
