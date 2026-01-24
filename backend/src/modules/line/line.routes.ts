@@ -1,10 +1,16 @@
 import { Router } from 'express';
 import { lineController } from './line.controller.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
+import lineLinkRoutes from './line-link.routes.js';
 
 const router = Router();
 
-// All routes require authentication
+// ============================================================
+// LINE LINK MANAGEMENT ROUTES (includes public /login route)
+// ============================================================
+router.use(lineLinkRoutes);
+
+// All routes below require authentication
 router.use(authMiddleware);
 
 // ============================================================
