@@ -25,9 +25,8 @@ export class LinkRequestsService {
             .order('created_at', { ascending: false });
 
         if (error) {
-            // Gracefully handle missing table
-            logger.warn('Failed to list link requests (table might be missing), returning empty list', error);
-            return [];
+            logger.error('Failed to list link requests', error);
+            throw new Error('Failed to list link requests');
         }
 
         return data;

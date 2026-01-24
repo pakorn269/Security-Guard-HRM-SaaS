@@ -27,7 +27,7 @@ export const linkRequestsService = {
      * List pending link requests
      */
     async listPending(): Promise<LinkRequest[]> {
-        const response = await api.get<ApiResponse<LinkRequest[]>>('/auth/link-requests');
+        const response = await api.get<ApiResponse<LinkRequest[]>>('/link-requests');
         if (response.data.success && response.data.data) {
             return response.data.data;
         }
@@ -38,7 +38,7 @@ export const linkRequestsService = {
      * Approve a link request
      */
     async approve(id: string): Promise<void> {
-        const response = await api.post<ApiResponse<void>>(`/auth/link-requests/${id}/approve`);
+        const response = await api.post<ApiResponse<void>>(`/link-requests/${id}/approve`);
         if (!response.data.success) {
             throw new Error(response.data.error?.message || 'Failed to approve request');
         }
@@ -48,7 +48,7 @@ export const linkRequestsService = {
      * Reject a link request
      */
     async reject(id: string, notes?: string): Promise<void> {
-        const response = await api.post<ApiResponse<void>>(`/auth/link-requests/${id}/reject`, { notes });
+        const response = await api.post<ApiResponse<void>>(`/link-requests/${id}/reject`, { notes });
         if (!response.data.success) {
             throw new Error(response.data.error?.message || 'Failed to reject request');
         }

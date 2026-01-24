@@ -71,23 +71,8 @@ export default function LiffLinkEmployeePage() {
             } else if (result.pendingApproval) {
                 setPendingApproval(true);
             } else if (result.requireCompanySlug) {
-                // If company slug was already provided but still got this error,
-                // it means no employee was found - show error message
-                if (requireCompanySlug) {
-                    setFormErrors(prev => ({
-                        ...prev,
-                        companySlug: result.message || 'ไม่พบข้อมูลพนักงาน กรุณาตรวจสอบข้อมูลอีกครั้ง'
-                    }));
-                } else {
-                    // First time - show company slug field
-                    setRequireCompanySlug(true);
-                }
-            } else if (!result.success && result.message) {
-                // Generic error from API
-                setFormErrors(prev => ({
-                    ...prev,
-                    employeeCode: result.message || 'เกิดข้อผิดพลาด'
-                }));
+                setRequireCompanySlug(true);
+                // Maybe focus on company slug input?
             }
         } finally {
             setIsSubmitting(false);

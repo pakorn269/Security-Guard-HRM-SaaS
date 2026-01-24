@@ -125,70 +125,50 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         sessionStorage.removeItem(LIFF_PROFILE_KEY);
     };
 
+    // Use ref to prevent double initialization in React Strict Mode or fast remounts
+    const initRef = useRef(false);
+
     const initializeLiff = useCallback(async () => {
-        // Prevent multiple initializations within the same component lifecycle
-        if (hasInitializedRef.current) {
-            console.log('[LiffLink] Already initializing, skipping');
-            return;
-        }
-        hasInitializedRef.current = true;
-
-        // ============================================================
-        // STEP 1: Check for existing JWT token first (user might already be linked)
-        // ============================================================
-        const existingToken = getAccessToken();
-        if (existingToken) {
-            console.log('[LiffLink] Found existing JWT token, checking if linked...');
-            addDebugLog('Found JWT token, verifying...');
-            try {
-                const response = await api.get('/auth/me');
-                if (response.data?.success && response.data?.data) {
-                    const user = response.data.data;
-                    if (user.lineUserId) {
-                        // User is already linked - redirect to clock page
-                        console.log('[LiffLink] User already linked, redirecting...');
-                        addDebugLog('User linked, redirecting to /liff/clock');
-                        setState(prev => ({
-                            ...prev,
-                            status: 'linked',
-                            user: user,
-                        }));
-                        return;
-                    }
-                    // User has token but no LINE linked - unusual state, clear and continue
-                    console.log('[LiffLink] User has token but no LINE linked, clearing...');
-                }
-            } catch {
-                console.log('[LiffLink] JWT token invalid, clearing...');
-                addDebugLog('JWT invalid, clearing');
-            }
-            clearTokens();
-        }
-
-        // ============================================================
-        // STEP 2: Try to restore LINE profile from sessionStorage
-        // ============================================================
-        const storedProfile = getStoredLineProfile();
-        if (storedProfile) {
-            console.log('[LiffLink] Restored LINE profile from storage:', storedProfile.displayName);
-            addDebugLog(`Restored profile: ${storedProfile.displayName}`);
-            setState(prev => ({
-                ...prev,
-                status: 'not_linked',
-                lineProfile: storedProfile,
-            }));
-            return;
-        }
-
-        // ============================================================
-        // STEP 3: No token and no stored profile - initialize LIFF SDK
-        // ============================================================
-        console.log('[LiffLink] Starting LIFF initialization...');
-        addDebugLog('Starting LIFF initialization...');
-        setState(prev => ({ ...prev, status: 'initializing', error: null }));
+        if (initRef.current) return;
+        initRef.current = true;
 
         try {
-            // Check if LIFF SDK is already initialized (e.g., from LiffLayout navigation)
+            setState(prev => ({ ...prev, status: 'initializing', error: null }));
+
+            // ============================================================
+            // STEP 1: Check for existing JWT token first (user might already be linked)
+            // ============================================================
+            const existingToken = getAccessToken();
+            if (existingToken) {
+                console.log('[LiffLink] Found existing JWT token, checking if linked...');
+                addDebugLog('Found JWT token, verifying...');
+                try {
+                    const response = await api.get('/auth/me');
+                    if (response.data?.success && response.data?.data) {
+                        const user = response.data.data;
+                        if (user.lineUserId) {
+                            // User is already linked - redirect to clock page
+                            console.log('[LiffLink] User already linked, redirecting...');
+                            addDebugLog('User linked, redirecting to /liff/clock');
+                            setState(prev => ({
+                                ...prev,
+                                status: 'linked',
+                                user: user,
+                            }));
+                            return;
+                        }
+                        // User has token but no LINE linked - unusual state, clear and continue
+                        console.log('[LiffLink] User has token but no LINE linked, clearing...');
+                    }
+                } catch {
+                    console.log('[LiffLink] JWT token invalid, clearing...');
+                    addDebugLog('JWT invalid, clearing');
+                }
+                clearTokens();
+            }
+
+            // Initialize LIFF SDK
+            // Check if already initialized to avoid re-init error
             let liffId = liff.id;
             const isAlreadyInitialized = !!liffId;
 
@@ -201,9 +181,17 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     throw new Error('LIFF ID not configured');
                 }
 
-                await liff.init({ liffId });
-                console.log('[LiffLink] LIFF initialized');
-                addDebugLog('LIFF SDK initialized');
+                try {
+                    await liff.init({ liffId });
+                    console.log('[LiffLink] LIFF initialized');
+                } catch (initError: any) {
+                    // Ignore "LIFF is already initialized" error
+                    if (initError.code === 'ALREADY_INITIALIZED') {
+                        console.log('[LiffLink] LIFF was already initialized (caught error)');
+                    } else {
+                        throw initError;
+                    }
+                }
             } else {
                 console.log('[LiffLink] LIFF already initialized with ID:', liffId);
                 addDebugLog(`LIFF already init: ${liffId}`);
@@ -237,7 +225,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     if (verifyResult.isLinked) {
                         console.log('[LiffLink] User is linked:', verifyResult.user.id);
                         clearLineProfile(); // Clear stored profile when linked
-                                                markSessionInitialized(); // Mark as initialized now that we have user data
+                        markSessionInitialized(); // Mark as initialized now that we have user data
                         setState(prev => ({
                             ...prev,
                             status: 'linked',
@@ -247,7 +235,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                         console.log('[LiffLink] Saving profile to sessionStorage:', verifyResult.lineProfile);
                         saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
-                                                markSessionInitialized(); // Mark as initialized now that we have profile
+                        markSessionInitialized(); // Mark as initialized now that we have profile
                         addDebugLog(`Saved profile: ${verifyResult.lineProfile.displayName}`);
                         setState(prev => ({
                             ...prev,
@@ -297,7 +285,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             if (verifyResult.isLinked) {
                 console.log('[LiffLink] User is linked:', verifyResult.user.id);
                 clearLineProfile(); // Clear stored profile when linked
-                                markSessionInitialized(); // Mark as initialized now that we have user data
+                markSessionInitialized(); // Mark as initialized now that we have user data
                 setState(prev => ({
                     ...prev,
                     status: 'linked',
@@ -306,7 +294,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             } else {
                 console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                 saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
-                                markSessionInitialized(); // Mark as initialized now that we have profile
+                markSessionInitialized(); // Mark as initialized now that we have profile
                 setState(prev => ({
                     ...prev,
                     status: 'not_linked',
@@ -388,9 +376,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
 
         try {
-            // Clear any previous error, but DON'T change status to 'verifying'
-            // because that would cause isLoading=true and unmount the child page
-            setState(prev => ({ ...prev, error: null }));
+            setState(prev => ({ ...prev, status: 'verifying', error: null }));
 
             const result = await liffAuthService.autoLinkEmployee({
                 idToken: state.idToken,
@@ -402,23 +388,28 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
             if (result.success && result.data) {
                 // Linked successfully
-                clearLineProfile(); // Clear stored profile after successful linking
                 setState(prev => ({
                     ...prev,
                     status: 'linked',
                     user: result.data!.user,
                 }));
+            } else {
+                // Pending approval or require company slug or other cases
+                // We return the result so the page can handle UI
+                setState(prev => ({
+                    ...prev,
+                    status: 'not_linked',
+                    error: null // Clear error as we handle it in UI
+                }));
             }
-            // For other cases (pendingApproval, requireCompanySlug, etc.)
-            // we just return the result and let the child page handle the UI
             return result;
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้';
             setState(prev => ({
                 ...prev,
-                error: errorMessage,
+                status: 'not_linked',
+                error: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
             }));
-            return { success: false, message: errorMessage };
+            return { success: false, message: err instanceof Error ? err.message : 'Unknown error' };
         }
     }, [state.idToken, state.liffId]);
 
@@ -461,10 +452,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
     // Retry - reset the initialization flags to allow re-initialization
     const retry = useCallback(() => {
-        console.log('[LiffLink] Retry requested, resetting initialization flags');
-        hasInitializedRef.current = false;
-        sessionStorage.removeItem(LIFF_INIT_KEY);
-        clearLineProfile(); // Also clear stored profile on retry
+        initRef.current = false; // Allow re-initialization
         initializeLiff();
     }, [initializeLiff]);
 
