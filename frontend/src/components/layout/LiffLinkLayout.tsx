@@ -157,6 +157,8 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             // User not linked yet, show linking page
             // Try to restore LINE profile from sessionStorage
             const storedProfile = getStoredLineProfile();
+            console.log('[LiffLink] Restoring from storage, storedProfile:', storedProfile);
+            addDebugLog(`Stored profile: ${storedProfile ? storedProfile.displayName : 'null'}`);
             setState(prev => ({
                 ...prev,
                 status: 'not_linked',
@@ -252,7 +254,9 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         }));
                     } else {
                         console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
+                        console.log('[LiffLink] Saving profile to sessionStorage:', verifyResult.lineProfile);
                         saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
+                        addDebugLog(`Saved profile: ${verifyResult.lineProfile.displayName}`);
                         setState(prev => ({
                             ...prev,
                             status: 'not_linked',

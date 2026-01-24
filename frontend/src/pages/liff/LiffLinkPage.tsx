@@ -127,6 +127,16 @@ export default function LiffLinkPage() {
                     </button>
                 </div>
 
+                {/* Debug info */}
+                <div className="mt-6 p-3 bg-neutral-100 dark:bg-neutral-800 rounded text-left">
+                    <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+                        Debug - LINE Profile:
+                    </p>
+                    <pre className="text-xs font-mono text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap break-all">
+                        {JSON.stringify(lineProfile, null, 2) || 'null'}
+                    </pre>
+                </div>
+
                 {/* Help text */}
                 <div className="mt-8 text-center">
                     <p className="text-xs text-neutral-400 dark:text-neutral-500">
