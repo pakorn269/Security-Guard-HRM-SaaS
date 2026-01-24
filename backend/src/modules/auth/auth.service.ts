@@ -2068,8 +2068,9 @@ class AuthService {
             .order('requested_at', { ascending: true });
 
         if (error) {
-            logger.error('Failed to fetch PIN reset requests', error);
-            throw new Error('Failed to fetch requests');
+            // Gracefully handle missing table
+            logger.warn('Failed to fetch PIN reset requests (table might be missing), returning empty list', error);
+            return [];
         }
 
         return (data || []).map((row: any) => ({

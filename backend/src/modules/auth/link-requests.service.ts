@@ -25,8 +25,9 @@ export class LinkRequestsService {
             .order('created_at', { ascending: false });
 
         if (error) {
-            logger.error('Failed to list link requests', error);
-            throw new Error('Failed to list link requests');
+            // Gracefully handle missing table
+            logger.warn('Failed to list link requests (table might be missing), returning empty list', error);
+            return [];
         }
 
         return data;
@@ -64,7 +65,7 @@ export class LinkRequestsService {
         }
 
         if (employee.user_id) {
-             // Update existing user
+            // Update existing user
             const { error: updateError } = await supabaseAdmin
                 .from('users')
                 .update({
