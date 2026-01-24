@@ -15,6 +15,11 @@ export default function DebugEnvPage() {
             ? import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 20) + '...'
             : '(not set)',
         VITE_LIFF_ID: import.meta.env.VITE_LIFF_ID || '(not set)',
+        VITE_LIFF_LINK_ID: import.meta.env.VITE_LIFF_LINK_ID || '(not set)',
+        VITE_LIFF_CLOCK_ID: import.meta.env.VITE_LIFF_CLOCK_ID || '(not set)',
+        VITE_LIFF_SCHEDULE_ID: import.meta.env.VITE_LIFF_SCHEDULE_ID || '(not set)',
+        VITE_LIFF_LEAVE_ID: import.meta.env.VITE_LIFF_LEAVE_ID || '(not set)',
+        VITE_LIFF_PROFILE_ID: import.meta.env.VITE_LIFF_PROFILE_ID || '(not set)',
         VITE_APP_NAME: import.meta.env.VITE_APP_NAME || '(not set)',
     };
 
