@@ -77,23 +77,36 @@ export const liffAuthService = {
      * Returns user data + tokens if linked, or LINE profile if not linked
      */
     async verifyLineToken(idToken: string, liffId: string): Promise<LineVerifyResponse> {
-        const response = await api.post<ApiResponse<LineVerifyResponse>>(
-            `${AUTH_BASE}/line/verify`,
-            { idToken, liffId }
-        );
+        // Use fetch() instead of axios in LIFF context to avoid axios issues in LINE app
+        // axios has problems with LIFF SDK interceptors in some cases
+        try {
+            const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+            const response = await fetch(`${baseURL}${AUTH_BASE}/line/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ idToken, liffId }),
+            });
 
-        if (response.data.success && response.data.data) {
-            const data = response.data.data;
+            const data: ApiResponse<LineVerifyResponse> = await response.json();
 
-            // If linked, store tokens
-            if (data.isLinked && data.tokens) {
-                setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+            if (data.success && data.data) {
+                const result = data.data;
+
+                // If linked, store tokens
+                if (result.isLinked && result.tokens) {
+                    setTokens(result.tokens.accessToken, result.tokens.refreshToken);
+                }
+
+                return result;
             }
 
-            return data;
+            throw new Error(data.error?.message || 'Failed to verify LINE token');
+        } catch (error) {
+            console.error('[liffAuthService] Error verifying LINE token:', error);
+            throw error instanceof Error ? error : new Error('Failed to verify LINE token');
         }
-
-        throw new Error(response.data.error?.message || 'Failed to verify LINE token');
     },
 
     /**
