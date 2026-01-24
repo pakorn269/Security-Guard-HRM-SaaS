@@ -159,12 +159,23 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             const storedProfile = getStoredLineProfile();
             console.log('[LiffLink] Restoring from storage, storedProfile:', storedProfile);
             addDebugLog(`Stored profile: ${storedProfile ? storedProfile.displayName : 'null'}`);
-            setState(prev => ({
-                ...prev,
-                status: 'not_linked',
-                lineProfile: storedProfile || prev.lineProfile || null,
-            }));
-            return;
+
+            // If no stored profile, we need to re-fetch it from LINE
+            if (!storedProfile) {
+                console.log('[LiffLink] No stored profile, need to re-initialize to fetch profile');
+                addDebugLog('No stored profile, re-initializing...');
+                // Clear the session flag so we can re-initialize
+                sessionStorage.removeItem(LIFF_INIT_KEY);
+                hasInitializedRef.current = false;
+                // Don't return - fall through to full initialization
+            } else {
+                setState(prev => ({
+                    ...prev,
+                    status: 'not_linked',
+                    lineProfile: storedProfile,
+                }));
+                return;
+            }
         }
 
         try {
