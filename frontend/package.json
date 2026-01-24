@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "optionalDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "4.1.18",
-    "@tailwindcss/oxide-linux-x64-musl": "4.1.18",
+    "@esbuild/linux-x64": "0.27.2",
     "@rollup/rollup-linux-x64-gnu": "4.56.0",
     "@rollup/rollup-linux-x64-musl": "4.56.0",
-    "@esbuild/linux-x64": "0.27.2",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.1.18",
+    "@tailwindcss/oxide-linux-x64-musl": "4.1.18",
     "lightningcss-linux-x64-gnu": "^1.29.0",
     "lightningcss-linux-x64-musl": "^1.29.0"
   },
@@ -29,6 +29,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
     "@line/liff": "^2.27.3",
+    "@sentry/react": "^10.36.0",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
     "i18next": "^25.7.4",

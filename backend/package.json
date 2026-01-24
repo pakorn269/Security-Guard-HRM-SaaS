@@ -27,6 +27,7 @@
   "license": "ISC",
   "dependencies": {
     "@line/bot-sdk": "^9.8.0",
+    "@sentry/node": "^10.36.0",
     "@supabase/supabase-js": "^2.49.1",
     "@types/node-cron": "^3.0.11",
     "axios": "^1.7.9",

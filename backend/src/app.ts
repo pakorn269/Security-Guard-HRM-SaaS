@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import * as Sentry from '@sentry/node';
 
 import { env } from './config/env.js';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware.js';
@@ -183,6 +184,9 @@ apiRouter.get('/', (_req, res) => {
 
 // 404 handler
 app.use(notFoundMiddleware);
+
+// Sentry error handler (must be before your own error handler)
+Sentry.setupExpressErrorHandler(app);
 
 // Error handler (must be last)
 app.use(errorMiddleware);
