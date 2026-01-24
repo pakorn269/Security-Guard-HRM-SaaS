@@ -54,6 +54,7 @@ const LiffLinkContext = createContext<LiffLinkContextValue | undefined>(undefine
 // Debug context to pass error details without polluting main context
 interface LiffLinkDebugContextValue {
     debugError: string | null;
+    debugLogs?: string[];
 }
 const LiffLinkDebugContext = createContext<LiffLinkDebugContextValue | undefined>(undefined);
 
@@ -87,17 +88,25 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         liffId: null,
     });
     const [debugError, setDebugError] = useState<string | null>(null);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]); // Track initialization steps
     const hasInitializedRef = useRef(false); // Use ref instead of state to persist across re-renders
+
+    const addDebugLog = (message: string) => {
+        const timestamp = new Date().toISOString().split('T')[1].substring(0, 12);
+        setDebugLogs(prev => [...prev.slice(-10), `[${timestamp}] ${message}`]); // Keep last 10 logs
+    };
 
     const initializeLiff = useCallback(async () => {
         // Prevent multiple initializations using ref
         if (hasInitializedRef.current) {
             console.log('[LiffLink] Already initialized, skipping');
+            addDebugLog('Already initialized, skipping');
             return;
         }
 
         try {
             console.log('[LiffLink] Starting initialization...');
+            addDebugLog('Starting initialization...');
             hasInitializedRef.current = true;
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
@@ -105,10 +114,12 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             const existingToken = getAccessToken();
             if (existingToken) {
                 console.log('[LiffLink] Found existing JWT token, verifying...');
+                addDebugLog('Found JWT token, verifying...');
                 try {
                     const response = await api.get('/auth/me');
                     if (response.data?.success && response.data?.data) {
                         console.log('[LiffLink] JWT token valid, user is already linked');
+                        addDebugLog('JWT valid - user linked!');
                         setState(prev => ({
                             ...prev,
                             status: 'linked',
@@ -118,6 +129,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     }
                 } catch {
                     console.log('[LiffLink] JWT token invalid, clearing...');
+                    addDebugLog('JWT invalid, clearing tokens');
                     clearTokens();
                 }
             }
@@ -129,6 +141,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             if (!liffId) {
                 liffId = getCurrentLiffId();
                 console.log('[LiffLink] Initializing LIFF with ID:', liffId);
+                addDebugLog(`Init LIFF ID: ${liffId}`);
 
                 if (!liffId) {
                     throw new Error('LIFF ID not configured');
@@ -136,14 +149,17 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
                 await liff.init({ liffId });
                 console.log('[LiffLink] LIFF initialized');
+                addDebugLog('LIFF SDK initialized');
             } else {
                 console.log('[LiffLink] LIFF already initialized with ID:', liffId);
+                addDebugLog(`LIFF already init: ${liffId}`);
             }
 
             // Check LIFF context for debugging
             const isInClient = liff.isInClient();
             const isLoggedIn = liff.isLoggedIn();
             console.log('[LiffLink] LIFF Context - isInClient:', isInClient, 'isLoggedIn:', isLoggedIn, 'wasAlreadyInitialized:', isAlreadyInitialized);
+            addDebugLog(`isInClient:${isInClient} isLoggedIn:${isLoggedIn}`);
 
             // If we're in LINE client, the user is guaranteed to be logged in
             // even if isLoggedIn() returns false (can happen due to timing)
@@ -408,7 +424,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
     return (
         <LiffLinkContext.Provider value={value}>
-            <LiffLinkDebugContext.Provider value={{ debugError }}>
+            <LiffLinkDebugContext.Provider value={{ debugError: debugError, debugLogs }}>
                 {children}
             </LiffLinkDebugContext.Provider>
         </LiffLinkContext.Provider>
@@ -468,8 +484,8 @@ function LiffLinkLayoutContent() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950 safe-area-inset">
-                <div className="flex flex-col items-center gap-4 p-6">
+            <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950 safe-area-inset p-4">
+                <div className="flex flex-col items-center gap-4 w-full max-w-md">
                     <div className="relative">
                         <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                             <Loader2 size={32} className="text-primary-500 animate-spin" />
@@ -483,6 +499,17 @@ function LiffLinkLayoutContent() {
                             กรุณารอสักครู่
                         </p>
                     </div>
+                    {/* Debug logs */}
+                    {debugContext?.debugLogs && debugContext.debugLogs.length > 0 && (
+                        <div className="w-full mt-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded text-left max-h-48 overflow-y-auto">
+                            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Debug Logs:</p>
+                            {debugContext.debugLogs.map((log, i) => (
+                                <p key={i} className="text-xs font-mono text-neutral-600 dark:text-neutral-400">
+                                    {log}
+                                </p>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         );
