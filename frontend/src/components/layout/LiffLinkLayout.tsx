@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { getCurrentLiffId } from '../../hooks/useLiff';
@@ -401,6 +401,40 @@ export default function LiffLinkLayout() {
 
 function LiffLinkLayoutContent() {
     const { status, error, retry, isLoading, needsLogin, loginWithLine } = useLiffLink();
+    const navigate = useNavigate();
+
+    // If already linked, redirect to clock page
+    // This handles the case where a linked user navigates directly to /liff/link
+    useEffect(() => {
+        if (status === 'linked') {
+            console.log('[LiffLink] User already linked, redirecting to clock page');
+            // Use replace to not add to browser history
+            navigate('/liff/clock', { replace: true, state: { from: { pathname: '/liff/link' } } });
+        }
+    }, [status, navigate]);
+
+    // Show redirecting message while navigating
+    if (status === 'linked') {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-neutral-50 dark:bg-neutral-950 safe-area-inset">
+                <div className="flex flex-col items-center gap-4 p-6">
+                    <div className="relative">
+                        <div className="w-16 h-16 rounded-full bg-success-100 dark:bg-success-900/30 flex items-center justify-center">
+                            <Loader2 size={32} className="text-success-500 animate-spin" />
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-neutral-600 dark:text-neutral-300 font-medium">
+                            บัญชีเชื่อมต่อแล้ว
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                            กำลังเปลี่ยนเส้นทาง...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // Loading state
     if (isLoading) {
@@ -488,3 +522,4 @@ function LiffLinkLayoutContent() {
         </div>
     );
 }
+
