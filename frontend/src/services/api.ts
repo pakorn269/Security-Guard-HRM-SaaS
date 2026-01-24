@@ -56,7 +56,7 @@ export const clearTokens = (): void => {
 // Create Axios instance
 const api: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
-    timeout: 30000,
+    timeout: 60000, // Increase timeout to 60 seconds for cold starts
     headers: {
         'Content-Type': 'application/json',
     },
@@ -206,11 +206,33 @@ api.interceptors.response.use(
         }
 
         // Extract error message
-        const apiError: ApiError = error.response?.data?.error || {
-            code: 'NETWORK_ERROR',
-            message: error.message || 'Network error occurred',
-            message_th: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
-        };
+        let apiError: ApiError;
+
+        if (error.response?.data?.error) {
+            // Backend returned an error response
+            apiError = error.response.data.error;
+        } else if (error.code === 'ECONNABORTED') {
+            // Request timeout
+            apiError = {
+                code: 'TIMEOUT_ERROR',
+                message: 'Request timeout - server took too long to respond',
+                message_th: 'หมดเวลาในการเชื่อมต่อ - เซิร์ฟเวอร์ตอบกลับช้าเกินไป',
+            };
+        } else if (error.code === 'ERR_NETWORK') {
+            // Network error (CORS, no internet, etc.)
+            apiError = {
+                code: 'NETWORK_ERROR',
+                message: `Network error: ${error.message}. Check your internet connection or backend URL (${import.meta.env.VITE_API_BASE_URL})`,
+                message_th: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
+            };
+        } else {
+            // Other error
+            apiError = {
+                code: 'UNKNOWN_ERROR',
+                message: error.message || 'An unknown error occurred',
+                message_th: 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',
+            };
+        }
 
         return Promise.reject(apiError);
     }
