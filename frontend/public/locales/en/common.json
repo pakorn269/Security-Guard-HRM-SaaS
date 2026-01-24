@@ -165,11 +165,16 @@
         "notes": "Notes",
         "createUserAccount": "Create user account for this employee",
         "userRole": "User Role",
-        "password": "Password"
+        "password": "Password",
+        "noGuards": "No guards found"
     },
     "common": {
         "cancel": "Cancel",
-        "save": "Save"
+        "save": "Save",
+        "more": "more",
+        "details": "Details",
+        "selectAll": "Select All",
+        "saveFirst": "Save first"
     },
     "account": {
         "title": "My Account",
@@ -254,5 +259,35 @@
             "tokenMissing": "LINE token not found",
             "initFailed": "Failed to initialize LIFF"
         }
+    },
+    "sites": {
+        "title": "Sites Management",
+        "subtitle": "Manage security locations and zones",
+        "addSite": "Add Site",
+        "editSite": "Edit Site",
+        "name": "Site Name",
+        "address": "Address",
+        "contact": "Contact",
+        "contactName": "Contact Name",
+        "contactPhone": "Contact Phone",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "radius": "Geofence Radius (m)",
+        "status": "Status",
+        "assignGuards": "Assign Guards",
+        "searchPlaceholder": "Search sites...",
+        "noSites": "No sites found",
+        "zone": "Zone",
+        "zones": "Zones",
+        "selectGuards": "Select Guards",
+        "newZonePlaceholder": "New Zone Name (e.g. Main Gate)",
+        "noZones": "No zones added yet",
+        "entireSite": "Entire Site",
+        "zoneOptional": "Zone (Optional)"
+    },
+    "shifts": {
+        "template": "Shift Template",
+        "break": "Break",
+        "creatingFor": "Creating shifts for"
     }
 }

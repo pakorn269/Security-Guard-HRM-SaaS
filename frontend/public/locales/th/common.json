@@ -165,11 +165,16 @@
         "notes": "หมายเหตุ",
         "createUserAccount": "สร้างบัญชีผู้ใช้สำหรับพนักงานนี้",
         "userRole": "บทบาทผู้ใช้",
-        "password": "รหัสผ่าน"
+        "password": "รหัสผ่าน",
+        "noGuards": "ไม่พบเจ้าหน้าที่"
     },
     "common": {
         "cancel": "ยกเลิก",
-        "save": "บันทึก"
+        "save": "บันทึก",
+        "more": "รายการ",
+        "details": "รายละเอียด",
+        "selectAll": "เลือกทั้งหมด",
+        "saveFirst": "บันทึกก่อน"
     },
     "auth": {
         "logout": "ออกจากระบบ"
@@ -273,5 +278,35 @@
             "tokenMissing": "ไม่พบข้อมูล LINE token",
             "initFailed": "ไม่สามารถเชื่อมต่อ LIFF ได้"
         }
+    },
+    "sites": {
+        "title": "จัดการหน่วยงาน",
+        "subtitle": "จัดการสถานที่และโซนรักษาความปลอดภัย",
+        "addSite": "เพิ่มหน่วยงาน",
+        "editSite": "แก้ไขหน่วยงาน",
+        "name": "ชื่อหน่วยงาน",
+        "address": "ที่อยู่",
+        "contact": "ผู้ติดต่อ",
+        "contactName": "ชื่อผู้ติดต่อ",
+        "contactPhone": "เบอร์โทรศัพท์ผู้ติดต่อ",
+        "latitude": "ละติจูด",
+        "longitude": "ลองจิจูด",
+        "radius": "รัศมีพิกัด (เมตร)",
+        "status": "สถานะ",
+        "assignGuards": "จัดเวรเจ้าหน้าที่",
+        "searchPlaceholder": "ค้นหาหน่วยงาน...",
+        "noSites": "ไม่พบหน่วยงาน",
+        "zone": "โซน",
+        "zones": "โซน",
+        "selectGuards": "เลือกเจ้าหน้าที่",
+        "newZonePlaceholder": "ชื่อโซนใหม่ (เช่น ประตูหลัก)",
+        "noZones": "ยังไม่มีโซน",
+        "entireSite": "ทั้งหน่วยงาน",
+        "zoneOptional": "โซน (ไม่ระบุได้)"
+    },
+    "shifts": {
+        "template": "รูปแบบกะงาน",
+        "break": "พัก",
+        "creatingFor": "สร้างตารางงานสำหรับ"
     }
 }
