@@ -2,7 +2,7 @@
 // Wrapper for account linking pages - initializes LIFF without auto-redirecting to login
 // This prevents the infinite login loop when users haven't linked their account yet
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
@@ -80,7 +80,13 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         liffId: null,
     });
 
+    // Use ref to prevent double initialization in React Strict Mode or fast remounts
+    const initRef = useRef(false);
+
     const initializeLiff = useCallback(async () => {
+        if (initRef.current) return;
+        initRef.current = true;
+
         try {
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
@@ -106,6 +112,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             }
 
             // Initialize LIFF SDK
+            // Check if already initialized to avoid re-init error
             let liffId = liff.id;
 
             if (!liffId) {
@@ -116,8 +123,17 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     throw new Error('LIFF ID not configured');
                 }
 
-                await liff.init({ liffId });
-                console.log('[LiffLink] LIFF initialized');
+                try {
+                    await liff.init({ liffId });
+                    console.log('[LiffLink] LIFF initialized');
+                } catch (initError: any) {
+                    // Ignore "LIFF is already initialized" error
+                    if (initError.code === 'ALREADY_INITIALIZED') {
+                        console.log('[LiffLink] LIFF was already initialized (caught error)');
+                    } else {
+                        throw initError;
+                    }
+                }
             } else {
                 console.log('[LiffLink] LIFF already initialized with ID:', liffId);
             }
@@ -313,6 +329,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
     // Retry
     const retry = useCallback(() => {
+        initRef.current = false; // Allow re-initialization
         initializeLiff();
     }, [initializeLiff]);
 

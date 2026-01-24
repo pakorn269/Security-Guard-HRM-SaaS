@@ -182,7 +182,9 @@ api.interceptors.response.use(
                         window.location.href = `/liff/${companySlug}/login`;
                     } else {
                         // Generic LIFF path, redirect to LIFF link page
-                        window.location.href = '/liff/link';
+                        if (window.location.pathname !== '/liff/link') {
+                            window.location.href = '/liff/link';
+                        }
                     }
                 } else {
                     window.location.href = '/login';
