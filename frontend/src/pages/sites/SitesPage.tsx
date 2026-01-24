@@ -109,7 +109,7 @@ export default function SitesPage() {
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
                             <div className="flex items-center gap-1 mb-1 font-medium text-neutral-700 dark:text-neutral-300">
                                 <ShieldCheck size={12} />
-                                Zones ({site.zones?.length || 0})
+                                {t('sites.zones', 'Zones')} ({site.zones?.length || 0})
                             </div>
                             {site.zones && site.zones.length > 0 && (
                                 <div className="pl-4 space-y-0.5 border-l-2 border-neutral-200 dark:border-neutral-800 ml-1.5">
@@ -120,14 +120,14 @@ export default function SitesPage() {
                                     ))}
                                     {site.zones.length > 3 && (
                                         <div className="text-neutral-400 italic">
-                                            +{site.zones.length - 3} more
+                                            +{site.zones.length - 3} {t('common.more', 'more')}
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
+                </div >
             )
         },
         {

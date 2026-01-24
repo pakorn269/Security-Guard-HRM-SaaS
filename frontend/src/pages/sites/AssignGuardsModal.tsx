@@ -136,7 +136,7 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
     };
 
     const zoneOptions = useMemo(() => {
-        const opts = [{ value: 'all', label: 'Entire Site' }];
+        const opts = [{ value: 'all', label: t('sites.entireSite', 'Entire Site') }];
         if (site?.zones) {
             site.zones.forEach(z => opts.push({ value: z.id, label: z.name }));
         }
@@ -189,7 +189,7 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
                             control={control}
                             render={({ field }) => (
                                 <Select
-                                    label={t('sites.zone', 'Zone (Optional)')}
+                                    label={t('sites.zoneOptional', 'Zone (Optional)')}
                                     options={zoneOptions}
                                     value={field.value}
                                     onChange={field.onChange}
@@ -200,9 +200,9 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
                             <div className="md:col-span-2 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                                 <Clock size={14} />
                                 <span>
-                                    Time: <span className="font-medium text-neutral-900 dark:text-white">{selectedTemplate.startTime.substring(0, 5)} - {selectedTemplate.endTime.substring(0, 5)}</span>
+                                    {t('time.time', 'Time')}: <span className="font-medium text-neutral-900 dark:text-white">{selectedTemplate.startTime.substring(0, 5)} - {selectedTemplate.endTime.substring(0, 5)}</span>
                                 </span>
-                                {selectedTemplate.breakMinutes > 0 && <span>(Break: {selectedTemplate.breakMinutes}m)</span>}
+                                {selectedTemplate.breakMinutes > 0 && <span>({t('shifts.break', 'Break')}: {selectedTemplate.breakMinutes}m)</span>}
                             </div>
                         )}
                     </div>
@@ -239,7 +239,7 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
                                     onChange={handleSelectAll}
                                     className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                                 />
-                                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Select All</span>
+                                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">{t('common.selectAll', 'Select All')}</span>
                             </div>
 
                             {/* List */}
@@ -267,7 +267,7 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
                                 ))}
                                 {filteredEmployees.length === 0 && (
                                     <div className="p-4 text-center text-neutral-500 text-sm">
-                                        No guards found
+                                        {t('employees.noGuards', 'No guards found')}
                                     </div>
                                 )}
                             </div>
@@ -277,7 +277,7 @@ export default function AssignGuardsModal({ isOpen, onClose, onSuccess, site }: 
 
                 <div className="pt-4 mt-auto border-t border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
                     <div className="text-sm text-neutral-500">
-                        Creating shifts for <strong>{site?.name}</strong>
+                        {t('shifts.creatingFor', 'Creating shifts for')} <strong>{site?.name}</strong>
                     </div>
                     <div className="flex gap-3">
                         <Button variant="ghost" onClick={onClose} type="button">

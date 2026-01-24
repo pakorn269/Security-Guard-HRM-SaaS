@@ -122,14 +122,14 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                     className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === 'details' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'}`}
                     onClick={() => setActiveTab('details')}
                 >
-                    Details
+                    {t('common.details', 'Details')}
                 </button>
                 <button
                     className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === 'zones' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'}`}
                     onClick={() => setActiveTab('zones')}
                     disabled={!site}
                 >
-                    Zones {!site && '(Save first)'}
+                    {t('sites.zones', 'Zones')} {!site && `(${t('common.saveFirst', 'Save first')})`}
                 </button>
             </div>
 
@@ -178,13 +178,13 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                 <div className="space-y-4">
                     <div className="flex gap-2">
                         <Input
-                            placeholder="New Zone Name (e.g. Main Gate)"
+                            placeholder={t('sites.newZonePlaceholder', 'New Zone Name (e.g. Main Gate)')}
                             value={newZoneName}
                             onChange={(e) => setNewZoneName(e.target.value)}
                             className="flex-1"
                         />
                         <Button variant="secondary" onClick={handleAddZone} disabled={!newZoneName}>
-                            <Plus size={16} /> Add
+                            <Plus size={16} /> {t('actions.add', 'Add')}
                         </Button>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -199,7 +199,7 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                             </div>
                         ))}
                         {zones.length === 0 && (
-                            <div className="text-center text-neutral-500 py-4">No zones added yet</div>
+                            <div className="text-center text-neutral-500 py-4">{t('sites.noZones', 'No zones added yet')}</div>
                         )}
                     </div>
                 </div>
