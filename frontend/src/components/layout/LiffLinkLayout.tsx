@@ -245,7 +245,8 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
 
         try {
-            setState(prev => ({ ...prev, status: 'verifying', error: null }));
+            // Clear error but don't change status (would unmount child page)
+            setState(prev => ({ ...prev, error: null }));
 
             const result = await liffAuthService.linkEmployee({
                 idToken: state.idToken,
@@ -264,7 +265,6 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         } catch (err) {
             setState(prev => ({
                 ...prev,
-                status: 'not_linked',
                 error: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
             }));
             return false;
@@ -283,7 +283,9 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
 
         try {
-            setState(prev => ({ ...prev, status: 'verifying', error: null }));
+            // Clear any previous error, but DON'T change status to 'verifying'
+            // because that would cause isLoading=true and unmount the child page
+            setState(prev => ({ ...prev, error: null }));
 
             const result = await liffAuthService.autoLinkEmployee({
                 idToken: state.idToken,
@@ -300,23 +302,17 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     status: 'linked',
                     user: result.data!.user,
                 }));
-            } else {
-                // Pending approval or require company slug or other cases
-                // We return the result so the page can handle UI
-                setState(prev => ({
-                    ...prev,
-                    status: 'not_linked',
-                    error: null // Clear error as we handle it in UI
-                }));
             }
+            // For other cases (pendingApproval, requireCompanySlug, etc.)
+            // we just return the result and let the child page handle the UI
             return result;
         } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้';
             setState(prev => ({
                 ...prev,
-                status: 'not_linked',
-                error: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
+                error: errorMessage,
             }));
-            return { success: false, message: err instanceof Error ? err.message : 'Unknown error' };
+            return { success: false, message: errorMessage };
         }
     }, [state.idToken, state.liffId]);
 
@@ -331,7 +327,8 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
 
         try {
-            setState(prev => ({ ...prev, status: 'verifying', error: null }));
+            // Clear error but don't change status (would unmount child page)
+            setState(prev => ({ ...prev, error: null }));
 
             const result = await liffAuthService.linkCredentials({
                 idToken: state.idToken,
@@ -349,7 +346,6 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         } catch (err) {
             setState(prev => ({
                 ...prev,
-                status: 'not_linked',
                 error: err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อบัญชีได้',
             }));
             return false;
