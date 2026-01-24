@@ -45,6 +45,7 @@ export default function LiffLinkEmployeePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         clearError();
+        setFormErrors({}); // Clear form errors
 
         if (!validateForm()) return;
 
@@ -69,8 +70,23 @@ export default function LiffLinkEmployeePage() {
             } else if (result.pendingApproval) {
                 setPendingApproval(true);
             } else if (result.requireCompanySlug) {
-                setRequireCompanySlug(true);
-                // Maybe focus on company slug input?
+                // If company slug was already provided but still got this error,
+                // it means no employee was found - show error message
+                if (requireCompanySlug) {
+                    setFormErrors(prev => ({
+                        ...prev,
+                        companySlug: result.message || 'ไม่พบข้อมูลพนักงาน กรุณาตรวจสอบข้อมูลอีกครั้ง'
+                    }));
+                } else {
+                    // First time - show company slug field
+                    setRequireCompanySlug(true);
+                }
+            } else if (!result.success && result.message) {
+                // Generic error from API
+                setFormErrors(prev => ({
+                    ...prev,
+                    employeeCode: result.message || 'เกิดข้อผิดพลาด'
+                }));
             }
         } finally {
             setIsSubmitting(false);
@@ -236,11 +252,11 @@ export default function LiffLinkEmployeePage() {
                     {/* Company Slug (Only if required) */}
                     {requireCompanySlug && (
                         <div className="animate-fade-in">
-                             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-3">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-3">
                                 <p className="text-sm text-blue-700 dark:text-blue-300">
                                     ไม่พบข้อมูล หรือมีข้อมูลซ้ำกัน กรุณาระบุรหัสบริษัทเพิ่มเติม
                                 </p>
-                             </div>
+                            </div>
                             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
                                 <span className="flex items-center gap-1.5">
                                     <Building2 size={14} />

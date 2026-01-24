@@ -87,10 +87,18 @@ export class LineLinkingService {
                 throw new NotFoundError('Company not found', 'ไม่พบข้อมูลบริษัท');
             }
             company = comp;
+            logger.info('Company found', { companyId: company.id, slug: companySlug });
 
             // Search in this company
-            // Try exact match first
-            const { data: exactMatch } = await supabaseAdmin
+            // Try exact match first (employee_code + phone)
+            logger.info('Searching for employee', {
+                companyId: company.id,
+                employeeCode,
+                normalizedPhone,
+                searchType: 'exact'
+            });
+
+            const { data: exactMatch, error: exactError } = await supabaseAdmin
                 .from('employees')
                 .select('*, users!employees_user_id_fkey(*)')
                 .eq('company_id', company.id)
@@ -98,33 +106,56 @@ export class LineLinkingService {
                 .eq('phone', normalizedPhone)
                 .single();
 
+            if (exactError) {
+                logger.info('Exact match search result', { found: false, error: exactError.code });
+            }
+
             if (exactMatch) {
                 employee = exactMatch;
                 matchType = 'exact';
+                logger.info('Exact match found', { employeeId: employee.id });
             } else {
                 // Try Phone match
-                const { data: phoneMatch } = await supabaseAdmin
+                logger.info('Trying phone-only match', { normalizedPhone });
+                const { data: phoneMatch, error: phoneError } = await supabaseAdmin
                     .from('employees')
                     .select('*, users!employees_user_id_fkey(*)')
                     .eq('company_id', company.id)
                     .eq('phone', normalizedPhone)
                     .single();
 
+                if (phoneError) {
+                    logger.info('Phone match search result', { found: false, error: phoneError.code });
+                }
+
                 if (phoneMatch) {
                     employee = phoneMatch;
                     matchType = 'phone_only';
+                    logger.info('Phone match found', { employeeId: employee.id, employeeCode: employee.employee_code });
                 } else {
                     // Try Code match
-                    const { data: codeMatch } = await supabaseAdmin
+                    logger.info('Trying code-only match', { employeeCode });
+                    const { data: codeMatch, error: codeError } = await supabaseAdmin
                         .from('employees')
                         .select('*, users!employees_user_id_fkey(*)')
                         .eq('company_id', company.id)
                         .eq('employee_code', employeeCode)
                         .single();
 
+                    if (codeError) {
+                        logger.info('Code match search result', { found: false, error: codeError.code });
+                    }
+
                     if (codeMatch) {
                         employee = codeMatch;
                         matchType = 'code_only';
+                        logger.info('Code match found', { employeeId: employee.id, phone: employee.phone });
+                    } else {
+                        logger.info('No employee match found in company', {
+                            companyId: company.id,
+                            employeeCode,
+                            normalizedPhone
+                        });
                     }
                 }
             }
@@ -160,13 +191,13 @@ export class LineLinkingService {
                     company = await getCompany(employee.company_id);
                     matchType = 'phone_only';
                 } else if (phoneMatches && phoneMatches.length > 1) {
-                     return {
+                    return {
                         success: false,
                         requireCompanySlug: true,
                         message: 'Multiple matches found. Please enter Company Code.',
                     };
                 } else {
-                     // Try Code Match
+                    // Try Code Match
                     const { data: codeMatches } = await supabaseAdmin
                         .from('employees')
                         .select('*, users!employees_user_id_fkey(*)')
@@ -178,7 +209,7 @@ export class LineLinkingService {
                         matchType = 'code_only';
                     } else {
                         // Ambiguous or Not Found
-                         return {
+                        return {
                             success: false,
                             requireCompanySlug: true,
                             message: 'Employee not found or multiple matches.',
@@ -189,7 +220,7 @@ export class LineLinkingService {
         }
 
         if (!employee || !company) {
-             return {
+            return {
                 success: false,
                 requireCompanySlug: true,
                 message: 'Employee not found.',
@@ -204,10 +235,10 @@ export class LineLinkingService {
             // Check if user exists
             let user = employee.users;
 
-             if (user) {
+            if (user) {
                 // Check if user already has LINE linked
                 if (user.line_user_id) {
-                     throw new ConflictError(
+                    throw new ConflictError(
                         'This employee account is already linked to a LINE account',
                         'บัญชีพนักงานนี้เชื่อมต่อกับ LINE อื่นแล้ว'
                     );
@@ -228,7 +259,7 @@ export class LineLinkingService {
                     .single();
 
                 if (updateError || !updatedUser) {
-                     throw new Error('Failed to link LINE account');
+                    throw new Error('Failed to link LINE account');
                 }
                 user = updatedUser;
             } else {
@@ -253,7 +284,7 @@ export class LineLinkingService {
                 if (createError || !newUser) {
                     throw new Error('Failed to create user account');
                 }
-                 // Update employee with user_id
+                // Update employee with user_id
                 await supabaseAdmin
                     .from('employees')
                     .update({ user_id: newUser.id })
@@ -282,7 +313,7 @@ export class LineLinkingService {
                 success: true,
                 data: {
                     user: {
-                         id: user.id as string,
+                        id: user.id as string,
                         email: user.email as string,
                         role: user.role as 'super_admin' | 'company_admin' | 'manager' | 'guard',
                         companyId: user.company_id as string,
