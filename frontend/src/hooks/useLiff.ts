@@ -44,16 +44,28 @@ const LIFF_ID_STORAGE_KEY = 'liff_session_id';
  * the user isn't logged in.
  */
 export function getCurrentLiffId(): string | null {
-  // First, check if we already have a LIFF ID stored in session
-  // This ensures consistency across navigation within the same session
+  const path = window.location.pathname;
+  const env = import.meta.env;
+
+  // IMPORTANT: /liff/link pages need their own LIFF ID because each LIFF app
+  // is configured with a specific endpoint URL in LINE Developer Console.
+  // Using a LIFF ID from another page (e.g., /liff/clock) will cause login state issues.
+  const isLinkPage = path.includes('/liff/link');
+
+  // For link pages, always use the dedicated LIFF_LINK_ID (or fallback to VITE_LIFF_ID)
+  // Do NOT use stored LIFF ID from other pages
+  if (isLinkPage) {
+    const linkLiffId = env.VITE_LIFF_LINK_ID || env.VITE_LIFF_ID || null;
+    console.log('[useLiff] Link page - using LIFF ID:', linkLiffId);
+    return linkLiffId;
+  }
+
+  // For other LIFF pages, check if we have a stored LIFF ID for session consistency
   const storedLiffId = sessionStorage.getItem(LIFF_ID_STORAGE_KEY);
   if (storedLiffId) {
     console.log('[useLiff] Using stored LIFF ID:', storedLiffId);
     return storedLiffId;
   }
-
-  const path = window.location.pathname;
-  const env = import.meta.env;
 
   let liffId: string | null = null;
 
