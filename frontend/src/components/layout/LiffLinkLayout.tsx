@@ -161,14 +161,32 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             addDebugLog(`Stored profile: ${storedProfile ? storedProfile.displayName : 'null'}`);
 
             // If no stored profile, we need to re-fetch it from LINE
+            // BUT only if we haven't already tried (prevent infinite loop)
             if (!storedProfile) {
+                // Check if we already tried re-initializing (prevent loop)
+                const hasTriedReinit = sessionStorage.getItem('liff_link_reinit_attempted');
+                if (hasTriedReinit) {
+                    console.log('[LiffLink] Already attempted re-init, showing not_linked with null profile');
+                    addDebugLog('Re-init already attempted, using null profile');
+                    setState(prev => ({
+                        ...prev,
+                        status: 'not_linked',
+                        lineProfile: null,
+                    }));
+                    return;
+                }
+
                 console.log('[LiffLink] No stored profile, need to re-initialize to fetch profile');
                 addDebugLog('No stored profile, re-initializing...');
+                // Mark that we're attempting re-init to prevent loop
+                sessionStorage.setItem('liff_link_reinit_attempted', 'true');
                 // Clear the session flag so we can re-initialize
                 sessionStorage.removeItem(LIFF_INIT_KEY);
                 hasInitializedRef.current = false;
                 // Don't return - fall through to full initialization
             } else {
+                // Clear the re-init flag since we have a profile
+                sessionStorage.removeItem('liff_link_reinit_attempted');
                 setState(prev => ({
                     ...prev,
                     status: 'not_linked',
@@ -258,6 +276,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     if (verifyResult.isLinked) {
                         console.log('[LiffLink] User is linked:', verifyResult.user.id);
                         clearLineProfile(); // Clear stored profile when linked
+                        sessionStorage.removeItem('liff_link_reinit_attempted'); // Clear re-init flag
                         markSessionInitialized(); // Mark as initialized now that we have user data
                         setState(prev => ({
                             ...prev,
@@ -268,6 +287,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                         console.log('[LiffLink] Saving profile to sessionStorage:', verifyResult.lineProfile);
                         saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
+                        sessionStorage.removeItem('liff_link_reinit_attempted'); // Clear re-init flag after successful profile save
                         markSessionInitialized(); // Mark as initialized now that we have profile
                         addDebugLog(`Saved profile: ${verifyResult.lineProfile.displayName}`);
                         setState(prev => ({
@@ -318,6 +338,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             if (verifyResult.isLinked) {
                 console.log('[LiffLink] User is linked:', verifyResult.user.id);
                 clearLineProfile(); // Clear stored profile when linked
+                sessionStorage.removeItem('liff_link_reinit_attempted'); // Clear re-init flag
                 markSessionInitialized(); // Mark as initialized now that we have user data
                 setState(prev => ({
                     ...prev,
@@ -327,6 +348,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             } else {
                 console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                 saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
+                sessionStorage.removeItem('liff_link_reinit_attempted'); // Clear re-init flag
                 markSessionInitialized(); // Mark as initialized now that we have profile
                 setState(prev => ({
                     ...prev,
@@ -485,6 +507,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         console.log('[LiffLink] Retry requested, resetting initialization flags');
         hasInitializedRef.current = false;
         sessionStorage.removeItem(LIFF_INIT_KEY);
+        sessionStorage.removeItem('liff_link_reinit_attempted'); // Clear re-init flag on retry
         clearLineProfile(); // Also clear stored profile on retry
         initializeLiff();
     }, [initializeLiff]);
@@ -543,10 +566,11 @@ function LiffLinkLayoutContent() {
     useEffect(() => {
         if (status === 'linked') {
             console.log('[LiffLink] User already linked, redirecting to clock page');
-            // Use replace to not add to browser history
-            navigate('/liff/clock', { replace: true, state: { from: { pathname: '/liff/link' } } });
+            // Use window.location.replace for cleaner redirect in LIFF context
+            // React Router's navigate can sometimes cause issues in LINE's webview
+            window.location.replace('/liff/clock');
         }
-    }, [status, navigate]);
+    }, [status]);
 
     // Show redirecting message while navigating
     if (status === 'linked') {
