@@ -64,8 +64,9 @@ export default function LiffLinkEmployeePage() {
             if (result.success && result.data) {
                 setSuccess(true);
                 // Redirect to clock page after success
+                // Include state to signal that we just completed linking
                 setTimeout(() => {
-                    navigate('/liff/clock');
+                    navigate('/liff/clock', { state: { from: { pathname: '/liff/link/employee' } } });
                 }, 1500);
             } else if (result.pendingApproval) {
                 setPendingApproval(true);
