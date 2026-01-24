@@ -46,22 +46,27 @@ app.use(
     })
 );
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS),
-    max: parseInt(env.RATE_LIMIT_MAX),
-    message: {
-        success: false,
-        error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Too many requests, please try again later',
-            message_th: 'มีคำขอมากเกินไป กรุณาลองใหม่ภายหลัง',
+// Rate limiting - disabled in development
+if (env.NODE_ENV === 'production') {
+    const limiter = rateLimit({
+        windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS),
+        max: parseInt(env.RATE_LIMIT_MAX),
+        message: {
+            success: false,
+            error: {
+                code: 'RATE_LIMIT_EXCEEDED',
+                message: 'Too many requests, please try again later',
+                message_th: 'มีคำขอมากเกินไป กรุณาลองใหม่ภายหลัง',
+            },
         },
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-app.use(limiter);
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+    app.use(limiter);
+    console.log('[App] Rate limiting enabled (production mode)');
+} else {
+    console.log('[App] Rate limiting disabled (development mode)');
+}
 
 // Body parsing
 app.use(json({ limit: '10mb' }));
