@@ -87,9 +87,18 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         liffId: null,
     });
     const [debugError, setDebugError] = useState<string | null>(null);
+    const [hasInitialized, setHasInitialized] = useState(false);
 
     const initializeLiff = useCallback(async () => {
+        // Prevent multiple initializations
+        if (hasInitialized) {
+            console.log('[LiffLink] Already initialized, skipping');
+            return;
+        }
+
         try {
+            console.log('[LiffLink] Starting initialization...');
+            setHasInitialized(true);
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
             // Check for existing JWT token first
@@ -171,6 +180,11 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         }));
                     }
                     return;
+                } else {
+                    // ID token not available yet - this shouldn't happen in LINE client
+                    // but if it does, show an error instead of falling through
+                    console.error('[LiffLink] In LINE client but no ID token available');
+                    throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้');
                 }
             }
 
@@ -230,7 +244,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 error: errorMessage,
             }));
         }
-    }, []);
+    }, [hasInitialized]);
 
     // Initialize on mount
     useEffect(() => {
