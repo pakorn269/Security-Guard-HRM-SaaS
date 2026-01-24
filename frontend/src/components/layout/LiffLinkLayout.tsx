@@ -471,9 +471,21 @@ function LiffLinkLayoutContent() {
                         <h1 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
                             เกิดข้อผิดพลาด
                         </h1>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
                             {error}
                         </p>
+                        {/* Debug info */}
+                        <div className="mt-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded text-left">
+                            <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 break-all">
+                                <strong>LIFF ID:</strong> {import.meta.env.VITE_LIFF_LINK_ID || 'not set'}
+                            </p>
+                            <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 mt-1">
+                                <strong>Status:</strong> {status}
+                            </p>
+                            <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 mt-1">
+                                <strong>Path:</strong> {window.location.pathname}
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={retry}
