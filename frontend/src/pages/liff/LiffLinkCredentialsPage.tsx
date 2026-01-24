@@ -53,8 +53,9 @@ export default function LiffLinkCredentialsPage() {
             if (success) {
                 setSuccess(true);
                 // Redirect to clock page after success
+                // Include state to signal that we just completed linking
                 setTimeout(() => {
-                    navigate('/liff/clock');
+                    navigate('/liff/clock', { state: { from: { pathname: '/liff/link/credentials' } } });
                 }, 1500);
             }
         } finally {
