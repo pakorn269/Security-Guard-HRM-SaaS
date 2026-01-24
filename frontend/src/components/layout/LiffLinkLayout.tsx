@@ -51,6 +51,12 @@ interface LiffLinkContextValue extends LiffLinkState {
 
 const LiffLinkContext = createContext<LiffLinkContextValue | undefined>(undefined);
 
+// Debug context to pass error details without polluting main context
+interface LiffLinkDebugContextValue {
+    debugError: string | null;
+}
+const LiffLinkDebugContext = createContext<LiffLinkDebugContextValue | undefined>(undefined);
+
 // ============================================================
 // Hook
 // ============================================================
@@ -80,6 +86,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         idToken: null,
         liffId: null,
     });
+    const [debugError, setDebugError] = useState<string | null>(null);
 
     const initializeLiff = useCallback(async () => {
         try {
@@ -214,10 +221,13 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             }
         } catch (err) {
             console.error('[LiffLink] Error:', err);
+            const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+            const errorDetails = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack || ''}` : JSON.stringify(err);
+            setDebugError(errorDetails);
             setState(prev => ({
                 ...prev,
                 status: 'error',
-                error: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+                error: errorMessage,
             }));
         }
     }, []);
@@ -382,7 +392,9 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
     return (
         <LiffLinkContext.Provider value={value}>
-            {children}
+            <LiffLinkDebugContext.Provider value={{ debugError }}>
+                {children}
+            </LiffLinkDebugContext.Provider>
         </LiffLinkContext.Provider>
     );
 }
@@ -401,6 +413,7 @@ export default function LiffLinkLayout() {
 
 function LiffLinkLayoutContent() {
     const { status, error, retry, isLoading, needsLogin, loginWithLine } = useLiffLink();
+    const debugContext = useContext(LiffLinkDebugContext);
     const navigate = useNavigate();
 
     // If already linked, redirect to clock page
@@ -475,7 +488,7 @@ function LiffLinkLayoutContent() {
                             {error}
                         </p>
                         {/* Debug info */}
-                        <div className="mt-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded text-left">
+                        <div className="mt-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded text-left max-h-48 overflow-y-auto">
                             <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 break-all">
                                 <strong>LIFF ID:</strong> {import.meta.env.VITE_LIFF_LINK_ID || 'not set'}
                             </p>
@@ -485,6 +498,12 @@ function LiffLinkLayoutContent() {
                             <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 mt-1">
                                 <strong>Path:</strong> {window.location.pathname}
                             </p>
+                            {debugContext?.debugError && (
+                                <p className="text-xs font-mono text-error-600 dark:text-error-400 mt-2 whitespace-pre-wrap">
+                                    <strong>Error Details:</strong><br />
+                                    {debugContext.debugError}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <button
