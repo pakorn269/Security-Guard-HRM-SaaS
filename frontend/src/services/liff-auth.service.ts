@@ -102,7 +102,12 @@ export const liffAuthService = {
                 return result;
             }
 
-            throw new Error(data.error?.message || 'Failed to verify LINE token');
+            // Handle rate limiting with a better message
+            if (data.error?.code === 'RATE_LIMIT_EXCEEDED') {
+                throw new Error(data.error.message_th || 'มีคำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
+            }
+
+            throw new Error(data.error?.message_th || data.error?.message || 'Failed to verify LINE token');
         } catch (error) {
             console.error('[liffAuthService] Error verifying LINE token:', error);
             throw error instanceof Error ? error : new Error('Failed to verify LINE token');
