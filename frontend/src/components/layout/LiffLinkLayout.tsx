@@ -92,7 +92,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
     });
     const [debugError, setDebugError] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<string[]>([]); // Track initialization steps
-    const hasInitializedRef = useRef(false); // Use ref for re-renders within same page load
+
 
     const addDebugLog = (message: string) => {
         const timestamp = new Date().toISOString().split('T')[1].substring(0, 12);
@@ -109,16 +109,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         sessionStorage.setItem(LIFF_PROFILE_KEY, JSON.stringify(profile));
     };
 
-    // Retrieve LINE profile from sessionStorage
-    const getStoredLineProfile = (): LineProfile | null => {
-        const stored = sessionStorage.getItem(LIFF_PROFILE_KEY);
-        if (!stored) return null;
-        try {
-            return JSON.parse(stored) as LineProfile;
-        } catch {
-            return null;
-        }
-    };
+
 
     // Clear LINE profile from sessionStorage
     const clearLineProfile = () => {
