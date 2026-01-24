@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import * as Sentry from '@sentry/node';
 import { supabaseAdmin } from '../../config/supabase.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 import logger from '../../utils/logger.js';
@@ -185,6 +186,20 @@ router.get('/schema', async (_req: Request, res: Response) => {
   } catch (error) {
     logger.error('Schema check failed', error);
     return sendError(res, 'SCHEMA_CHECK_FAILED', 'Schema check failed', 500);
+  }
+});
+
+/**
+ * @route   GET /api/v1/health/sentry-test
+ * @desc    Test Sentry error reporting
+ * @access  Public (development only)
+ */
+router.get('/sentry-test', (_req: Request, _res: Response) => {
+  try {
+    throw new Error('This is your first error!');
+  } catch (e) {
+    Sentry.captureException(e);
+    throw e;
   }
 });
 

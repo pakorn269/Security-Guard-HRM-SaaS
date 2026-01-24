@@ -1,3 +1,7 @@
+// IMPORTANT: Import instrument.js at the top of your file.
+import './instrument.js';
+
+import * as Sentry from '@sentry/node';
 import app from './app.js';
 import { env } from './config/env.js';
 import logger from './utils/logger.js';
@@ -38,11 +42,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
+    Sentry.captureException(error);
     logger.error('Uncaught Exception', error);
     process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+    Sentry.captureException(reason);
     logger.error('Unhandled Rejection', reason as Error, { promise: String(promise) });
 });
 
