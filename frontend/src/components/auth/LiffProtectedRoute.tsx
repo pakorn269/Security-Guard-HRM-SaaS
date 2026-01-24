@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getAccessToken } from '../../services/api';
 
 interface LiffProtectedRouteProps {
   children: ReactNode;
@@ -27,21 +28,24 @@ interface LiffProtectedRouteProps {
 export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const { isAuthenticated: isAuthAuthenticated, isLoading: authLoading, user, checkAuth } = useAuth();
   const location = useLocation();
-  const [hasCheckedAfterNavigation, setHasCheckedAfterNavigation] = useState(false);
+  const [isRechecking, setIsRechecking] = useState(false);
+  const hasRecheckedRef = useRef(false);
 
-  // Check if we're coming from a link page (tokens might have just been stored)
-  const cameFromLinkPage = location.state?.from?.pathname?.startsWith('/liff/link');
-
-  // Re-check authentication when coming from link page
-  // This handles the case where tokens were just stored during linking
+  // Check if we need to re-verify auth (token exists but not authenticated)
+  // This handles navigation from /liff/link where tokens were just stored
+  // Also handles page reloads or direct navigation when tokens exist
   useEffect(() => {
-    if (cameFromLinkPage && !hasCheckedAfterNavigation) {
-      console.log('[LiffProtectedRoute] Coming from link page, re-checking auth...');
-      checkAuth().then(() => {
-        setHasCheckedAfterNavigation(true);
+    const token = getAccessToken();
+    // If there's a token but AuthContext says not authenticated (and not loading), re-check
+    if (token && !isAuthAuthenticated && !authLoading && !hasRecheckedRef.current) {
+      console.log('[LiffProtectedRoute] Token exists but not authenticated, re-checking auth...');
+      hasRecheckedRef.current = true;
+      setIsRechecking(true);
+      checkAuth().finally(() => {
+        setIsRechecking(false);
       });
     }
-  }, [cameFromLinkPage, hasCheckedAfterNavigation, checkAuth]);
+  }, [isAuthAuthenticated, authLoading, checkAuth]);
 
   // Check if we're on any linking page - these bypass AuthContext checks
   // because the linking flow is managed by LiffAuthContext inside LiffLayout
@@ -54,8 +58,8 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // Show loading while checking auth status (only for non-linking pages)
-  // Also show loading if we're waiting for re-check after coming from link page
-  if (authLoading || (cameFromLinkPage && !hasCheckedAfterNavigation)) {
+  // Also show loading if we're re-checking auth after tokens were stored
+  if (authLoading || isRechecking) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
