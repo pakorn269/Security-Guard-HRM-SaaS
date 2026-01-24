@@ -242,4 +242,106 @@ export function isLiffClient(): boolean {
   }
 }
 
+/**
+ * Wait for LIFF to be fully ready
+ *
+ * In LINE in-app browser, liff.init() resolves almost instantly,
+ * but tokens might not be immediately available. This function
+ * uses liff.ready to ensure the SDK is fully initialized.
+ */
+export async function waitForLiffReady(): Promise<void> {
+  // liff.ready is a Promise that resolves when LIFF is fully ready
+  // This handles the race condition where init() resolves before
+  // tokens are available in LINE in-app browser
+  if (typeof liff.ready !== 'undefined') {
+    await liff.ready;
+  }
+}
+
+/**
+ * Get ID Token with retry logic for LINE in-app browser race condition
+ *
+ * In the LINE in-app browser, liff.getIDToken() might return null
+ * immediately after liff.init() even when the user is logged in.
+ * This function retries with exponential backoff.
+ *
+ * @param maxRetries Maximum number of retry attempts (default: 5)
+ * @param initialDelay Initial delay in ms (default: 100)
+ * @returns The ID token or null if all retries failed
+ */
+export async function getIdTokenWithRetry(
+  maxRetries: number = 5,
+  initialDelay: number = 100
+): Promise<string | null> {
+  // First, ensure LIFF is fully ready
+  await waitForLiffReady();
+
+  let delay = initialDelay;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const idToken = liff.getIDToken();
+
+    if (idToken) {
+      if (attempt > 0) {
+        console.log(`[useLiff] ID token retrieved on attempt ${attempt + 1}`);
+      }
+      return idToken;
+    }
+
+    // Don't wait after the last attempt
+    if (attempt < maxRetries) {
+      console.log(`[useLiff] ID token null, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, 1000); // Exponential backoff, max 1 second
+    }
+  }
+
+  console.warn('[useLiff] Failed to get ID token after all retries');
+  return null;
+}
+
+/**
+ * Get LINE Profile with retry logic for LINE in-app browser race condition
+ *
+ * Similar to getIdTokenWithRetry, this handles the case where
+ * liff.getProfile() might fail immediately after init().
+ *
+ * @param maxRetries Maximum number of retry attempts (default: 3)
+ * @param initialDelay Initial delay in ms (default: 100)
+ * @returns The LINE profile or null if all retries failed
+ */
+export async function getProfileWithRetry(
+  maxRetries: number = 3,
+  initialDelay: number = 100
+): Promise<{ userId: string; displayName: string; pictureUrl?: string } | null> {
+  // First, ensure LIFF is fully ready
+  await waitForLiffReady();
+
+  let delay = initialDelay;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const profile = await liff.getProfile();
+      if (profile) {
+        if (attempt > 0) {
+          console.log(`[useLiff] Profile retrieved on attempt ${attempt + 1}`);
+        }
+        return profile;
+      }
+    } catch (err) {
+      console.log(`[useLiff] getProfile attempt ${attempt + 1} failed:`, err);
+    }
+
+    // Don't wait after the last attempt
+    if (attempt < maxRetries) {
+      console.log(`[useLiff] Profile retrieval failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, 500); // Exponential backoff, max 500ms
+    }
+  }
+
+  console.warn('[useLiff] Failed to get profile after all retries');
+  return null;
+}
+
 export default useLiff;

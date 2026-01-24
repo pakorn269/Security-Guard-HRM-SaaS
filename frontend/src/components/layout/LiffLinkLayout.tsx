@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
-import { getCurrentLiffId } from '../../hooks/useLiff';
+import { getCurrentLiffId, getIdTokenWithRetry, waitForLiffReady } from '../../hooks/useLiff';
 import liffAuthService, { type LineProfile, type AutoLinkResult } from '../../services/liff-auth.service';
 import { clearTokens, getAccessToken } from '../../services/api';
 import type { AuthUser } from '../../types/auth';
@@ -219,20 +219,38 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 addDebugLog(`LIFF already init: ${liffId}`);
             }
 
+            // Wait for LIFF to be fully ready (handles LINE in-app browser race condition)
+            await waitForLiffReady();
+            addDebugLog('LIFF ready');
+
             // Check LIFF context for debugging
             const isInClient = liff.isInClient();
-            const isLoggedIn = liff.isLoggedIn();
+            let isLoggedIn = liff.isLoggedIn();
             console.log('[LiffLink] LIFF Context - isInClient:', isInClient, 'isLoggedIn:', isLoggedIn, 'wasAlreadyInitialized:', isAlreadyInitialized);
             addDebugLog(`isInClient:${isInClient} isLoggedIn:${isLoggedIn}`);
 
             // If we're in LINE client, the user is guaranteed to be logged in
-            // even if isLoggedIn() returns false (can happen due to timing)
+            // even if isLoggedIn() returns false initially (can happen due to timing)
             if (isInClient) {
-                console.log('[LiffLink] Running inside LINE client, proceeding as logged in');
-                // In LINE client, we can always get the ID token
-                const idToken = liff.getIDToken();
+                console.log('[LiffLink] Running inside LINE client');
+
+                // In LINE client, if not logged in yet, wait a bit (race condition)
+                if (!isLoggedIn) {
+                    console.log('[LiffLink] In LINE client but isLoggedIn=false, waiting for race condition...');
+                    addDebugLog('Waiting for login state...');
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    isLoggedIn = liff.isLoggedIn();
+                    console.log('[LiffLink] After wait, isLoggedIn:', isLoggedIn);
+                    addDebugLog(`After wait isLoggedIn:${isLoggedIn}`);
+                }
+
+                // Get ID token with retry logic for race condition
+                // In LINE client, the token should be available but might take a moment
+                const idToken = await getIdTokenWithRetry(5, 100);
+
                 if (idToken) {
                     console.log('[LiffLink] ID Token retrieved in LINE client');
+                    addDebugLog('ID Token retrieved');
                     setState(prev => ({
                         ...prev,
                         status: 'verifying',
@@ -242,6 +260,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
 
                     // Verify with backend
                     console.log('[LiffLink] Verifying with backend...');
+                    addDebugLog('Verifying with backend...');
                     const verifyResult = await liffAuthService.verifyLineToken(idToken, liffId);
 
                     if (verifyResult.isLinked) {
@@ -265,10 +284,10 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     }
                     return;
                 } else {
-                    // ID token not available yet - this shouldn't happen in LINE client
-                    // but if it does, show an error instead of falling through
-                    console.error('[LiffLink] In LINE client but no ID token available');
-                    throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้');
+                    // ID token not available even after retries - this shouldn't happen in LINE client
+                    console.error('[LiffLink] In LINE client but no ID token available after retries');
+                    addDebugLog('ERROR: No ID token after retries');
+                    throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้ กรุณาลองใหม่อีกครั้ง');
                 }
             }
 
@@ -283,12 +302,12 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 return; // Stop here - don't call liff.login() automatically
             }
 
-            // User is logged in, get ID token
-            const idToken = liff.getIDToken();
+            // User is logged in (external browser), get ID token with retry
+            const idToken = await getIdTokenWithRetry(3, 100);
             console.log('[LiffLink] ID Token retrieved:', idToken ? 'Yes' : 'No');
 
             if (!idToken) {
-                throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้');
+                throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้ กรุณาลองใหม่อีกครั้ง');
             }
 
             setState(prev => ({
