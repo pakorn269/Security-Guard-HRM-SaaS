@@ -1,4 +1,4 @@
-import { supabaseAdmin as supabase } from '@/config/supabase.js';
+import { supabaseAdmin as supabase } from '../../config/supabase.js';
 import type {
     LineLinkRequest,
     LineLinkRequestRow,
@@ -22,7 +22,7 @@ import type {
     ApproveUnlinkResult,
     RevokeSessionResult,
 } from './line-link.types.js';
-import { toCamelCase, toSnakeCase } from '@/utils/caseConversion.js';
+import { toCamelCase, toSnakeCase } from '../../utils/caseConversion.js';
 import { createHash } from 'crypto';
 
 // ============================================================

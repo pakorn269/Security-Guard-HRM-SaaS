@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authMiddleware as authenticate } from '@/middleware/auth.middleware.js';
-import { requireRoles as requireRole } from '@/middleware/auth.middleware.js';
+import { authMiddleware as authenticate } from '../../middleware/auth.middleware.js';
+import { requireRoles as requireRole } from '../../middleware/auth.middleware.js';
 import * as lineLinkController from './line-link.controller.js';
 
 const router = Router();

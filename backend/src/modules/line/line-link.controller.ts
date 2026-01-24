@@ -10,8 +10,8 @@ import {
     listSessionsQuerySchema,
     listAuditLogsQuerySchema,
 } from './line-link.validation.js';
-import { successResponse, errorResponse } from '@/utils/response.js';
-import type { AuthenticatedRequest } from '@/types/express.js';
+import { successResponse, errorResponse } from '../../utils/response.js';
+import type { AuthenticatedRequest } from '../../types/express.js';
 
 // ============================================================
 // LINE LOGIN & AUTO-DISCOVERY
