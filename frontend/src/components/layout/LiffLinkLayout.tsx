@@ -171,7 +171,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             console.log('[LiffLink] Starting initialization...');
             addDebugLog('Starting initialization...');
             hasInitializedRef.current = true;
-            markSessionInitialized();
+            // Don't mark session as initialized yet - wait until we have profile or user data
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
             // Check for existing JWT token first
@@ -247,6 +247,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                     if (verifyResult.isLinked) {
                         console.log('[LiffLink] User is linked:', verifyResult.user.id);
                         clearLineProfile(); // Clear stored profile when linked
+                        markSessionInitialized(); // Mark as initialized now that we have user data
                         setState(prev => ({
                             ...prev,
                             status: 'linked',
@@ -256,6 +257,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                         console.log('[LiffLink] Saving profile to sessionStorage:', verifyResult.lineProfile);
                         saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
+                        markSessionInitialized(); // Mark as initialized now that we have profile
                         addDebugLog(`Saved profile: ${verifyResult.lineProfile.displayName}`);
                         setState(prev => ({
                             ...prev,
@@ -305,6 +307,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             if (verifyResult.isLinked) {
                 console.log('[LiffLink] User is linked:', verifyResult.user.id);
                 clearLineProfile(); // Clear stored profile when linked
+                markSessionInitialized(); // Mark as initialized now that we have user data
                 setState(prev => ({
                     ...prev,
                     status: 'linked',
@@ -313,6 +316,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
             } else {
                 console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
                 saveLineProfile(verifyResult.lineProfile); // Save to sessionStorage
+                markSessionInitialized(); // Mark as initialized now that we have profile
                 setState(prev => ({
                     ...prev,
                     status: 'not_linked',
