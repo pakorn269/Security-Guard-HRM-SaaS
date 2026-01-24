@@ -182,10 +182,12 @@ export default function EmployeeDetailPage() {
         setIsLoadingHistory(true);
         try {
             const response = await lineService.getEmployeeHistory(id, { pageSize: 10 });
-            setMessageHistory(response.data);
-            setHistoryTotal(response.pagination.total);
+            setMessageHistory(response.data || []);
+            setHistoryTotal(response.pagination?.total || 0);
         } catch (error) {
             console.error('Failed to fetch message history:', error);
+            setMessageHistory([]);
+            setHistoryTotal(0);
         } finally {
             setIsLoadingHistory(false);
         }
@@ -444,7 +446,7 @@ export default function EmployeeDetailPage() {
                                 <div className="flex justify-center py-8">
                                     <LoadingSpinner size="sm" />
                                 </div>
-                            ) : messageHistory.length > 0 ? (
+                            ) : messageHistory && messageHistory.length > 0 ? (
                                 <div className="space-y-3">
                                     {(historyExpanded ? messageHistory : messageHistory.slice(0, 5)).map((msg) => (
                                         <div
