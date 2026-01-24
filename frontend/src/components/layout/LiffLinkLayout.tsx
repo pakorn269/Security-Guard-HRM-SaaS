@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { getCurrentLiffId } from '../../hooks/useLiff';
@@ -559,7 +559,6 @@ export default function LiffLinkLayout() {
 function LiffLinkLayoutContent() {
     const { status, error, retry, isLoading, needsLogin, loginWithLine } = useLiffLink();
     const debugContext = useContext(LiffLinkDebugContext);
-    const navigate = useNavigate();
 
     // If already linked, redirect to clock page
     // This handles the case where a linked user navigates directly to /liff/link
