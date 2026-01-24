@@ -105,8 +105,9 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 }
             }
 
-            // Initialize LIFF SDK
+            // Check if LIFF SDK is already initialized (e.g., from LiffLayout navigation)
             let liffId = liff.id;
+            const isAlreadyInitialized = !!liffId;
 
             if (!liffId) {
                 liffId = getCurrentLiffId();
@@ -122,9 +123,52 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 console.log('[LiffLink] LIFF already initialized with ID:', liffId);
             }
 
-            // Check if logged into LINE - but DON'T auto-redirect
-            if (!liff.isLoggedIn()) {
-                console.log('[LiffLink] Not logged into LINE - waiting for user action');
+            // Check LIFF context for debugging
+            const isInClient = liff.isInClient();
+            const isLoggedIn = liff.isLoggedIn();
+            console.log('[LiffLink] LIFF Context - isInClient:', isInClient, 'isLoggedIn:', isLoggedIn, 'wasAlreadyInitialized:', isAlreadyInitialized);
+
+            // If we're in LINE client, the user is guaranteed to be logged in
+            // even if isLoggedIn() returns false (can happen due to timing)
+            if (isInClient) {
+                console.log('[LiffLink] Running inside LINE client, proceeding as logged in');
+                // In LINE client, we can always get the ID token
+                const idToken = liff.getIDToken();
+                if (idToken) {
+                    console.log('[LiffLink] ID Token retrieved in LINE client');
+                    setState(prev => ({
+                        ...prev,
+                        status: 'verifying',
+                        idToken,
+                        liffId,
+                    }));
+
+                    // Verify with backend
+                    console.log('[LiffLink] Verifying with backend...');
+                    const verifyResult = await liffAuthService.verifyLineToken(idToken, liffId);
+
+                    if (verifyResult.isLinked) {
+                        console.log('[LiffLink] User is linked:', verifyResult.user.id);
+                        setState(prev => ({
+                            ...prev,
+                            status: 'linked',
+                            user: verifyResult.user,
+                        }));
+                    } else {
+                        console.log('[LiffLink] User not linked, LINE profile:', verifyResult.lineProfile.userId);
+                        setState(prev => ({
+                            ...prev,
+                            status: 'not_linked',
+                            lineProfile: verifyResult.lineProfile,
+                        }));
+                    }
+                    return;
+                }
+            }
+
+            // External browser: Check if logged into LINE
+            if (!isLoggedIn) {
+                console.log('[LiffLink] Not logged into LINE (external browser) - waiting for user action');
                 setState(prev => ({
                     ...prev,
                     status: 'not_logged_in',
