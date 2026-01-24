@@ -2,7 +2,7 @@
 // Wrapper for account linking pages - initializes LIFF without auto-redirecting to login
 // This prevents the infinite login loop when users haven't linked their account yet
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
@@ -87,18 +87,18 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         liffId: null,
     });
     const [debugError, setDebugError] = useState<string | null>(null);
-    const [hasInitialized, setHasInitialized] = useState(false);
+    const hasInitializedRef = useRef(false); // Use ref instead of state to persist across re-renders
 
     const initializeLiff = useCallback(async () => {
-        // Prevent multiple initializations
-        if (hasInitialized) {
+        // Prevent multiple initializations using ref
+        if (hasInitializedRef.current) {
             console.log('[LiffLink] Already initialized, skipping');
             return;
         }
 
         try {
             console.log('[LiffLink] Starting initialization...');
-            setHasInitialized(true);
+            hasInitializedRef.current = true;
             setState(prev => ({ ...prev, status: 'initializing', error: null }));
 
             // Check for existing JWT token first
@@ -244,7 +244,7 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 error: errorMessage,
             }));
         }
-    }, [hasInitialized]);
+    }, []); // Empty deps - only initialize once
 
     // Initialize on mount
     useEffect(() => {
@@ -376,8 +376,10 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
         }
     }, [state.idToken, state.liffId]);
 
-    // Retry
+    // Retry - reset the initialization flag to allow re-initialization
     const retry = useCallback(() => {
+        console.log('[LiffLink] Retry requested, resetting initialization flag');
+        hasInitializedRef.current = false;
         initializeLiff();
     }, [initializeLiff]);
 
