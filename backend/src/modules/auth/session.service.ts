@@ -73,19 +73,27 @@ class SessionService {
         const deviceName = data.deviceName || this.parseDeviceName(data.userAgent);
         const deviceType = data.deviceType || this.detectDeviceType(data.userAgent);
 
+        // Use provided sessionId or let database generate one
+        const sessionData: Record<string, unknown> = {
+            user_id: data.userId,
+            company_id: data.companyId,
+            refresh_token_hash: tokenHash,
+            device_name: deviceName,
+            device_type: deviceType,
+            user_agent: data.userAgent || null,
+            ip_address: data.ipAddress || null,
+            expires_at: data.expiresAt.toISOString(),
+            last_activity_at: new Date().toISOString(),
+        };
+
+        // If sessionId is provided, use it (for token consistency)
+        if (data.sessionId) {
+            sessionData.id = data.sessionId;
+        }
+
         const { data: session, error } = await supabaseAdmin
             .from('user_sessions')
-            .insert({
-                user_id: data.userId,
-                company_id: data.companyId,
-                refresh_token_hash: tokenHash,
-                device_name: deviceName,
-                device_type: deviceType,
-                user_agent: data.userAgent || null,
-                ip_address: data.ipAddress || null,
-                expires_at: data.expiresAt.toISOString(),
-                last_activity_at: new Date().toISOString(),
-            })
+            .insert(sessionData)
             .select('id')
             .single();
 
