@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import liff from '@line/liff';
 import { getCurrentLiffId, clearStoredLiffId, getIdTokenWithRetry, waitForLiffReady } from '../hooks/useLiff';
 import liffAuthService, { type LineProfile } from '../services/liff-auth.service';
-import { clearTokens, getAccessToken } from '../services/api';
+import api, { clearTokens, getAccessToken } from '../services/api';
 import type { AuthUser } from '../types/auth';
 
 // ============================================================
@@ -199,41 +199,26 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
             if (existingToken) {
                 console.log('[LiffAuth] Found existing JWT token, verifying with /auth/me...');
                 try {
-                    // Use fetch instead of axios in LIFF context to avoid axios issues in LINE app
-                    // axios has problems with request interception in LINE's in-app browser
-                    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-                    const response = await fetch(`${baseURL}/auth/me`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${existingToken}`,
-                        },
-                    });
+                    // Use api.get (axios) now that headers issue is resolved
+                    // This allows the interceptor to handle token refresh automatically
+                    const response = await api.get<{ success: boolean; data: AuthUser }>('/auth/me');
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data?.success && data?.data) {
-                            const user = data.data;
-                            // Check if user has LINE linked to determine auth mode
-                            if (user.lineUserId) {
-                                console.log('[LiffAuth] JWT token valid, user has LINE linked');
-                                dispatch({ type: 'LINK_SUCCESS', payload: user });
-                            } else {
-                                console.log('[LiffAuth] JWT token valid, using email auth mode');
-                                dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: user });
-                            }
-                            return;
+                    if (response.data?.success && response.data?.data) {
+                        const user = response.data.data;
+                        // Check if user has LINE linked to determine auth mode
+                        if (user.lineUserId) {
+                            console.log('[LiffAuth] JWT token valid, user has LINE linked');
+                            dispatch({ type: 'LINK_SUCCESS', payload: user });
+                        } else {
+                            console.log('[LiffAuth] JWT token valid, using email auth mode');
+                            dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: user });
                         }
-                    } else if (response.status === 401) {
-                        console.log('[LiffAuth] JWT token invalid (401), clearing and continuing with LINE auth');
-                        clearTokens();
-                    } else {
-                        console.log('[LiffAuth] /auth/me failed with status:', response.status);
-                        // Keep token and try LINE auth as fallback
+                        return;
                     }
                 } catch (err) {
-                    console.log('[LiffAuth] /auth/me fetch failed, keeping token:', err);
-                    // Network error - keep token and try LINE auth as fallback
+                    console.log('[LiffAuth] /auth/me failed (token invalid or refresh failed), clearing and continuing with LINE auth:', err);
+                    // Token is invalid/expired and refresh failed, so we clear it and proceed to standard LINE auth
+                    clearTokens();
                 }
             }
 

@@ -77,22 +77,15 @@ export const liffAuthService = {
      * Returns user data + tokens if linked, or LINE profile if not linked
      */
     async verifyLineToken(idToken: string, liffId: string): Promise<LineVerifyResponse> {
-        // Use fetch() instead of axios in LIFF context to avoid axios issues in LINE app
-        // axios has problems with LIFF SDK interceptors in some cases
+        // Use api.post (axios) now that headers issue is resolved
         try {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-            const response = await fetch(`${baseURL}${AUTH_BASE}/line/verify`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ idToken, liffId }),
+            const response = await api.post<ApiResponse<LineVerifyResponse>>(`${AUTH_BASE}/line/verify`, {
+                idToken,
+                liffId
             });
 
-            const data: ApiResponse<LineVerifyResponse> = await response.json();
-
-            if (data.success && data.data) {
-                const result = data.data;
+            if (response.data.success && response.data.data) {
+                const result = response.data.data;
 
                 // If linked, store tokens
                 if (result.isLinked && result.tokens) {
@@ -102,15 +95,16 @@ export const liffAuthService = {
                 return result;
             }
 
+            throw new Error('Failed to verify LINE token');
+        } catch (error: any) {
+            console.error('[liffAuthService] Error verifying LINE token:', error);
+
             // Handle rate limiting with a better message
-            if (data.error?.code === 'RATE_LIMIT_EXCEEDED') {
-                throw new Error(data.error.message_th || 'มีคำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
+            if (error?.code === 'RATE_LIMIT_EXCEEDED') {
+                throw new Error(error.message_th || 'มีคำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
             }
 
-            throw new Error(data.error?.message_th || data.error?.message || 'Failed to verify LINE token');
-        } catch (error) {
-            console.error('[liffAuthService] Error verifying LINE token:', error);
-            throw error instanceof Error ? error : new Error('Failed to verify LINE token');
+            throw error instanceof Error ? error : new Error(error?.message || 'Failed to verify LINE token');
         }
     },
 
