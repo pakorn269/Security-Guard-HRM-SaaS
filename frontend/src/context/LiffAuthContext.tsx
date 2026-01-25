@@ -195,8 +195,9 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
             // users who just completed LINE linking in LiffLinkLayout)
             // ============================================================
             const existingToken = getAccessToken();
+            console.log('[LiffAuth] Checking for existing token:', !!existingToken);
             if (existingToken) {
-                console.log('[LiffAuth] Found existing JWT token, verifying...');
+                console.log('[LiffAuth] Found existing JWT token, verifying with /auth/me...');
                 try {
                     // Try to get current user with existing token
                     const response = await api.get('/auth/me');
@@ -212,13 +213,14 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                         }
                         return;
                     }
-                } catch {
+                } catch (err) {
                     // Token invalid/expired, continue with LINE auth
-                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth');
+                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth', err);
                     clearTokens();
                 }
             }
 
+            console.log('[LiffAuth] No valid token found, proceeding with LINE authentication');
             // ============================================================
             // No valid JWT token, proceed with LINE authentication
             // ============================================================

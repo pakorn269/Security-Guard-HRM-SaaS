@@ -522,6 +522,7 @@ function LiffLinkLayoutContent() {
         if (status === 'linked' && !hasRedirectedRef.current) {
             hasRedirectedRef.current = true;
             console.log('[LiffLink] User already linked, redirecting to clock page');
+            console.log('[LiffLink] Current tokens - access:', !!localStorage.getItem('access_token'), 'refresh:', !!localStorage.getItem('refresh_token'));
             // Use React Router navigate to preserve React state and prevent full page reload
             // This avoids the infinite loop caused by window.location.replace resetting all contexts
             navigate('/liff/clock', { replace: true });
