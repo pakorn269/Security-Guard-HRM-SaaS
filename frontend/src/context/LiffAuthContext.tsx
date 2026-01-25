@@ -5,7 +5,7 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import liff from '@line/liff';
-import { getCurrentLiffId, clearStoredLiffId } from '../hooks/useLiff';
+import { getCurrentLiffId, clearStoredLiffId, getIdTokenWithRetry, waitForLiffReady } from '../hooks/useLiff';
 import liffAuthService, { type LineProfile } from '../services/liff-auth.service';
 import api, { clearTokens, getAccessToken } from '../services/api';
 import type { AuthUser } from '../types/auth';
@@ -236,20 +236,41 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                 console.log('[LiffAuth] LIFF already initialized with ID:', liffId);
             }
 
+            // Wait for LIFF to be fully ready (handles LINE in-app browser race condition)
+            await waitForLiffReady();
+            console.log('[LiffAuth] LIFF ready');
+
             // Check if logged into LINE
-            if (!liff.isLoggedIn()) {
-                console.log('[LiffAuth] Not logged into LINE, redirecting to login...');
-                dispatch({ type: 'NOT_LOGGED_IN' });
-                liff.login();
-                return;
+            // In LINE in-app browser, isLoggedIn() should be true immediately
+            // In external browser, user may need to go through login flow
+            const isInClient = liff.isInClient();
+            const isLoggedIn = liff.isLoggedIn();
+            console.log('[LiffAuth] Context - isInClient:', isInClient, 'isLoggedIn:', isLoggedIn);
+
+            if (!isLoggedIn) {
+                // In LINE client, user should always be logged in
+                // If somehow not, wait a bit and check again (race condition handling)
+                if (isInClient) {
+                    console.log('[LiffAuth] In LINE client but not logged in yet, waiting...');
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    if (!liff.isLoggedIn()) {
+                        console.log('[LiffAuth] Still not logged in after wait, proceeding anyway in LINE client');
+                    }
+                } else {
+                    console.log('[LiffAuth] Not logged into LINE, redirecting to login...');
+                    dispatch({ type: 'NOT_LOGGED_IN' });
+                    liff.login();
+                    return;
+                }
             }
 
-            // Get ID token
-            const idToken = liff.getIDToken();
+            // Get ID token with retry logic for LINE in-app browser race condition
+            // In LINE client, the token should be available but might take a moment
+            const idToken = await getIdTokenWithRetry(5, 100);
             console.log('[LiffAuth] ID Token retrieved:', idToken ? 'Yes' : 'No');
 
             if (!idToken) {
-                throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้');
+                throw new Error('ไม่สามารถดึงข้อมูลยืนยันตัวตนจาก LINE ได้ กรุณาลองใหม่อีกครั้ง');
             }
 
             dispatch({ type: 'LIFF_READY', payload: { idToken, liffId } });
