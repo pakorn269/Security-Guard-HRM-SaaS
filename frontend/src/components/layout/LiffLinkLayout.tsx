@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
 import { Loader2, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { getCurrentLiffId, getIdTokenWithRetry, waitForLiffReady } from '../../hooks/useLiff';
@@ -513,17 +513,20 @@ export default function LiffLinkLayout() {
 function LiffLinkLayoutContent() {
     const { status, error, retry, isLoading, needsLogin, loginWithLine } = useLiffLink();
     const debugContext = useContext(LiffLinkDebugContext);
+    const navigate = useNavigate();
+    const hasRedirectedRef = useRef(false);
 
     // If already linked, redirect to clock page
     // This handles the case where a linked user navigates directly to /liff/link
     useEffect(() => {
-        if (status === 'linked') {
+        if (status === 'linked' && !hasRedirectedRef.current) {
+            hasRedirectedRef.current = true;
             console.log('[LiffLink] User already linked, redirecting to clock page');
-            // Use window.location.replace for cleaner redirect in LIFF context
-            // React Router's navigate can sometimes cause issues in LINE's webview
-            window.location.replace('/liff/clock');
+            // Use React Router navigate to preserve React state and prevent full page reload
+            // This avoids the infinite loop caused by window.location.replace resetting all contexts
+            navigate('/liff/clock', { replace: true });
         }
-    }, [status]);
+    }, [status, navigate]);
 
     // Show redirecting message while navigating
     if (status === 'linked') {

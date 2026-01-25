@@ -191,7 +191,8 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
             dispatch({ type: 'INIT_START' });
 
             // ============================================================
-            // Check for existing JWT token first (email login users)
+            // Check for existing JWT token first (handles both email login and
+            // users who just completed LINE linking in LiffLinkLayout)
             // ============================================================
             const existingToken = getAccessToken();
             if (existingToken) {
@@ -200,8 +201,15 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                     // Try to get current user with existing token
                     const response = await api.get('/auth/me');
                     if (response.data?.success && response.data?.data) {
-                        console.log('[LiffAuth] JWT token valid, using email auth mode');
-                        dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: response.data.data });
+                        const user = response.data.data;
+                        // Check if user has LINE linked to determine auth mode
+                        if (user.lineUserId) {
+                            console.log('[LiffAuth] JWT token valid, user has LINE linked');
+                            dispatch({ type: 'LINK_SUCCESS', payload: user });
+                        } else {
+                            console.log('[LiffAuth] JWT token valid, using email auth mode');
+                            dispatch({ type: 'EMAIL_AUTH_SUCCESS', payload: user });
+                        }
                         return;
                     }
                 } catch {
@@ -211,9 +219,6 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                 }
             }
 
-            // ============================================================
-            // No valid JWT token, proceed with LINE authentication
-            // ============================================================
             // ============================================================
             // No valid JWT token, proceed with LINE authentication
             // ============================================================
@@ -292,9 +297,12 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                 type: 'ERROR',
                 payload: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
             });
-        } finally {
+            // Only reset on error to allow retry
+            // Keep initializingRef true on success to prevent re-initialization loops
             initializingRef.current = false;
         }
+        // Note: initializingRef stays true after successful init to prevent re-init loops
+        // The retry() function explicitly resets it when user wants to retry
     }, []);
 
     // Initialize on mount
