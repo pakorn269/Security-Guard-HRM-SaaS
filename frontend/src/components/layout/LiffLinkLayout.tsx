@@ -150,12 +150,23 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                         }
                         // User has token but no LINE linked - unusual state, clear and continue
                         console.log('[LiffLink] User has token but no LINE linked, clearing...');
+                        clearTokens();
                     }
-                } catch {
-                    console.log('[LiffLink] JWT token invalid, clearing...');
-                    addDebugLog('JWT invalid, clearing');
+                } catch (err) {
+                    // Don't clear tokens on transient errors - let the user retry
+                    // Only clear if it's definitely an auth error (401)
+                    const isAuthError = err && typeof err === 'object' && 'response' in err &&
+                        (err as { response?: { status?: number } }).response?.status === 401;
+                    if (isAuthError) {
+                        console.log('[LiffLink] JWT token invalid (401), clearing...');
+                        addDebugLog('JWT invalid (401), clearing');
+                        clearTokens();
+                    } else {
+                        console.log('[LiffLink] /auth/me failed (not 401), keeping token and retrying LINE auth', err);
+                        addDebugLog('auth/me failed, keeping token');
+                        // Keep the token and proceed with LINE auth as fallback
+                    }
                 }
-                clearTokens();
             }
 
             // Initialize LIFF SDK
