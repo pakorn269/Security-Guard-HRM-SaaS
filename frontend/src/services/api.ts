@@ -1,5 +1,5 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
-import { getLiffHeaders } from '../hooks/useLiff';
+// import { getLiffHeaders } from '../hooks/useLiff';
 
 // Types for API responses
 export interface ApiResponse<T = unknown> {
@@ -77,6 +77,9 @@ api.interceptors.request.use(
         }
 
         // Add LIFF context headers if in LIFF environment
+        // COMMENTED OUT: Caused NETWORK_ERROR in LINE in-app browser likely due to CORS preflight failure
+        // The backend likely doesn't allow these custom headers in Access-Control-Allow-Headers
+        /*
         try {
             const liffHeaders = getLiffHeaders();
             if (config.headers && liffHeaders) {
@@ -85,6 +88,7 @@ api.interceptors.request.use(
         } catch (error) {
             // Ignore LIFF header errors (not in LIFF context)
         }
+        */
 
         return config;
     },
