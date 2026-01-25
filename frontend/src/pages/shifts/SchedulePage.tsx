@@ -36,7 +36,10 @@ import {
   copyShifts,
 } from '../../services/shift.service';
 import { employeeService } from '../../services/employee.service';
+import { listLeaveRequests, type LeaveRequestWithDetails } from '../../services/leave.service';
+import { sitesService, type Site } from '../../services/sites.service';
 import type { ShiftTemplate, ShiftWithDetails, CreateShiftRequest } from '../../types/shift.types';
+import { calculateWeeklyCost, calculateShiftCost, calculateShiftHours, formatCurrency, formatHours } from '../../utils/shiftCost';
 import { Button, Modal, LoadingSpinner, Card, Input, Select, Badge, Avatar } from '../../components/common';
 import { PageHeader } from '../../components/layout';
 import { Tabs, TabList, Tab } from '../../components/navigation';
@@ -108,10 +111,11 @@ const SHIFT_STATUS_CONFIG = {
 interface DraggableShiftProps {
   shift: ShiftWithDetails;
   onClick: (shift: ShiftWithDetails) => void;
+  onDuplicate: (shift: ShiftWithDetails) => void;
   statusConfig: typeof SHIFT_STATUS_CONFIG[keyof typeof SHIFT_STATUS_CONFIG];
 }
 
-const DraggableShift = ({ shift, onClick, statusConfig }: DraggableShiftProps) => {
+const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig }: DraggableShiftProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
     data: shift,
@@ -138,15 +142,32 @@ const DraggableShift = ({ shift, onClick, statusConfig }: DraggableShiftProps) =
       {...listeners}
       {...attributes}
     >
-      <div
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10 cursor-pointer"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(shift);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <GripHorizontal size={14} className="text-neutral-400" />
+      {/* Action buttons */}
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+        {/* Duplicate button */}
+        <div
+          className="p-0.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDuplicate(shift);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="Duplicate shift"
+        >
+          <Copy size={14} className="text-blue-500" />
+        </div>
+
+        {/* Edit/drag handle */}
+        <div
+          className="p-0.5 rounded hover:bg-black/10 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(shift);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <GripHorizontal size={14} className="text-neutral-400" />
+        </div>
       </div>
 
       <div style={{
@@ -161,6 +182,24 @@ const DraggableShift = ({ shift, onClick, statusConfig }: DraggableShiftProps) =
         <div className="flex items-center gap-1 font-medium text-neutral-700 dark:text-neutral-200">
           <Clock size={12} />
           {shift.startTime} - {shift.endTime}
+        </div>
+
+        {/* Duration */}
+        <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+          {(() => {
+            const hours = calculateShiftHours(shift.startTime, shift.endTime, 0);
+            const breakdown = calculateShiftCost(shift, 250);
+            return (
+              <>
+                {formatHours(hours)} hrs
+                {breakdown.overtimeHours > 0 && (
+                  <span className="text-warning-600 dark:text-warning-400 ml-1">
+                    (+{formatHours(breakdown.overtimeHours)} OT)
+                  </span>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Location */}
@@ -219,6 +258,8 @@ export default function SchedulePage() {
   const [shifts, setShifts] = useState<ShiftWithDetails[]>([]);
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequestWithDetails[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const toast = useToast();
@@ -237,6 +278,7 @@ export default function SchedulePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [showCostModal, setShowCostModal] = useState(false);
   const [editingShift, setEditingShift] = useState<ShiftWithDetails | null>(null);
   const [activeDragShift, setActiveDragShift] = useState<ShiftWithDetails | null>(null);
 
@@ -261,6 +303,8 @@ export default function SchedulePage() {
     date: '',
     startTime: '08:00',
     endTime: '17:00',
+    siteId: '',
+    zoneId: '',
     location: '',
   });
 
@@ -277,13 +321,19 @@ export default function SchedulePage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [templatesRes, shiftsRes, employeesRes] = await Promise.all([
+      const [templatesRes, shiftsRes, employeesRes, leaveRes, sitesRes] = await Promise.all([
         listShiftTemplates(),
         listShifts({
           startDate: weekStart,
           endDate: weekEnd,
         }),
         employeeService.list({ status: 'active' }),
+        listLeaveRequests({
+          status: 'approved',
+          startDate: weekStart,
+          endDate: weekEnd,
+        }),
+        sitesService.list(),
       ]);
 
       setTemplates(templatesRes);
@@ -296,6 +346,8 @@ export default function SchedulePage() {
           status: e.status,
         }))
       );
+      setLeaveRequests(leaveRes.requests);
+      setSites(sitesRes.filter(s => s.isActive));
     } catch (error) {
       console.error('Error loading schedule data:', error);
       toast.error('Failed to load schedule');
@@ -334,6 +386,9 @@ export default function SchedulePage() {
   const draftCount = shifts.filter((s) => s.status === 'draft').length;
   const publishedCount = shifts.filter((s) => s.status === 'published').length;
 
+  // Calculate weekly cost summary
+  const weeklyCost = calculateWeeklyCost(shifts, 250); // Default 250 THB/hour
+
   // Handle shift creation
   const handleCreateShift = async () => {
     try {
@@ -342,29 +397,62 @@ export default function SchedulePage() {
       toast.success(t('schedule.createSuccess', 'สร้างกะสำเร็จ'));
       loadData();
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating shift:', error);
-      toast.error(t('schedule.createError', 'เกิดข้อผิดพลาดในการสร้างกะ'));
+
+      // Display specific error message from backend
+      const errorMessage = error?.message_th || error?.message || t('schedule.createError', 'เกิดข้อผิดพลาดในการสร้างกะ');
+      toast.error(errorMessage);
     }
   };
 
   // Handle shift update
   const handleUpdateShift = async () => {
     if (!editingShift) return;
+
+    // If shift is published, show confirmation dialog
+    if (editingShift.status === 'published') {
+      const employeeName = editingShift.employee?.fullName || 'พนักงาน';
+      const confirmed = window.confirm(
+        t(
+          'schedule.confirmUpdatePublished',
+          `แก้ไขกะที่เผยแพร่แล้วสำหรับ ${employeeName}?\n\nพนักงานจะได้รับการแจ้งเตือนเกี่ยวกับการเปลี่ยนแปลงผ่าน LINE`
+        )
+      );
+
+      if (!confirmed) {
+        return; // User cancelled
+      }
+    }
+
     try {
       await updateShift(editingShift.id, {
         startTime: formData.startTime,
         endTime: formData.endTime,
-        location: formData.location,
+        siteId: formData.siteId || null,
+        zoneId: formData.zoneId || null,
+        location: formData.location || null,
+        notes: formData.notes || null,
       });
       setShowCreateModal(false);
       setEditingShift(null);
-      toast.success(t('schedule.updateSuccess', 'อัปเดตกะสำเร็จ'));
+
+      if (editingShift.status === 'published') {
+        toast.success(
+          t('schedule.updatePublishedSuccess', `อัปเดตกะสำเร็จ ส่งการแจ้งเตือนไปยัง ${editingShift.employee?.fullName || 'พนักงาน'} แล้ว`)
+        );
+      } else {
+        toast.success(t('schedule.updateSuccess', 'อัปเดตกะสำเร็จ'));
+      }
+
       loadData();
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating shift:', error);
-      toast.error(t('schedule.updateError', 'เกิดข้อผิดพลาดในการอัปเดตกะ'));
+
+      // Display specific error message from backend
+      const errorMessage = error?.message_th || error?.message || t('schedule.updateError', 'เกิดข้อผิดพลาดในการอัปเดตกะ');
+      toast.error(errorMessage);
     }
   };
 
@@ -375,9 +463,12 @@ export default function SchedulePage() {
       await deleteShift(shiftId);
       toast.success(t('schedule.deleteSuccess', 'ลบกะสำเร็จ'));
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting shift:', error);
-      toast.error(t('schedule.deleteError', 'เกิดข้อผิดพลาดในการลบกะ'));
+
+      // Display specific error message from backend
+      const errorMessage = error?.message_th || error?.message || t('schedule.deleteError', 'เกิดข้อผิดพลาดในการลบกะ');
+      toast.error(errorMessage);
     }
   };
 
@@ -388,9 +479,12 @@ export default function SchedulePage() {
       setShowPublishModal(false);
       toast.success(t('schedule.publishSuccess', 'ประกาศกะสำเร็จ'));
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error publishing shifts:', error);
-      toast.error(t('schedule.publishError', 'เกิดข้อผิดพลาดในการประกาศกะ'));
+
+      // Display specific error message from backend
+      const errorMessage = error?.message_th || error?.message || t('schedule.publishError', 'เกิดข้อผิดพลาดในการประกาศกะ');
+      toast.error(errorMessage);
     }
   };
 
@@ -404,9 +498,12 @@ export default function SchedulePage() {
       setShowCopyModal(false);
       toast.success(t('schedule.copySuccess', 'คัดลอกกะสำเร็จ'));
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error copying shifts:', error);
-      toast.error(t('schedule.copyError', 'เกิดข้อผิดพลาดในการคัดลอกกะ'));
+
+      // Display specific error message from backend
+      const errorMessage = error?.message_th || error?.message || t('schedule.copyError', 'เกิดข้อผิดพลาดในการคัดลอกกะ');
+      toast.error(errorMessage);
     }
   };
 
@@ -417,6 +514,8 @@ export default function SchedulePage() {
       date: '',
       startTime: '08:00',
       endTime: '17:00',
+      siteId: '',
+      zoneId: '',
       location: '',
     });
     setEditingShift(null);
@@ -440,9 +539,29 @@ export default function SchedulePage() {
       date: shift.date,
       startTime: shift.startTime,
       endTime: shift.endTime,
+      siteId: shift.siteId || '',
+      zoneId: shift.zoneId || '',
       location: shift.location || '',
+      notes: shift.notes || '',
     });
     setShowCreateModal(true);
+  };
+
+  // Duplicate shift
+  const duplicateShift = (shift: ShiftWithDetails) => {
+    setEditingShift(null); // Not editing, creating new
+    setFormData({
+      employeeId: shift.employeeId,
+      date: shift.date, // Same date by default, user can change
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      siteId: shift.siteId || '',
+      zoneId: shift.zoneId || '',
+      location: shift.location || '',
+      notes: shift.notes || '',
+    });
+    setShowCreateModal(true);
+    toast.success(t('schedule.duplicateReady', 'Shift copied. Modify date/employee as needed.'));
   };
 
   // Apply template to form
@@ -456,6 +575,30 @@ export default function SchedulePage() {
         endTime: template.endTime,
       });
     }
+  };
+
+  // Check if employee has approved leave on a specific date
+  const isEmployeeOnLeave = (employeeId: string, date: string): LeaveRequestWithDetails | undefined => {
+    return leaveRequests.find(
+      (leave) =>
+        leave.employeeId === employeeId &&
+        leave.startDate <= date &&
+        leave.endDate >= date
+    );
+  };
+
+  // Calculate employee weekly hours
+  const getEmployeeWeeklyHours = (employeeId: string): number => {
+    return shifts
+      .filter(s => s.employeeId === employeeId && s.status !== 'cancelled')
+      .reduce((total, shift) => {
+        return total + calculateShiftHours(shift.startTime, shift.endTime, 0);
+      }, 0);
+  };
+
+  // Get employee shift count
+  const getEmployeeShiftCount = (employeeId: string): number => {
+    return shifts.filter(s => s.employeeId === employeeId && s.status !== 'cancelled').length;
   };
 
   // Open copy modal with defaults
@@ -562,13 +705,23 @@ export default function SchedulePage() {
             <Button variant="ghost" size="sm" onClick={goToPreviousWeek} className="touch-target">
               <ChevronLeft size={18} />
             </Button>
+
+            {/* Date Picker for Quick Jump */}
+            <input
+              type="date"
+              value={formatDate(currentDate)}
+              onChange={(e) => setCurrentDate(new Date(e.target.value))}
+              className="px-2 py-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 cursor-pointer hover:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              title={t('schedule.jumpToDate', 'เลือกวันที่')}
+            />
+
             <Button variant="outline" size="sm" onClick={goToToday} className="touch-target">
               {t('schedule.today', 'วันนี้')}
             </Button>
             <Button variant="ghost" size="sm" onClick={goToNextWeek} className="touch-target">
               <ChevronRight size={18} />
             </Button>
-            <span className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-neutral-100 ml-1 sm:ml-2 truncate">
+            <span className="hidden sm:inline text-sm font-semibold text-neutral-800 dark:text-neutral-100 ml-1 truncate">
               {weekDays[0].toLocaleDateString('th-TH', { month: 'short', year: 'numeric' })}
             </span>
           </div>
@@ -587,6 +740,24 @@ export default function SchedulePage() {
                 {publishedCount}
               </Badge>
             </div>
+            {/* Cost Summary */}
+            {weeklyCost.totalShifts > 0 && (
+              <button
+                onClick={() => setShowCostModal(true)}
+                className="flex items-center gap-2 text-sm flex-shrink-0 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+                title={t('schedule.viewCostBreakdown', 'ดูรายละเอียดค่าใช้จ่าย')}
+              >
+                <span className="text-primary-700 dark:text-primary-300">💰</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-xs text-primary-600 dark:text-primary-400">
+                    {t('schedule.weekCost', 'ค่าใช้จ่าย')}
+                  </span>
+                  <span className="font-semibold text-primary-700 dark:text-primary-300">
+                    {formatCurrency(weeklyCost.totalCost)}
+                  </span>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* View Toggle - hidden on mobile, we use agenda view */}
@@ -738,11 +909,39 @@ export default function SchedulePage() {
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 sticky left-0 bg-white dark:bg-neutral-900 z-10">
                           <div className="flex items-center gap-3">
                             <Avatar name={employee.fullName} size="sm" />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium text-neutral-800 dark:text-neutral-100 truncate">
                                 {employee.fullName}
                               </div>
                               <div className="text-xs text-neutral-500">{employee.employeeCode}</div>
+
+                              {/* Workload Indicator */}
+                              {(() => {
+                                const weeklyHours = getEmployeeWeeklyHours(employee.id);
+                                const shiftCount = getEmployeeShiftCount(employee.id);
+                                const percentage = Math.min((weeklyHours / 48) * 100, 100);
+                                const status = weeklyHours > 48 ? 'over' : weeklyHours >= 40 ? 'high' : 'normal';
+
+                                return (
+                                  <div className="mt-1">
+                                    <div className="flex items-center gap-1 text-[10px] text-neutral-500 mb-0.5">
+                                      <span>{formatHours(weeklyHours)}/48h</span>
+                                      <span>•</span>
+                                      <span>{shiftCount} shifts</span>
+                                    </div>
+                                    <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full transition-all ${
+                                          status === 'over' ? 'bg-error-500' :
+                                          status === 'high' ? 'bg-warning-500' :
+                                          'bg-success-500'
+                                        }`}
+                                        style={{ width: `${percentage}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </td>
@@ -751,6 +950,7 @@ export default function SchedulePage() {
                         {weekDays.map((day) => {
                           const dateStr = formatDate(day);
                           const cellShifts = getShiftsForCell(dateStr, employee.id);
+                          const employeeLeave = isEmployeeOnLeave(employee.id, dateStr);
 
                           return (
                             <DroppableCell
@@ -764,23 +964,36 @@ export default function SchedulePage() {
                                   key={shift.id}
                                   shift={shift}
                                   onClick={openEditModal}
+                                  onDuplicate={duplicateShift}
                                   statusConfig={SHIFT_STATUS_CONFIG[shift.status as keyof typeof SHIFT_STATUS_CONFIG]}
                                 />
                               ))}
 
-                              {/* Add shift button */}
-                              <button
-                                className="
-                                w-full p-2 rounded-md
-                                border-2 border-dashed border-neutral-200 dark:border-neutral-700
-                                text-neutral-400 hover:border-primary-300 hover:text-primary-500
-                                hover:bg-primary-50 dark:hover:bg-primary-900/20
-                                transition-colors
-                              "
-                                onClick={() => openCreateModal(dateStr, employee.id)}
-                              >
-                                <Plus size={16} className="mx-auto" />
-                              </button>
+                              {/* Leave indicator */}
+                              {employeeLeave && (
+                                <div
+                                  className="w-full p-2 rounded-md bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-700 text-warning-700 dark:text-warning-300 text-xs text-center cursor-help"
+                                  title={t('schedule.onLeave', `ลาพักร้อน: ${employeeLeave.startDate} - ${employeeLeave.endDate}`)}
+                                >
+                                  🏖️ {t('schedule.onLeaveShort', 'ลาพักร้อน')}
+                                </div>
+                              )}
+
+                              {/* Add shift button - disabled if on leave */}
+                              {!employeeLeave && (
+                                <button
+                                  className="
+                                  w-full p-2 rounded-md
+                                  border-2 border-dashed border-neutral-200 dark:border-neutral-700
+                                  text-neutral-400 hover:border-primary-300 hover:text-primary-500
+                                  hover:bg-primary-50 dark:hover:bg-primary-900/20
+                                  transition-colors
+                                "
+                                  onClick={() => openCreateModal(dateStr, employee.id)}
+                                >
+                                  <Plus size={16} className="mx-auto" />
+                                </button>
+                              )}
                             </DroppableCell>
                           );
                         })}
@@ -849,6 +1062,21 @@ export default function SchedulePage() {
         title={editingShift ? t('schedule.editShift', 'แก้ไขกะ') : t('schedule.createShift', 'สร้างกะใหม่')}
       >
         <div className="space-y-4">
+          {/* Warning banner for published shifts */}
+          {editingShift && editingShift.status === 'published' && (
+            <div className="p-3 bg-warning-50 border border-warning-200 rounded-lg flex items-start gap-2">
+              <div className="flex-shrink-0 text-warning-600 mt-0.5">⚠️</div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-warning-900">
+                  {t('schedule.editPublishedWarningTitle', 'กะนี้ถูกประกาศแล้ว')}
+                </p>
+                <p className="text-xs text-warning-700 mt-1">
+                  {t('schedule.editPublishedWarningText', 'การเปลี่ยนแปลงจะแจ้งเตือนพนักงานทันที')}
+                </p>
+              </div>
+            </div>
+          )}
+
           {!editingShift && (
             <Select
               label={t('schedule.employee', 'พนักงาน')}
@@ -900,12 +1128,114 @@ export default function SchedulePage() {
             />
           </div>
 
-          <Input
-            label={t('schedule.location', 'สถานที่ (ตัวเลือก)')}
-            value={formData.location || ''}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            placeholder={t('schedule.locationPlaceholder', 'เช่น อาคาร A')}
+          {/* Cost Estimate */}
+          {formData.startTime && formData.endTime && (
+            <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-primary-700 dark:text-primary-300">💰</span>
+                  <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+                    {t('schedule.estimatedCost', 'ค่าใช้จ่ายประมาณการ')}
+                  </span>
+                </div>
+                <div className="text-right">
+                  {(() => {
+                    const hours = calculateShiftHours(formData.startTime, formData.endTime, 0);
+                    const mockShift = {
+                      startTime: formData.startTime,
+                      endTime: formData.endTime,
+                    } as ShiftWithDetails;
+                    const breakdown = calculateShiftCost(mockShift, 250);
+
+                    return (
+                      <>
+                        <p className="text-lg font-bold text-primary-700 dark:text-primary-300">
+                          {formatCurrency(breakdown.totalCost)}
+                        </p>
+                        <p className="text-xs text-primary-600 dark:text-primary-400">
+                          {formatHours(hours)} {t('schedule.hrs', 'ชม.')}
+                          {breakdown.overtimeHours > 0 && (
+                            <span className="text-warning-600 dark:text-warning-400">
+                              {' '}(+{formatHours(breakdown.overtimeHours)} OT)
+                            </span>
+                          )}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Site Selector */}
+          <Select
+            label={t('schedule.site', 'สถานที่')}
+            value={formData.siteId || ''}
+            onChange={(e) => {
+              const selectedSite = sites.find(s => s.id === e.target.value);
+              setFormData({
+                ...formData,
+                siteId: e.target.value,
+                zoneId: '', // Reset zone when site changes
+                location: selectedSite?.name || '' // Auto-populate location
+              });
+            }}
+            options={[
+              { value: '', label: t('schedule.customLocation', 'กำหนดเอง / Custom') },
+              ...sites.map(s => ({
+                value: s.id,
+                label: `${s.name}${s.address ? ` - ${s.address}` : ''}`,
+              })),
+            ]}
+            placeholder={t('schedule.selectSite', 'เลือกสถานที่')}
           />
+
+          {/* Zone Selector - Only show when site is selected and has zones */}
+          {formData.siteId && sites.find(s => s.id === formData.siteId)?.zones && sites.find(s => s.id === formData.siteId)!.zones!.length > 0 && (
+            <Select
+              label={t('schedule.zone', 'จุดตรวจ / Zone (ตัวเลือก)')}
+              value={formData.zoneId || ''}
+              onChange={(e) => setFormData({ ...formData, zoneId: e.target.value })}
+              options={[
+                { value: '', label: t('schedule.noZone', 'ไม่ระบุ') },
+                ...(sites.find(s => s.id === formData.siteId)?.zones || [])
+                  .filter(z => z.isActive)
+                  .map(z => ({
+                    value: z.id,
+                    label: `${z.name}${z.code ? ` (${z.code})` : ''}`,
+                  })),
+              ]}
+            />
+          )}
+
+          {/* Custom Location - Only show when no site is selected */}
+          {!formData.siteId && (
+            <Input
+              label={t('schedule.customLocationInput', 'ระบุสถานที่')}
+              value={formData.location || ''}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder={t('schedule.locationPlaceholder', 'เช่น อาคาร A')}
+            />
+          )}
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              {t('schedule.notes', 'หมายเหตุ (ตัวเลือก)')}
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+              rows={3}
+              value={formData.notes || ''}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder={t('schedule.notesPlaceholder', 'เช่น นำอุปกรณ์รักษาความปลอดภัย')}
+              maxLength={1000}
+            />
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              {(formData.notes || '').length}/1000
+            </p>
+          </div>
 
           <div className="flex justify-between pt-4 border-t border-neutral-200 dark:border-neutral-700">
             <div>
@@ -997,6 +1327,132 @@ export default function SchedulePage() {
             </Button>
             <Button variant="primary" leftIcon={<Copy size={16} />} onClick={handleCopy}>
               {t('schedule.copyShifts', 'คัดลอกกะ')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cost Breakdown Modal */}
+      <Modal
+        isOpen={showCostModal}
+        onClose={() => setShowCostModal(false)}
+        title={t('schedule.costBreakdown', 'รายละเอียดค่าใช้จ่าย')}
+      >
+        <div className="space-y-4">
+          {/* Summary Card */}
+          <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-700">
+            <h3 className="text-sm font-medium text-primary-700 dark:text-primary-300 mb-3">
+              {t('schedule.weekSummary', 'สรุปค่าใช้จ่ายสัปดาห์')} ({formatDate(weekDays[0])} - {formatDate(weekDays[6])})
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-neutral-500">{t('schedule.totalShifts', 'จำนวนกะ')}</p>
+                <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {weeklyCost.totalShifts}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">{t('schedule.totalHours', 'ชั่วโมงรวม')}</p>
+                <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {formatHours(weeklyCost.totalHours)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">{t('schedule.regularHours', 'ชั่วโมงปกติ')}</p>
+                <p className="text-base font-medium text-neutral-700 dark:text-neutral-300">
+                  {formatHours(weeklyCost.regularHours)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">{t('schedule.overtimeHours', 'ชั่วโมง OT (1.25x)')}</p>
+                <p className="text-base font-medium text-warning-600 dark:text-warning-400">
+                  {formatHours(weeklyCost.overtimeHours)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-primary-200 dark:border-primary-700">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  {t('schedule.totalCost', 'ค่าใช้จ่ายรวม')}
+                </span>
+                <span className="text-xl font-bold text-primary-700 dark:text-primary-300">
+                  {formatCurrency(weeklyCost.totalCost)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-neutral-500">
+                  {t('schedule.avgPerShift', 'เฉลี่ยต่อกะ')}
+                </span>
+                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                  {formatCurrency(weeklyCost.averageCostPerShift)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Employee Breakdown Table */}
+          <div>
+            <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              {t('schedule.employeeBreakdown', 'รายละเอียดตามพนักงาน')}
+            </h3>
+            <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-50 dark:bg-neutral-800">
+                  <tr>
+                    <th className="text-left p-2 font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('schedule.employee', 'พนักงาน')}
+                    </th>
+                    <th className="text-right p-2 font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('schedule.shifts', 'กะ')}
+                    </th>
+                    <th className="text-right p-2 font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('schedule.hours', 'ชม.')}
+                    </th>
+                    <th className="text-right p-2 font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('schedule.cost', 'ค่าใช้จ่าย')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                  {weeklyCost.employeeBreakdown.map((emp) => (
+                    <tr key={emp.employeeId} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                      <td className="p-2 text-neutral-900 dark:text-neutral-100">
+                        {emp.employeeName}
+                      </td>
+                      <td className="p-2 text-right text-neutral-700 dark:text-neutral-300">
+                        {emp.shifts}
+                      </td>
+                      <td className="p-2 text-right text-neutral-700 dark:text-neutral-300">
+                        {formatHours(emp.hours)}
+                        {emp.overtimeHours > 0 && (
+                          <span className="text-xs text-warning-600 dark:text-warning-400 ml-1">
+                            (+{formatHours(emp.overtimeHours)} OT)
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-2 text-right font-medium text-neutral-900 dark:text-neutral-100">
+                        {formatCurrency(emp.cost)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Note about 2026 rules */}
+          <div className="text-xs text-neutral-500 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+            <p>
+              💡 {t('schedule.costNote', 'ค่าใช้จ่ายคำนวณตามกฎหมาย 2026: ชั่วโมงปกติ (≤8 ชม.) = อัตรา 1.0x, OT (>8 ชม.) = อัตรา 1.25x')}
+            </p>
+            <p className="mt-1">
+              {t('schedule.defaultRate', 'อัตราค่าจ้างเริ่มต้น: ฿250/ชั่วโมง')}
+            </p>
+          </div>
+
+          <div className="flex justify-end pt-4 border-t border-neutral-200 dark:border-neutral-700">
+            <Button variant="ghost" onClick={() => setShowCostModal(false)}>
+              {t('common.close', 'ปิด')}
             </Button>
           </div>
         </div>

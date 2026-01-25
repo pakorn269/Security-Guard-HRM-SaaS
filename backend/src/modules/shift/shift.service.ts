@@ -235,6 +235,15 @@ class ShiftService {
         if (employee.status === 'suspended') return { valid: false, reason: 'Employee is suspended (License Expired)' };
         if (employee.status === 'terminated') return { valid: false, reason: 'Employee is terminated' };
 
+        // 1.5. Check for Approved Leave (HARD BLOCK)
+        const leaveCheck = await this.checkApprovedLeave(companyId, employeeId, date);
+        if (leaveCheck.hasLeave) {
+            return {
+                valid: false,
+                reason: `Employee has approved leave on this date: ${leaveCheck.leaveDetails}`
+            };
+        }
+
         // Calculate new shift times
         const startDateTime = new Date(`${date}T${startTime}`);
         let endDateTime = new Date(`${date}T${endTime}`);
@@ -268,16 +277,24 @@ class ShiftService {
                     sEnd.setDate(sEnd.getDate() + 1);
                 }
 
-                // Check gap: 
+                // Check gap:
                 // Gap 1: Existing End -> New Start
                 if (sEnd <= startDateTime) {
                     const gap = (startDateTime.getTime() - sEnd.getTime()) / (1000 * 60 * 60);
-                    if (gap < 12) return { valid: false, reason: `Insufficient rest period (${gap.toFixed(1)} hrs) after previous shift` };
+                    if (gap < 12) return {
+                        valid: false,
+                        reason: `Insufficient rest period (${gap.toFixed(1)} hrs) after previous shift`,
+                        reason_th: `ระยะพักไม่เพียงพอ (${gap.toFixed(1)} ชม.) หลังกะก่อนหน้า (ต้องพักอย่างน้อย 12 ชม.)`
+                    };
                 }
                 // Gap 2: New End -> Existing Start
                 if (endDateTime <= sStart) {
                     const gap = (sStart.getTime() - endDateTime.getTime()) / (1000 * 60 * 60);
-                    if (gap < 12) return { valid: false, reason: `Insufficient rest period (${gap.toFixed(1)} hrs) before next shift` };
+                    if (gap < 12) return {
+                        valid: false,
+                        reason: `Insufficient rest period (${gap.toFixed(1)} hrs) before next shift`,
+                        reason_th: `ระยะพักไม่เพียงพอ (${gap.toFixed(1)} ชม.) ก่อนกะถัดไป (ต้องพักอย่างน้อย 12 ชม.)`
+                    };
                 }
             }
         }
@@ -328,7 +345,11 @@ class ShiftService {
         // To fix this properly, we should actually fetch IDs in the weekShifts query.
 
         if (newTotal > 48) {
-            return { valid: false, reason: `Weekly hours limit exceeded (${newTotal.toFixed(1)} / 48 hrs)` };
+            return {
+                valid: false,
+                reason: `Weekly hours limit exceeded (${newTotal.toFixed(1)} / 48 hrs)`,
+                reason_th: `เกินจำนวนชั่วโมงต่อสัปดาห์ (${newTotal.toFixed(1)} / 48 ชม.)`
+            };
         }
 
         return { valid: true };
@@ -401,6 +422,46 @@ class ShiftService {
         }
 
         return null;
+    }
+
+    // Check if employee has approved leave on the given date
+    async checkApprovedLeave(
+        companyId: string,
+        employeeId: string,
+        date: string
+    ): Promise<{ hasLeave: boolean; leaveDetails?: string }> {
+        const { data: leaveRequests, error } = await supabaseAdmin
+            .from('leave_requests')
+            .select(`
+                id,
+                start_date,
+                end_date,
+                leave_types!inner (
+                    name,
+                    name_th
+                )
+            `)
+            .eq('company_id', companyId)
+            .eq('employee_id', employeeId)
+            .eq('status', 'approved')
+            .lte('start_date', date)
+            .gte('end_date', date);
+
+        if (error) {
+            logger.error('Error checking approved leave', { error, employeeId, date });
+            throw error;
+        }
+
+        if (leaveRequests && leaveRequests.length > 0) {
+            const leave = leaveRequests[0];
+            const leaveType = leave.leave_types as unknown as { name: string; name_th: string | null };
+            return {
+                hasLeave: true,
+                leaveDetails: `${leaveType.name_th || leaveType.name} (${leave.start_date} - ${leave.end_date})`,
+            };
+        }
+
+        return { hasLeave: false };
     }
 
     // Helper: Convert time string to minutes
