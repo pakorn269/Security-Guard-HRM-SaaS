@@ -28,12 +28,11 @@ interface LiffProtectedRouteProps {
 export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const { isAuthenticated: isAuthAuthenticated, isLoading: authLoading, user, checkAuth } = useAuth();
   const location = useLocation();
-  const [isRechecking, setIsRechecking] = useState(() => {
-    // Initialize to true if token exists but auth not confirmed yet
-    // This prevents redirect before we've had a chance to verify the token
-    const token = getAccessToken();
-    return !!token && !authLoading;
-  });
+
+  // Check for token synchronously - if token exists, we need to verify before redirecting
+  const hasToken = !!getAccessToken();
+
+  const [isRechecking, setIsRechecking] = useState(false);
   const hasRecheckedRef = useRef(false);
 
   // Check if we need to re-verify auth (token exists but not authenticated)
@@ -58,6 +57,10 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
     }
   }, [isAuthAuthenticated, authLoading, checkAuth, isRechecking]);
 
+  // Determine if we should wait for auth verification
+  // Wait if: token exists AND (AuthContext is loading OR we're rechecking OR auth not yet confirmed)
+  const shouldWaitForAuth = hasToken && (authLoading || isRechecking || (!isAuthAuthenticated && !hasRecheckedRef.current));
+
   // Check if we're on any linking page - these bypass AuthContext checks
   // because the linking flow is managed by LiffAuthContext inside LiffLayout
   const isLinkingPage = location.pathname.startsWith('/liff/link');
@@ -69,8 +72,9 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // Show loading while checking auth status (only for non-linking pages)
-  // Also show loading if we're re-checking auth after tokens were stored
-  if (authLoading || isRechecking) {
+  // Wait if token exists and auth hasn't been confirmed yet
+  if (shouldWaitForAuth) {
+    console.log('[LiffProtectedRoute] Waiting for auth verification...', { hasToken, authLoading, isRechecking, isAuthAuthenticated });
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
