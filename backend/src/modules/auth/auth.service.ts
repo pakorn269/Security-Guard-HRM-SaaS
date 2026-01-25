@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
@@ -111,23 +112,25 @@ class AuthService {
     ): Promise<TokenPair> {
         const expiresAt = this.getRefreshTokenExpiryDate();
 
-        // Generate tokens first (we need the refresh token for hashing)
-        // We'll use a temporary sessionId, then create the session with the token hash
-        const tempTokens = this.generateTokens(payload, 'temp', options?.liffContext);
+        // Generate a session ID first using crypto
+        const sessionId = crypto.randomUUID();
 
-        // Create session and get the real sessionId
-        const sessionId = await sessionService.createSession({
+        // Generate tokens with the real sessionId
+        const tokens = this.generateTokens(payload, sessionId, options?.liffContext);
+
+        // Create session with the actual refresh token that will be returned to client
+        await sessionService.createSession({
             userId: payload.userId,
             companyId: payload.companyId,
-            refreshToken: tempTokens.refreshToken,
+            refreshToken: tokens.refreshToken,
             deviceType: options?.isLiff ? 'liff' : sessionService.detectDeviceType(options?.userAgent),
             userAgent: options?.userAgent,
             ipAddress: options?.ipAddress,
             expiresAt,
+            sessionId,
         });
 
-        // Generate final tokens with real sessionId
-        return this.generateTokens(payload, sessionId, options?.liffContext);
+        return tokens;
     }
 
     // Generate company slug from name

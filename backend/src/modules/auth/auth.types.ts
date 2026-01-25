@@ -229,6 +229,7 @@ export interface CreateSessionData {
     userAgent?: string;
     ipAddress?: string;
     expiresAt: Date;
+    sessionId?: string;
 }
 
 export interface SessionListResponse {
