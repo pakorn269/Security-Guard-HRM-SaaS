@@ -28,7 +28,12 @@ interface LiffProtectedRouteProps {
 export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   const { isAuthenticated: isAuthAuthenticated, isLoading: authLoading, user, checkAuth } = useAuth();
   const location = useLocation();
-  const [isRechecking, setIsRechecking] = useState(false);
+  const [isRechecking, setIsRechecking] = useState(() => {
+    // Initialize to true if token exists but auth not confirmed yet
+    // This prevents redirect before we've had a chance to verify the token
+    const token = getAccessToken();
+    return !!token && !authLoading;
+  });
   const hasRecheckedRef = useRef(false);
 
   // Check if we need to re-verify auth (token exists but not authenticated)
@@ -44,8 +49,14 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
       checkAuth().finally(() => {
         setIsRechecking(false);
       });
+    } else if (!token && isRechecking) {
+      // No token, stop rechecking
+      setIsRechecking(false);
+    } else if (isAuthAuthenticated && isRechecking) {
+      // Auth confirmed, stop rechecking
+      setIsRechecking(false);
     }
-  }, [isAuthAuthenticated, authLoading, checkAuth]);
+  }, [isAuthAuthenticated, authLoading, checkAuth, isRechecking]);
 
   // Check if we're on any linking page - these bypass AuthContext checks
   // because the linking flow is managed by LiffAuthContext inside LiffLayout

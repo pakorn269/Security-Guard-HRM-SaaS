@@ -214,9 +214,17 @@ export function LiffAuthProvider({ children }: LiffAuthProviderProps) {
                         return;
                     }
                 } catch (err) {
-                    // Token invalid/expired, continue with LINE auth
-                    console.log('[LiffAuth] JWT token invalid, clearing and continuing with LINE auth', err);
-                    clearTokens();
+                    // Only clear tokens on definite auth errors (401)
+                    // For other errors (network, timeout), keep token and try LINE auth as fallback
+                    const isAuthError = err && typeof err === 'object' && 'response' in err &&
+                        (err as { response?: { status?: number } }).response?.status === 401;
+                    if (isAuthError) {
+                        console.log('[LiffAuth] JWT token invalid (401), clearing and continuing with LINE auth');
+                        clearTokens();
+                    } else {
+                        console.log('[LiffAuth] /auth/me failed (not 401), keeping token:', err);
+                        // Don't clear token - it might still be valid, just a transient network error
+                    }
                 }
             }
 
