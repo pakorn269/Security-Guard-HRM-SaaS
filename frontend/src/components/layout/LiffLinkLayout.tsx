@@ -11,7 +11,6 @@ import { getCurrentLiffId, getIdTokenWithRetry, waitForLiffReady } from '../../h
 import liffAuthService, { type LineProfile, type AutoLinkResult } from '../../services/liff-auth.service';
 import { clearTokens, getAccessToken } from '../../services/api';
 import type { AuthUser } from '../../types/auth';
-import api from '../../services/api';
 
 // ============================================================
 // Types
@@ -134,38 +133,48 @@ export function LiffLinkProvider({ children }: LiffLinkProviderProps) {
                 console.log('[LiffLink] Found existing JWT token, checking if linked...');
                 addDebugLog('Found JWT token, verifying...');
                 try {
-                    const response = await api.get('/auth/me');
-                    if (response.data?.success && response.data?.data) {
-                        const user = response.data.data;
-                        if (user.lineUserId) {
-                            // User is already linked - redirect to clock page
-                            console.log('[LiffLink] User already linked, redirecting...');
-                            addDebugLog('User linked, redirecting to /liff/clock');
-                            setState(prev => ({
-                                ...prev,
-                                status: 'linked',
-                                user: user,
-                            }));
-                            return;
+                    // Use fetch instead of axios in LIFF context to avoid axios issues in LINE app
+                    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+                    const response = await fetch(`${baseURL}/auth/me`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${existingToken}`,
+                        },
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data?.success && data?.data) {
+                            const user = data.data;
+                            if (user.lineUserId) {
+                                // User is already linked - redirect to clock page
+                                console.log('[LiffLink] User already linked, redirecting...');
+                                addDebugLog('User linked, redirecting to /liff/clock');
+                                setState(prev => ({
+                                    ...prev,
+                                    status: 'linked',
+                                    user: user,
+                                }));
+                                return;
+                            }
+                            // User has token but no LINE linked - unusual state, clear and continue
+                            console.log('[LiffLink] User has token but no LINE linked, clearing...');
+                            clearTokens();
                         }
-                        // User has token but no LINE linked - unusual state, clear and continue
-                        console.log('[LiffLink] User has token but no LINE linked, clearing...');
-                        clearTokens();
-                    }
-                } catch (err) {
-                    // Don't clear tokens on transient errors - let the user retry
-                    // Only clear if it's definitely an auth error (401)
-                    const isAuthError = err && typeof err === 'object' && 'response' in err &&
-                        (err as { response?: { status?: number } }).response?.status === 401;
-                    if (isAuthError) {
+                    } else if (response.status === 401) {
                         console.log('[LiffLink] JWT token invalid (401), clearing...');
                         addDebugLog('JWT invalid (401), clearing');
                         clearTokens();
                     } else {
-                        console.log('[LiffLink] /auth/me failed (not 401), keeping token and retrying LINE auth', err);
-                        addDebugLog('auth/me failed, keeping token');
+                        console.log('[LiffLink] /auth/me failed with status:', response.status);
+                        addDebugLog(`auth/me failed (${response.status}), keeping token`);
                         // Keep the token and proceed with LINE auth as fallback
                     }
+                } catch (err) {
+                    console.log('[LiffLink] /auth/me fetch failed, keeping token and retrying LINE auth', err);
+                    addDebugLog('auth/me fetch failed, keeping token');
+                    // Network error - keep token and try LINE auth as fallback
                 }
             }
 
