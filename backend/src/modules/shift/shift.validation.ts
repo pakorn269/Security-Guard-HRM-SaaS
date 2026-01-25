@@ -37,12 +37,14 @@ export const updateShiftTemplateSchema = z.object({
 
 export const createShiftSchema = z.object({
     employeeId: z.string().uuid('Invalid employee ID'),
-    templateId: z.string().uuid('Invalid template ID').optional(),
+    templateId: z.string().uuid('Invalid template ID').optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+    siteId: z.string().uuid('Invalid site ID').optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+    zoneId: z.string().uuid('Invalid zone ID').optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
     date: z.string().regex(dateRegex, 'Invalid date format (YYYY-MM-DD)'),
     startTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)'),
     endTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)'),
-    location: z.string().max(255).optional(),
-    notes: z.string().max(1000).optional(),
+    location: z.string().max(255).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
+    notes: z.string().max(1000).optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
 });
 
 export const bulkCreateShiftsSchema = z.object({
@@ -51,12 +53,14 @@ export const bulkCreateShiftsSchema = z.object({
 
 export const updateShiftSchema = z.object({
     employeeId: z.string().uuid('Invalid employee ID').optional(),
-    templateId: z.string().uuid('Invalid template ID').nullable().optional(),
+    templateId: z.string().uuid('Invalid template ID').nullable().optional().or(z.literal('')).transform(val => val === '' ? null : val),
+    siteId: z.string().uuid('Invalid site ID').nullable().optional().or(z.literal('')).transform(val => val === '' ? null : val),
+    zoneId: z.string().uuid('Invalid zone ID').nullable().optional().or(z.literal('')).transform(val => val === '' ? null : val),
     date: z.string().regex(dateRegex, 'Invalid date format (YYYY-MM-DD)').optional(),
     startTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
     endTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
-    location: z.string().max(255).nullable().optional(),
-    notes: z.string().max(1000).nullable().optional(),
+    location: z.string().max(255).nullable().optional().or(z.literal('')).transform(val => val === '' ? null : val),
+    notes: z.string().max(1000).nullable().optional().or(z.literal('')).transform(val => val === '' ? null : val),
     status: z.enum(['draft', 'published', 'cancelled']).optional(),
 });
 

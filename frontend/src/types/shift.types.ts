@@ -20,6 +20,8 @@ export interface Shift {
     companyId: string;
     employeeId: string;
     templateId?: string | null;
+    siteId?: string | null;
+    zoneId?: string | null;
     date: string; // YYYY-MM-DD format
     startTime: string;
     endTime: string;
@@ -44,6 +46,16 @@ export interface ShiftWithDetails extends Shift {
         name: string;
         nameTh: string | null;
         color: string;
+    } | null;
+    site?: {
+        id: string;
+        name: string;
+        address?: string | null;
+    } | null;
+    zone?: {
+        id: string;
+        name: string;
+        code?: string | null;
     } | null;
 }
 
@@ -121,6 +133,8 @@ export interface UpdateShiftTemplateRequest {
 export interface CreateShiftRequest {
     employeeId: string;
     templateId?: string;
+    siteId?: string;
+    zoneId?: string;
     date: string;
     startTime: string;
     endTime: string;
@@ -131,6 +145,8 @@ export interface CreateShiftRequest {
 export interface UpdateShiftRequest {
     employeeId?: string;
     templateId?: string | null;
+    siteId?: string | null;
+    zoneId?: string | null;
     date?: string;
     startTime?: string;
     endTime?: string;
