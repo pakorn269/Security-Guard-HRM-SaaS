@@ -85,9 +85,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
             try {
                 const user = await authService.getCurrentUser();
                 dispatch({ type: 'AUTH_SUCCESS', payload: user });
-            } catch {
-                clearTokens();
-                dispatch({ type: 'AUTH_LOGOUT' });
+            } catch (err) {
+                // Only clear tokens on definite auth errors (401)
+                // For network errors, keep the token - it might still be valid
+                const isAuthError = err && typeof err === 'object' && 'response' in err &&
+                    (err as { response?: { status?: number } }).response?.status === 401;
+                if (isAuthError) {
+                    console.log('[AuthContext] Token invalid (401), clearing...');
+                    clearTokens();
+                    dispatch({ type: 'AUTH_LOGOUT' });
+                } else {
+                    // Network error - don't clear token, but still dispatch logout for UI
+                    // The token is preserved for retry
+                    console.log('[AuthContext] checkAuth failed (not 401), keeping token for retry:', err);
+                    dispatch({ type: 'AUTH_LOGOUT' });
+                }
             }
         } else {
             dispatch({ type: 'AUTH_LOGOUT' });

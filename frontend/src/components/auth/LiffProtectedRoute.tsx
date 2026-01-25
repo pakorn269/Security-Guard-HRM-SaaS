@@ -86,10 +86,19 @@ export function LiffProtectedRoute({ children }: LiffProtectedRouteProps) {
   }
 
   // Check authentication (only for non-linking pages)
-  if (!isAuthAuthenticated) {
-    // Redirect to LIFF account linking page
-    console.log('[LiffProtectedRoute] Not authenticated, redirecting to link page from', location.pathname);
+  // If we have a token, trust it - the LiffAuthContext inside LiffLayout will verify
+  // This prevents redirect loops when /auth/me has network issues
+  if (!isAuthAuthenticated && !hasToken) {
+    // No token at all - definitely need to link
+    console.log('[LiffProtectedRoute] No token, redirecting to link page from', location.pathname);
     return <Navigate to="/liff/link" state={{ from: location }} replace />;
+  }
+
+  // If we have a token but auth failed, let the user through
+  // LiffLayout's LiffAuthContext will handle proper verification with LIFF
+  if (!isAuthAuthenticated && hasToken) {
+    console.log('[LiffProtectedRoute] Token exists but auth check failed, proceeding to let LiffAuthContext verify');
+    // Continue to render children - LiffAuthContext will verify using the token
   }
 
   // Check if user is guard (guards use LIFF exclusively)
