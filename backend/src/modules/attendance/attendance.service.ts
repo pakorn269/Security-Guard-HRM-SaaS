@@ -76,6 +76,28 @@ class AttendanceService {
     }
 
     // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+
+    /**
+     * Determines if a shift is an overnight shift by comparing start and end times.
+     * An overnight shift has end_time < start_time (e.g., 22:00 - 06:00)
+     */
+    private isOvernightShift(startTime: string, endTime: string): boolean {
+        const startMinutes = this.timeToMinutes(startTime);
+        const endMinutes = this.timeToMinutes(endTime);
+        return endMinutes < startMinutes;
+    }
+
+    /**
+     * Helper to convert time string "HH:mm" or "HH:mm:ss" to minutes since midnight
+     */
+    private timeToMinutes(time: string): number {
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    // ========================================================================
     // CLOCK IN/OUT FUNCTIONS
     // ========================================================================
 
@@ -132,6 +154,37 @@ class AttendanceService {
                 shiftId = shifts[0].id;
                 shiftData = shifts[0];
                 shiftStartTime = shifts[0].start_time;
+            } else {
+                // Check for yesterday's overnight shift that extends into today
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayDate = yesterday.toISOString().split('T')[0];
+
+                const { data: yesterdayShifts } = await supabaseAdmin
+                    .from('shifts')
+                    .select('id, date, start_time, end_time, location')
+                    .eq('company_id', companyId)
+                    .eq('employee_id', employeeId)
+                    .eq('date', yesterdayDate)
+                    .eq('status', 'published');
+
+                if (yesterdayShifts && yesterdayShifts.length > 0) {
+                    for (const ys of yesterdayShifts) {
+                        // Check if overnight shift (end_time < start_time)
+                        if (this.isOvernightShift(ys.start_time, ys.end_time)) {
+                            // Check if we're within valid clock-in window
+                            const shiftEndToday = new Date(`${today}T${ys.end_time}`);
+                            const gracePeriodMs = 2 * 60 * 60 * 1000; // 2 hours after shift end
+
+                            if (now.getTime() < shiftEndToday.getTime() + gracePeriodMs) {
+                                shiftId = ys.id;
+                                shiftData = ys;
+                                shiftStartTime = ys.start_time;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         } else {
             // Verify the provided shift
@@ -290,9 +343,16 @@ class AttendanceService {
 
         // Check for early leave if there's a shift
         if (activeAttendance.shifts) {
-            const [endHours, endMinutes] = activeAttendance.shifts.end_time.split(':').map(Number);
-            const shiftEnd = new Date(now);
-            shiftEnd.setHours(endHours, endMinutes, 0, 0);
+            // Calculate shift end datetime
+            const shiftEnd = new Date(
+                `${activeAttendance.shifts.date}T${activeAttendance.shifts.end_time}`
+            );
+
+            // Check if overnight shift (end_time < start_time means next day)
+            if (this.isOvernightShift(activeAttendance.shifts.start_time, activeAttendance.shifts.end_time)) {
+                // Overnight shift - end time is next day
+                shiftEnd.setDate(shiftEnd.getDate() + 1);
+            }
 
             // Use fetched company settings
             const earlyLeaveThreshold = company?.settings?.early_leave_threshold_minutes ?? 15;
@@ -352,10 +412,64 @@ class AttendanceService {
         employeeId: string,
         date?: string
     ): Promise<TodayAttendanceResponse> {
-        const targetDate = date || new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const targetDate = date || now.toISOString().split('T')[0];
 
-        // Get today's shift
-        const { data: shifts } = await supabaseAdmin
+        // Calculate yesterday's date for overnight shift lookback
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayDate = yesterday.toISOString().split('T')[0];
+
+        // ========================================================================
+        // STEP 1: Check for ACTIVE attendance (clocked in, not clocked out)
+        // This handles overnight shifts where guard clocked in yesterday
+        // ========================================================================
+        const { data: activeAttendance } = await supabaseAdmin
+            .from('attendance_logs')
+            .select(`
+                *,
+                employees (id, full_name, employee_code),
+                shifts (id, date, start_time, end_time, location)
+            `)
+            .eq('company_id', companyId)
+            .eq('employee_id', employeeId)
+            .is('clock_out_time', null)
+            .not('clock_in_time', 'is', null)
+            .order('clock_in_time', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        // If there's an active attendance, the guard needs to clock out
+        if (activeAttendance) {
+            const attendance = this.mapToAttendanceLogWithDetails(
+                activeAttendance as AttendanceLogRowWithEmployee
+            );
+
+            // Get shift info from the attendance record (via FK)
+            const shift = activeAttendance.shifts;
+
+            return {
+                hasShiftToday: true, // They have an ongoing shift
+                shift: shift
+                    ? {
+                          id: shift.id,
+                          date: shift.date,
+                          startTime: shift.start_time,
+                          endTime: shift.end_time,
+                          location: shift.location,
+                      }
+                    : null,
+                attendance,
+                canClockIn: false,
+                canClockOut: true,
+                currentStatus: 'clocked_in',
+            };
+        }
+
+        // ========================================================================
+        // STEP 2: Check for today's shifts (not yet clocked in)
+        // ========================================================================
+        const { data: todayShifts } = await supabaseAdmin
             .from('shifts')
             .select('id, date, start_time, end_time, location')
             .eq('company_id', companyId)
@@ -363,9 +477,42 @@ class AttendanceService {
             .eq('date', targetDate)
             .eq('status', 'published');
 
-        const shift = shifts && shifts.length > 0 ? shifts[0] : null;
+        let shift = todayShifts && todayShifts.length > 0 ? todayShifts[0] : null;
 
-        // Get today's attendance
+        // ========================================================================
+        // STEP 3: If no today's shift, check for yesterday's OVERNIGHT shift
+        // that might still be pending clock-in (edge case: late clock-in)
+        // ========================================================================
+        if (!shift) {
+            const { data: yesterdayShifts } = await supabaseAdmin
+                .from('shifts')
+                .select('id, date, start_time, end_time, location')
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .eq('date', yesterdayDate)
+                .eq('status', 'published');
+
+            if (yesterdayShifts && yesterdayShifts.length > 0) {
+                // Check if any is an overnight shift that extends into today
+                for (const ys of yesterdayShifts) {
+                    if (this.isOvernightShift(ys.start_time, ys.end_time)) {
+                        // Calculate if the shift's end time is still in the future
+                        // (within a reasonable grace period for late clock-in)
+                        const shiftEndTime = new Date(`${targetDate}T${ys.end_time}`);
+                        const gracePeriodMs = 4 * 60 * 60 * 1000; // 4 hours grace after shift end
+
+                        if (now.getTime() < shiftEndTime.getTime() + gracePeriodMs) {
+                            shift = ys;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ========================================================================
+        // STEP 4: Get today's attendance (if already completed)
+        // ========================================================================
         const { data: attendanceLogs } = await supabaseAdmin
             .from('attendance_logs')
             .select(`
@@ -380,11 +527,39 @@ class AttendanceService {
             .order('clock_in_time', { ascending: false })
             .limit(1);
 
-        const attendance = attendanceLogs && attendanceLogs.length > 0
-            ? this.mapToAttendanceLogWithDetails(attendanceLogs[0] as AttendanceLogRowWithEmployee)
-            : null;
+        let attendance =
+            attendanceLogs && attendanceLogs.length > 0
+                ? this.mapToAttendanceLogWithDetails(attendanceLogs[0] as AttendanceLogRowWithEmployee)
+                : null;
 
-        // Determine status
+        // If no today attendance, check for overnight attendance from yesterday
+        // that was completed today (for display purposes)
+        if (!attendance) {
+            const { data: overnightLogs } = await supabaseAdmin
+                .from('attendance_logs')
+                .select(`
+                    *,
+                    employees (id, full_name, employee_code),
+                    shifts (id, date, start_time, end_time, location)
+                `)
+                .eq('company_id', companyId)
+                .eq('employee_id', employeeId)
+                .gte('clock_in_time', `${yesterdayDate}T00:00:00`)
+                .lte('clock_in_time', `${yesterdayDate}T23:59:59`)
+                .gte('clock_out_time', `${targetDate}T00:00:00`)
+                .order('clock_in_time', { ascending: false })
+                .limit(1);
+
+            if (overnightLogs && overnightLogs.length > 0) {
+                attendance = this.mapToAttendanceLogWithDetails(
+                    overnightLogs[0] as AttendanceLogRowWithEmployee
+                );
+            }
+        }
+
+        // ========================================================================
+        // STEP 5: Determine status
+        // ========================================================================
         let currentStatus: TodayAttendanceResponse['currentStatus'];
         let canClockIn = false;
         let canClockOut = false;
@@ -405,12 +580,12 @@ class AttendanceService {
             hasShiftToday: !!shift,
             shift: shift
                 ? {
-                    id: shift.id,
-                    date: shift.date,
-                    startTime: shift.start_time,
-                    endTime: shift.end_time,
-                    location: shift.location,
-                }
+                      id: shift.id,
+                      date: shift.date,
+                      startTime: shift.start_time,
+                      endTime: shift.end_time,
+                      location: shift.location,
+                  }
                 : null,
             attendance,
             canClockIn,

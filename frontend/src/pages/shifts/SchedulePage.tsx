@@ -12,6 +12,7 @@ import {
   Trash2,
   CalendarDays,
   LayoutGrid,
+  LayoutTemplate,
   GripHorizontal,
   AlertTriangle,
   AlertCircle,
@@ -55,6 +56,7 @@ import { Tabs, TabList, Tab } from '../../components/navigation';
 import { useToast, ToastContainer } from '../../components/common/Toast';
 import Tooltip from '../../components/ui/Tooltip';
 import Alert from '../../components/feedback/Alert';
+import ShiftTemplateSidebar from '../../components/shifts/ShiftTemplateSidebar';
 
 /**
  * Schedule Page - Redesigned (Part 5.4)
@@ -343,6 +345,9 @@ export default function SchedulePage() {
 
   // Multi-select state
   const [selectedShiftIds, setSelectedShiftIds] = useState<Set<string>>(new Set());
+
+  // Template sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // DnD Sensors
   const sensors = useSensors(
@@ -807,8 +812,38 @@ export default function SchedulePage() {
 
     if (!over) return;
 
-    const shift = active.data.current as ShiftWithDetails;
+    const draggedData = active.data.current;
     const [targetDate, targetEmployeeId] = (over.id as string).split('::');
+
+    // Check if dragging a template (ID starts with 'template-')
+    if (typeof active.id === 'string' && active.id.startsWith('template-')) {
+      // Template Quick Apply
+      const template = draggedData?.template as ShiftTemplate;
+      if (!template) return;
+
+      try {
+        const newShift: CreateShiftRequest = {
+          employeeId: targetEmployeeId,
+          templateId: template.id,
+          date: targetDate,
+          startTime: template.startTime,
+          endTime: template.endTime,
+        };
+
+        await createShift(newShift);
+        toast.success(t('schedule.templateApplied', `สร้างกะ "${template.nameTh || template.name}" สำเร็จ`));
+        loadData();
+      } catch (error: any) {
+        console.error('Failed to create shift from template:', error);
+        const errorMessage = error?.message_th || error?.message || t('schedule.createShiftError', 'เกิดข้อผิดพลาดในการสร้างกะ');
+        toast.error(errorMessage);
+      }
+      return;
+    }
+
+    // Regular shift reschedule
+    const shift = draggedData as ShiftWithDetails;
+    if (!shift || !shift.id) return;
 
     // If dropped on same day and same employee, do nothing
     if (shift.date === targetDate && shift.employeeId === targetEmployeeId) {
@@ -857,6 +892,15 @@ export default function SchedulePage() {
         hideDescriptionOnMobile
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant={isSidebarOpen ? 'primary' : 'outline'}
+              size="sm"
+              leftIcon={<LayoutTemplate size={16} />}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="hidden md:inline-flex"
+            >
+              {t('schedule.templates', 'กะสำเร็จรูป')}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1312,6 +1356,23 @@ export default function SchedulePage() {
           <span>{t('schedule.colorCodeLegend', 'สีแสดงประเภทกะ')}</span>
         </div>
         </div>
+      )}
+
+      {/* Template Sidebar (Fixed Overlay) */}
+      <div className={`
+        fixed top-0 right-0 h-screen w-80 bg-white dark:bg-neutral-900 shadow-2xl z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
+      `}>
+        <ShiftTemplateSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </div>
+
+      {/* Overlay backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
       {/* Create/Edit Shift Modal */}
