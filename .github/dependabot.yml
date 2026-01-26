@@ -3,9 +3,9 @@ updates:
   # Backend npm dependencies
   - package-ecosystem: "npm"
     directory: "/backend"
+    target-branch: "develop"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
       time: "09:00"
       timezone: "Asia/Bangkok"
     open-pull-requests-limit: 10
@@ -35,9 +35,9 @@ updates:
   # Frontend npm dependencies
   - package-ecosystem: "npm"
     directory: "/frontend"
+    target-branch: "develop"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
       time: "09:00"
       timezone: "Asia/Bangkok"
     open-pull-requests-limit: 10
@@ -82,10 +82,10 @@ updates:
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
+    target-branch: "develop"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
       time: "09:00"
       timezone: "Asia/Bangkok"
     groups:
