@@ -223,7 +223,7 @@ class ShiftService {
         startTime: string,
         endTime: string,
         excludeShiftId?: string
-    ): Promise<{ valid: boolean; reason?: string }> {
+    ): Promise<{ valid: boolean; reason?: string; reason_th?: string }> {
         // 1. Check Employee Status
         const { data: employee, error } = await supabaseAdmin
             .from('employees')
@@ -231,16 +231,17 @@ class ShiftService {
             .eq('id', employeeId)
             .single();
 
-        if (error || !employee) return { valid: false, reason: 'Employee not found' };
-        if (employee.status === 'suspended') return { valid: false, reason: 'Employee is suspended (License Expired)' };
-        if (employee.status === 'terminated') return { valid: false, reason: 'Employee is terminated' };
+        if (error || !employee) return { valid: false, reason: 'Employee not found', reason_th: 'ไม่พบข้อมูลพนักงาน' };
+        if (employee.status === 'suspended') return { valid: false, reason: 'Employee is suspended (License Expired)', reason_th: 'พนักงานถูกพักงาน (ใบอนุญาตหมดอายุ)' };
+        if (employee.status === 'terminated') return { valid: false, reason: 'Employee is terminated', reason_th: 'พนักงานถูกเลิกจ้างแล้ว' };
 
         // 1.5. Check for Approved Leave (HARD BLOCK)
         const leaveCheck = await this.checkApprovedLeave(companyId, employeeId, date);
         if (leaveCheck.hasLeave) {
             return {
                 valid: false,
-                reason: `Employee has approved leave on this date: ${leaveCheck.leaveDetails}`
+                reason: `Employee has approved leave on this date: ${leaveCheck.leaveDetails}`,
+                reason_th: `พนักงานมีการลาที่อนุมัติแล้วในวันนี้: ${leaveCheck.leaveDetails}`
             };
         }
 
@@ -479,6 +480,33 @@ class ShiftService {
         return start1 < end2 && end1 > start2;
     }
 
+    // Helper: Check if a shift is in the past (for notification suppression)
+    private isPastShift(date: string, endTime: string): boolean {
+        const now = new Date();
+        let shiftEnd = new Date(`${date}T${endTime}`);
+
+        // Handle overnight shifts - if endTime is before startTime conceptually,
+        // it means the shift ends the next day
+        // However, we only have endTime here, so we check if it's already passed
+
+        return shiftEnd < now;
+    }
+
+    // Helper: Check if attendance logs exist for a shift
+    private async hasAttendanceLogs(shiftId: string): Promise<boolean> {
+        const { count, error } = await supabaseAdmin
+            .from('attendance_logs')
+            .select('id', { count: 'exact', head: true })
+            .eq('shift_id', shiftId);
+
+        if (error) {
+            logger.error('Error checking attendance logs', { error, shiftId });
+            return false;
+        }
+
+        return (count ?? 0) > 0;
+    }
+
     // Get shift by ID
     async getById(shiftId: string, companyId: string): Promise<Shift> {
         const { data, error } = await supabaseAdmin
@@ -577,6 +605,25 @@ class ShiftService {
 
         const shifts = (data || []).map(row => this.mapToShiftWithDetails(row as ShiftRowWithEmployee));
 
+        // Check for attendance logs in bulk for all shifts
+        if (shifts.length > 0) {
+            const shiftIds = shifts.map(s => s.id);
+            const { data: attendanceData } = await supabaseAdmin
+                .from('attendance_logs')
+                .select('shift_id')
+                .in('shift_id', shiftIds);
+
+            // Create a Set of shift IDs that have attendance
+            const shiftsWithAttendance = new Set(
+                (attendanceData || []).map(log => log.shift_id)
+            );
+
+            // Add hasAttendance flag to each shift
+            shifts.forEach(shift => {
+                shift.hasAttendance = shiftsWithAttendance.has(shift.id);
+            });
+        }
+
         return {
             shifts,
             total: count ?? 0,
@@ -617,7 +664,7 @@ class ShiftService {
         if (!validation.valid) {
             throw new ConflictError(
                 `Constraint violation: ${validation.reason}`,
-                `ไม่สามารถสร้างกะได้: ${validation.reason}`
+                validation.reason_th || `ไม่สามารถสร้างกะได้: ${validation.reason}`
             );
         }
 
@@ -674,6 +721,7 @@ class ShiftService {
                 result.skipped.push({
                     index: i,
                     reason: `Conflicts with existing shift (${conflict.existingTimeRange})`,
+                    reason_th: `กะทับซ้อนกับกะที่มีอยู่ (${conflict.existingTimeRange})`,
                     conflict,
                 });
                 continue;
@@ -692,6 +740,7 @@ class ShiftService {
                 result.skipped.push({
                     index: i,
                     reason: `Constraint violation: ${validation.reason}`,
+                    reason_th: validation.reason_th || `ไม่สามารถสร้างกะได้: ${validation.reason}`,
                 });
                 continue;
             }
@@ -724,6 +773,26 @@ class ShiftService {
     ): Promise<Shift> {
         const existing = await this.getById(shiftId, companyId);
 
+        // Check for attendance logs (CRITICAL: Prevent data integrity issues)
+        const hasAttendance = await this.hasAttendanceLogs(shiftId);
+
+        // RULE 1: Cannot change employee if attendance logs exist
+        if (hasAttendance && data.employeeId && data.employeeId !== existing.employeeId) {
+            throw new ConflictError(
+                'Cannot change employee: Attendance logs exist for this shift. Please void attendance records first.',
+                'ไม่สามารถเปลี่ยนพนักงานได้: มีบันทึกการเข้า-ออกงานแล้ว กรุณาลบบันทึกเวลาก่อน'
+            );
+        }
+
+        // RULE 2: Time changes are allowed but should be logged for recalculation
+        if (hasAttendance && (data.startTime || data.endTime)) {
+            logger.warn('Shift time changed with existing attendance logs', {
+                shiftId,
+                oldTimes: { start: existing.startTime, end: existing.endTime },
+                newTimes: { start: data.startTime, end: data.endTime },
+            });
+        }
+
         // If changing date, time, or employee, check for conflicts
         if (data.date || data.startTime || data.endTime || data.employeeId) {
             const conflict = await this.checkConflicts(
@@ -755,7 +824,7 @@ class ShiftService {
             if (!validation.valid) {
                 throw new ConflictError(
                     `Constraint violation: ${validation.reason}`,
-                    `ไม่สามารถแก้ไขกะได้: ${validation.reason}`
+                    validation.reason_th || `ไม่สามารถแก้ไขกะได้: ${validation.reason}`
                 );
             }
         }
@@ -787,10 +856,19 @@ class ShiftService {
         logger.info('Shift updated', { shiftId, companyId });
 
         // Send notification if shift was published and critical fields changed
+        // BUT skip notification for past shifts (retroactive edits)
+        const updatedDate = data.date ?? existing.date;
+        const updatedEndTime = data.endTime ?? existing.endTime;
+        const isPast = this.isPastShift(updatedDate, updatedEndTime);
+
         if (existing.status === 'published' && (data.date || data.startTime || data.endTime || data.location)) {
-            this.sendShiftChangeNotification(companyId, shift.id, 'update').catch(err =>
-                logger.error('Failed to send shift update notification', err)
-            );
+            if (!isPast) {
+                this.sendShiftChangeNotification(companyId, shift.id, 'update').catch(err =>
+                    logger.error('Failed to send shift update notification', err)
+                );
+            } else {
+                logger.info('Skipped notification for past shift (retroactive edit)', { shiftId, date: updatedDate, endTime: updatedEndTime });
+            }
         }
 
         return this.mapToShift(shift);
@@ -799,6 +877,16 @@ class ShiftService {
     // Delete shift
     async delete(shiftId: string, companyId: string): Promise<void> {
         const existing = await this.getById(shiftId, companyId);
+
+        // RULE 3: Cannot delete shift if attendance logs exist
+        const hasAttendance = await this.hasAttendanceLogs(shiftId);
+        if (hasAttendance) {
+            throw new ConflictError(
+                'Cannot delete shift: Attendance logs exist. Please void attendance records first.',
+                'ไม่สามารถลบกะได้: มีบันทึกการเข้า-ออกงานแล้ว กรุณาลบบันทึกเวลาก่อน'
+            );
+        }
+
         let shiftDetails: ShiftWithDetails | undefined;
 
         // If published, fetch details before delete for notification
@@ -823,11 +911,16 @@ class ShiftService {
 
         logger.info('Shift deleted', { shiftId, companyId });
 
-        // Send cancel notification
+        // Send cancel notification (skip for past shifts)
         if (shiftDetails) {
-            this.sendShiftChangeNotification(companyId, shiftId, 'cancel', shiftDetails).catch(err =>
-                logger.error('Failed to send shift cancel notification', err)
-            );
+            const isPast = this.isPastShift(existing.date, existing.endTime);
+            if (!isPast) {
+                this.sendShiftChangeNotification(companyId, shiftId, 'cancel', shiftDetails).catch(err =>
+                    logger.error('Failed to send shift cancel notification', err)
+                );
+            } else {
+                logger.info('Skipped notification for past shift deletion', { shiftId, date: existing.date, endTime: existing.endTime });
+            }
         }
     }
 
@@ -856,7 +949,7 @@ class ShiftService {
         if (!validation.valid) {
             throw new ConflictError(
                 `You cannot claim this shift: ${validation.reason}`,
-                `คุณไม่สามารถรับกะนี้ได้: ${validation.reason}`
+                validation.reason_th || `คุณไม่สามารถรับกะนี้ได้: ${validation.reason}`
             );
         }
 
@@ -921,15 +1014,181 @@ class ShiftService {
         return (shifts || []).map(row => this.mapToShift(row));
     }
 
+    // Bulk Publish: Publish multiple shifts by IDs with retroactive logic
+    async bulkPublish(companyId: string, shiftIds: string[]): Promise<{
+        successCount: number;
+        notificationSentCount: number;
+        skippedPastCount: number;
+    }> {
+        if (!shiftIds || shiftIds.length === 0) {
+            return { successCount: 0, notificationSentCount: 0, skippedPastCount: 0 };
+        }
+
+        const now = new Date().toISOString();
+
+        // Update all draft shifts to published
+        const { data: shifts, error } = await supabaseAdmin
+            .from('shifts')
+            .update({ status: 'published', published_at: now })
+            .eq('company_id', companyId)
+            .eq('status', 'draft')
+            .in('id', shiftIds)
+            .select();
+
+        if (error) {
+            logger.error('Error bulk publishing shifts', { error, companyId, shiftIds });
+            throw error;
+        }
+
+        const publishedShifts = (shifts || []).map(row => this.mapToShift(row));
+        const successCount = publishedShifts.length;
+
+        logger.info('Bulk published shifts', { companyId, successCount, requestedCount: shiftIds.length });
+
+        // Send notifications (with retroactive filtering)
+        if (publishedShifts.length > 0) {
+            const futureShifts = publishedShifts.filter(shift => !this.isPastShift(shift.date, shift.endTime));
+            const skippedPastCount = publishedShifts.length - futureShifts.length;
+
+            if (futureShifts.length > 0) {
+                this.sendPublishNotifications(companyId, futureShifts).catch(err =>
+                    logger.error('Failed to send bulk publish notifications', err)
+                );
+            }
+
+            return {
+                successCount,
+                notificationSentCount: futureShifts.length,
+                skippedPastCount,
+            };
+        }
+
+        return { successCount: 0, notificationSentCount: 0, skippedPastCount: 0 };
+    }
+
+    // Bulk Delete: Delete multiple shifts by IDs with attendance integrity check
+    async bulkDelete(companyId: string, shiftIds: string[]): Promise<{
+        deletedCount: number;
+        skippedCount: number;
+        skippedIds: string[];
+        skippedReasons: Array<{ id: string; reason: string; reason_th: string }>;
+    }> {
+        if (!shiftIds || shiftIds.length === 0) {
+            return { deletedCount: 0, skippedCount: 0, skippedIds: [], skippedReasons: [] };
+        }
+
+        const deletedIds: string[] = [];
+        const skippedIds: string[] = [];
+        const skippedReasons: Array<{ id: string; reason: string; reason_th: string }> = [];
+
+        // Process each shift individually to check attendance
+        for (const shiftId of shiftIds) {
+            try {
+                // Verify shift belongs to company
+                const { data: shift, error: fetchError } = await supabaseAdmin
+                    .from('shifts')
+                    .select('id, company_id, status, date, end_time')
+                    .eq('id', shiftId)
+                    .eq('company_id', companyId)
+                    .single();
+
+                if (fetchError || !shift) {
+                    logger.warn('Shift not found or not accessible', { shiftId, companyId });
+                    skippedIds.push(shiftId);
+                    skippedReasons.push({
+                        id: shiftId,
+                        reason: 'Shift not found',
+                        reason_th: 'ไม่พบกะ',
+                    });
+                    continue;
+                }
+
+                // Check for attendance logs
+                const hasAttendance = await this.hasAttendanceLogs(shiftId);
+
+                if (hasAttendance) {
+                    logger.warn('Cannot delete shift with attendance logs', { shiftId });
+                    skippedIds.push(shiftId);
+                    skippedReasons.push({
+                        id: shiftId,
+                        reason: 'Attendance logs exist',
+                        reason_th: 'มีบันทึกการเข้า-ออกงานแล้ว',
+                    });
+                    continue;
+                }
+
+                // Delete shift
+                const { error: deleteError } = await supabaseAdmin
+                    .from('shifts')
+                    .delete()
+                    .eq('id', shiftId)
+                    .eq('company_id', companyId);
+
+                if (deleteError) {
+                    logger.error('Error deleting shift in bulk', { error: deleteError, shiftId });
+                    skippedIds.push(shiftId);
+                    skippedReasons.push({
+                        id: shiftId,
+                        reason: 'Delete failed',
+                        reason_th: 'การลบล้มเหลว',
+                    });
+                    continue;
+                }
+
+                deletedIds.push(shiftId);
+
+                // Send notification if published and not past
+                if (shift.status === 'published') {
+                    const isPast = this.isPastShift(shift.date, shift.end_time);
+                    if (!isPast) {
+                        this.sendShiftChangeNotification(companyId, shiftId, 'cancel').catch(err =>
+                            logger.error('Failed to send bulk delete notification', err)
+                        );
+                    }
+                }
+            } catch (err) {
+                logger.error('Error processing shift in bulk delete', { error: err, shiftId });
+                skippedIds.push(shiftId);
+                skippedReasons.push({
+                    id: shiftId,
+                    reason: 'Processing error',
+                    reason_th: 'เกิดข้อผิดพลาดในการประมวลผล',
+                });
+            }
+        }
+
+        logger.info('Bulk delete completed', {
+            companyId,
+            requestedCount: shiftIds.length,
+            deletedCount: deletedIds.length,
+            skippedCount: skippedIds.length,
+        });
+
+        return {
+            deletedCount: deletedIds.length,
+            skippedCount: skippedIds.length,
+            skippedIds,
+            skippedReasons,
+        };
+    }
+
     // Send notifications for published shifts
     private async sendPublishNotifications(companyId: string, shifts: Shift[]) {
         try {
+            // Filter out past shifts (retroactive publishing shouldn't trigger notifications)
+            const futureShifts = shifts.filter(shift => !this.isPastShift(shift.date, shift.endTime));
+
+            if (futureShifts.length === 0) {
+                logger.info('No future shifts to notify (all shifts are in the past)', { totalShifts: shifts.length });
+                return;
+            }
+
             // Group shifts by employee
             const shiftsByEmployee = new Map<string, Shift[]>();
-            let minDate = shifts[0].date;
-            let maxDate = shifts[0].date;
+            let minDate = futureShifts[0].date;
+            let maxDate = futureShifts[0].date;
 
-            for (const shift of shifts) {
+            for (const shift of futureShifts) {
                 const list = shiftsByEmployee.get(shift.employeeId) || [];
                 list.push(shift);
                 shiftsByEmployee.set(shift.employeeId, list);
@@ -937,6 +1196,12 @@ class ShiftService {
                 if (shift.date < minDate) minDate = shift.date;
                 if (shift.date > maxDate) maxDate = shift.date;
             }
+
+            logger.info('Publishing notifications', {
+                totalShifts: shifts.length,
+                futureShifts: futureShifts.length,
+                pastShiftsSkipped: shifts.length - futureShifts.length
+            });
 
             // Get users for these employees
             const employeeIds = Array.from(shiftsByEmployee.keys());

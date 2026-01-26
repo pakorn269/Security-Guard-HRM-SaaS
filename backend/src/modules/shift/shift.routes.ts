@@ -36,6 +36,8 @@ router.get('/my', shiftController.getMyShifts);
 
 // Bulk operations (managers and above)
 router.post('/bulk', requireManager, shiftController.bulkCreate);
+router.post('/bulk/publish', requireManager, shiftController.bulkPublish);
+router.post('/bulk/delete', requireManager, shiftController.bulkDelete);
 router.post('/publish', requireManager, shiftController.publish);
 router.post('/copy', requireManager, shiftController.copyShifts);
 

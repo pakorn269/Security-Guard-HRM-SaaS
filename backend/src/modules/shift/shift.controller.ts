@@ -253,6 +253,56 @@ class ShiftController {
         }
     }
 
+    // POST /shifts/bulk/publish - Bulk publish shifts
+    async bulkPublish(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const { shiftIds } = req.body;
+
+            if (!Array.isArray(shiftIds) || shiftIds.length === 0) {
+                throw new BadRequestError('shiftIds must be a non-empty array', 'shiftIds ต้องเป็น array ที่ไม่ว่างเปล่า');
+            }
+
+            const result = await shiftService.bulkPublish(req.user.companyId, shiftIds);
+
+            return res.json(success(
+                result,
+                `Published ${result.successCount} shifts`,
+                `ประกาศ ${result.successCount} กะสำเร็จ`
+            ));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /shifts/bulk/delete - Bulk delete shifts
+    async bulkDelete(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const { shiftIds } = req.body;
+
+            if (!Array.isArray(shiftIds) || shiftIds.length === 0) {
+                throw new BadRequestError('shiftIds must be a non-empty array', 'shiftIds ต้องเป็น array ที่ไม่ว่างเปล่า');
+            }
+
+            const result = await shiftService.bulkDelete(req.user.companyId, shiftIds);
+
+            return res.json(success(
+                result,
+                `Deleted ${result.deletedCount} shifts`,
+                `ลบ ${result.deletedCount} กะสำเร็จ`
+            ));
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // POST /shifts/copy - Copy shifts from one week to another
     async copyShifts(req: Request, res: Response, next: NextFunction) {
         try {
