@@ -13,6 +13,11 @@ import {
   CalendarDays,
   LayoutGrid,
   GripHorizontal,
+  AlertTriangle,
+  AlertCircle,
+  Square,
+  CheckSquare,
+  X,
 } from 'lucide-react';
 import {
   DndContext,
@@ -34,16 +39,22 @@ import {
   deleteShift,
   publishShifts,
   copyShifts,
+  bulkPublishShifts,
+  bulkDeleteShifts,
 } from '../../services/shift.service';
 import { employeeService } from '../../services/employee.service';
+import type { Employee as FullEmployee } from '../../types/employee.types';
 import { listLeaveRequests, type LeaveRequestWithDetails } from '../../services/leave.service';
 import { sitesService, type Site } from '../../services/sites.service';
 import type { ShiftTemplate, ShiftWithDetails, CreateShiftRequest } from '../../types/shift.types';
 import { calculateWeeklyCost, calculateShiftCost, calculateShiftHours, formatCurrency, formatHours } from '../../utils/shiftCost';
+import { validateShift, getMostSevereWarning, isPastShift, type ShiftWarning } from '../../utils/shiftValidation';
 import { Button, Modal, LoadingSpinner, Card, Input, Select, Badge, Avatar } from '../../components/common';
 import { PageHeader } from '../../components/layout';
 import { Tabs, TabList, Tab } from '../../components/navigation';
 import { useToast, ToastContainer } from '../../components/common/Toast';
+import Tooltip from '../../components/ui/Tooltip';
+import Alert from '../../components/feedback/Alert';
 
 /**
  * Schedule Page - Redesigned (Part 5.4)
@@ -58,13 +69,6 @@ import { useToast, ToastContainer } from '../../components/common/Toast';
  */
 
 // Types
-interface Employee {
-  id: string;
-  fullName: string;
-  employeeCode: string;
-  status: string;
-}
-
 // Helper functions
 const getDaysInWeek = (date: Date): Date[] => {
   const startOfWeek = new Date(date);
@@ -113,9 +117,12 @@ interface DraggableShiftProps {
   onClick: (shift: ShiftWithDetails) => void;
   onDuplicate: (shift: ShiftWithDetails) => void;
   statusConfig: typeof SHIFT_STATUS_CONFIG[keyof typeof SHIFT_STATUS_CONFIG];
+  warnings?: ShiftWarning[];
+  isSelected?: boolean;
+  onToggleSelect?: (shiftId: string) => void;
 }
 
-const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig }: DraggableShiftProps) => {
+const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig, warnings = [], isSelected = false, onToggleSelect }: DraggableShiftProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
     data: shift,
@@ -127,6 +134,8 @@ const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig }: Draggable
     zIndex: isDragging ? 100 : 'auto',
   } : undefined;
 
+  const mostSevereWarning = getMostSevereWarning(warnings);
+
   return (
     <div
       ref={setNodeRef}
@@ -134,6 +143,10 @@ const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig }: Draggable
       className={`
         p-2 rounded-md text-xs cursor-grab active:cursor-grabbing transition-all
         hover:shadow-sm hover:scale-[1.01] relative group
+        ${isSelected
+          ? 'ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-neutral-900'
+          : ''
+        }
         ${shift.status === 'published'
           ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800'
           : 'bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800'
@@ -142,6 +155,52 @@ const DraggableShift = ({ shift, onClick, onDuplicate, statusConfig }: Draggable
       {...listeners}
       {...attributes}
     >
+      {/* Selection checkbox */}
+      {onToggleSelect && (
+        <div
+          className="absolute top-1 left-1 z-20 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(shift.id);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {isSelected ? (
+            <CheckSquare size={16} className="text-primary-600 dark:text-primary-400" />
+          ) : (
+            <Square size={16} className="text-neutral-400 dark:text-neutral-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
+        </div>
+      )}
+
+      {/* Warning indicator */}
+      {mostSevereWarning && (
+        <div className="absolute top-1 left-1 z-10">
+          <Tooltip
+            content={
+              <div className="max-w-xs whitespace-normal">
+                {mostSevereWarning.messageTh}
+              </div>
+            }
+            placement="top"
+          >
+            <div className={`
+              flex items-center justify-center w-5 h-5 rounded-full
+              ${mostSevereWarning.severity === 'error'
+                ? 'bg-error-100 dark:bg-error-900/30 text-error-600 dark:text-error-400'
+                : 'bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400'
+              }
+            `}>
+              {mostSevereWarning.severity === 'error' ? (
+                <AlertCircle size={14} />
+              ) : (
+                <AlertTriangle size={14} />
+              )}
+            </div>
+          </Tooltip>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
         {/* Duplicate button */}
@@ -257,7 +316,7 @@ export default function SchedulePage() {
   const [view, setView] = useState<'week' | 'month'>('week');
   const [shifts, setShifts] = useState<ShiftWithDetails[]>([]);
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<FullEmployee[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestWithDetails[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,6 +340,9 @@ export default function SchedulePage() {
   const [showCostModal, setShowCostModal] = useState(false);
   const [editingShift, setEditingShift] = useState<ShiftWithDetails | null>(null);
   const [activeDragShift, setActiveDragShift] = useState<ShiftWithDetails | null>(null);
+
+  // Multi-select state
+  const [selectedShiftIds, setSelectedShiftIds] = useState<Set<string>>(new Set());
 
   // DnD Sensors
   const sensors = useSensors(
@@ -338,14 +400,7 @@ export default function SchedulePage() {
 
       setTemplates(templatesRes);
       setShifts(shiftsRes.shifts);
-      setEmployees(
-        employeesRes.data.map((e) => ({
-          id: e.id,
-          fullName: e.fullName,
-          employeeCode: e.employeeCode,
-          status: e.status,
-        }))
-      );
+      setEmployees(employeesRes.data); // Use full Employee objects for validation
       setLeaveRequests(leaveRes.requests);
       setSites(sitesRes.filter(s => s.isActive));
     } catch (error) {
@@ -410,15 +465,29 @@ export default function SchedulePage() {
   const handleUpdateShift = async () => {
     if (!editingShift) return;
 
+    // Check if this is a past shift (retroactive edit)
+    const isPast = isPastShift(formData.date, formData.endTime);
+
     // If shift is published, show confirmation dialog
     if (editingShift.status === 'published') {
       const employeeName = editingShift.employee?.fullName || 'พนักงาน';
-      const confirmed = window.confirm(
-        t(
+
+      let confirmMessage: string;
+      if (isPast) {
+        // Retroactive edit warning
+        confirmMessage = t(
+          'schedule.confirmUpdatePastPublished',
+          `⚠️ การแก้ไขกะย้อนหลัง\n\nคุณกำลังแก้ไขกะที่ผ่านไปแล้วของ ${employeeName}\n\n• อาจส่งผลต่อการคำนวณเงินเดือนและ OT\n• จะไม่มีการส่งการแจ้งเตือนไปยังพนักงาน\n\nยืนยันการแก้ไข?`
+        );
+      } else {
+        // Future shift edit
+        confirmMessage = t(
           'schedule.confirmUpdatePublished',
           `แก้ไขกะที่เผยแพร่แล้วสำหรับ ${employeeName}?\n\nพนักงานจะได้รับการแจ้งเตือนเกี่ยวกับการเปลี่ยนแปลงผ่าน LINE`
-        )
-      );
+        );
+      }
+
+      const confirmed = window.confirm(confirmMessage);
 
       if (!confirmed) {
         return; // User cancelled
@@ -437,10 +506,17 @@ export default function SchedulePage() {
       setShowCreateModal(false);
       setEditingShift(null);
 
+      // Success toast message varies based on whether it's a past shift
       if (editingShift.status === 'published') {
-        toast.success(
-          t('schedule.updatePublishedSuccess', `อัปเดตกะสำเร็จ ส่งการแจ้งเตือนไปยัง ${editingShift.employee?.fullName || 'พนักงาน'} แล้ว`)
-        );
+        if (isPast) {
+          toast.success(
+            t('schedule.updatePastSuccess', 'อัปเดตกะย้อนหลังสำเร็จ (ไม่มีการส่งการแจ้งเตือน)')
+          );
+        } else {
+          toast.success(
+            t('schedule.updatePublishedSuccess', `อัปเดตกะสำเร็จ ส่งการแจ้งเตือนไปยัง ${editingShift.employee?.fullName || 'พนักงาน'} แล้ว`)
+          );
+        }
       } else {
         toast.success(t('schedule.updateSuccess', 'อัปเดตกะสำเร็จ'));
       }
@@ -503,6 +579,84 @@ export default function SchedulePage() {
 
       // Display specific error message from backend
       const errorMessage = error?.message_th || error?.message || t('schedule.copyError', 'เกิดข้อผิดพลาดในการคัดลอกกะ');
+      toast.error(errorMessage);
+    }
+  };
+
+  // Multi-select handlers
+  const toggleShiftSelection = (shiftId: string) => {
+    setSelectedShiftIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(shiftId)) {
+        newSet.delete(shiftId);
+      } else {
+        newSet.add(shiftId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllVisibleShifts = () => {
+    const allVisibleShiftIds = shifts.map(s => s.id);
+    setSelectedShiftIds(new Set(allVisibleShiftIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedShiftIds(new Set());
+  };
+
+  // Handle bulk publish
+  const handleBulkPublish = async () => {
+    const shiftIds = Array.from(selectedShiftIds);
+    if (shiftIds.length === 0) return;
+
+    if (!confirm(t('schedule.bulkPublishConfirm', `ยืนยันการประกาศ ${shiftIds.length} กะ?`))) return;
+
+    try {
+      const result = await bulkPublishShifts(shiftIds);
+      clearSelection();
+
+      let message = `ประกาศ ${result.successCount} กะสำเร็จ`;
+      if (result.notificationSentCount > 0) {
+        message += ` (ส่งการแจ้งเตือน ${result.notificationSentCount} กะ`;
+        if (result.skippedPastCount > 0) {
+          message += `, ข้าม ${result.skippedPastCount} กะที่ผ่านมาแล้ว`;
+        }
+        message += ')';
+      }
+
+      toast.success(message);
+      loadData();
+    } catch (error: any) {
+      console.error('Error bulk publishing shifts:', error);
+      const errorMessage = error?.message_th || error?.message || t('schedule.bulkPublishError', 'เกิดข้อผิดพลาดในการประกาศกะ');
+      toast.error(errorMessage);
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    const shiftIds = Array.from(selectedShiftIds);
+    if (shiftIds.length === 0) return;
+
+    if (!confirm(t('schedule.bulkDeleteConfirm', `คุณแน่ใจหรือไม่ที่จะลบ ${shiftIds.length} กะ?`))) return;
+
+    try {
+      const result = await bulkDeleteShifts(shiftIds);
+      clearSelection();
+
+      if (result.skippedCount === 0) {
+        toast.success(`ลบ ${result.deletedCount} กะสำเร็จ`);
+      } else {
+        toast.warning(
+          `ลบ ${result.deletedCount} กะสำเร็จ ข้าม ${result.skippedCount} กะที่มีบันทึกการเข้า-ออกงาน`
+        );
+      }
+
+      loadData();
+    } catch (error: any) {
+      console.error('Error bulk deleting shifts:', error);
+      const errorMessage = error?.message_th || error?.message || t('schedule.bulkDeleteError', 'เกิดข้อผิดพลาดในการลบกะ');
       toast.error(errorMessage);
     }
   };
@@ -601,6 +755,37 @@ export default function SchedulePage() {
     return shifts.filter(s => s.employeeId === employeeId && s.status !== 'cancelled').length;
   };
 
+  // Calculate warnings for a shift
+  const getShiftWarnings = (shift: ShiftWithDetails): ShiftWarning[] => {
+    return validateShift({
+      shift,
+      allShifts: shifts,
+      employees,
+      leaveRequests,
+    });
+  };
+
+  // Get all conflicts across the schedule
+  const getAllConflicts = (): { errors: number; warnings: number; details: Array<{ shift: ShiftWithDetails; warning: ShiftWarning }> } => {
+    const conflicts: Array<{ shift: ShiftWithDetails; warning: ShiftWarning }> = [];
+    let errorCount = 0;
+    let warningCount = 0;
+
+    shifts.forEach(shift => {
+      const warnings = getShiftWarnings(shift);
+      warnings.forEach(warning => {
+        conflicts.push({ shift, warning });
+        if (warning.severity === 'error') {
+          errorCount++;
+        } else {
+          warningCount++;
+        }
+      });
+    });
+
+    return { errors: errorCount, warnings: warningCount, details: conflicts };
+  };
+
   // Open copy modal with defaults
   const openCopyModal = () => {
     const prevWeek = new Date(weekDays[0]);
@@ -697,6 +882,40 @@ export default function SchedulePage() {
         }
       />
 
+      {/* Conflicts Summary Alert */}
+      {(() => {
+        const conflicts = getAllConflicts();
+        if (conflicts.errors === 0 && conflicts.warnings === 0) return null;
+
+        return (
+          <Alert
+            variant={conflicts.errors > 0 ? 'error' : 'warning'}
+            title={
+              conflicts.errors > 0
+                ? `พบข้อผิดพลาด ${conflicts.errors} รายการ`
+                : `พบคำเตือน ${conflicts.warnings} รายการ`
+            }
+            dismissible={false}
+          >
+            <div className="text-sm space-y-1">
+              {conflicts.errors > 0 && (
+                <div>
+                  • <strong>{conflicts.errors}</strong> กะมีข้อผิดพลาดที่ต้องแก้ไข (ระยะพักไม่เพียงพอ, เกินชั่วโมงต่อสัปดาห์, พนักงานลา)
+                </div>
+              )}
+              {conflicts.warnings > 0 && (
+                <div>
+                  • <strong>{conflicts.warnings}</strong> กะมีคำเตือน (ใกล้เกินชั่วโมงต่อสัปดาห์)
+                </div>
+              )}
+              <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-2">
+                💡 ชี้เมาส์ที่ไอคอนคำเตือนบนกะเพื่อดูรายละเอียด
+              </div>
+            </div>
+          </Alert>
+        );
+      })()}
+
       {/* Navigation & View Controls */}
       <Card variant="bordered" padding="md" className="mobile-p-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
@@ -781,6 +1000,24 @@ export default function SchedulePage() {
         </div>
       </Card>
 
+      {/* Month View - Coming Soon Placeholder */}
+      {view === 'month' && !isMobile ? (
+        <Card variant="bordered">
+          <div className="flex flex-col items-center justify-center min-h-96 text-center p-12">
+            <Calendar size={64} className="text-neutral-400 dark:text-neutral-500 mb-4" />
+            <h3 className="text-xl font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+              {t('schedule.monthViewComingSoon', 'มุมมองรายเดือนกำลังพัฒนา')}
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md">
+              {t(
+                'schedule.monthViewMessage',
+                'ฟีเจอร์นี้กำลังอยู่ระหว่างการพัฒนา กรุณาใช้มุมมองรายสัปดาห์ในขณะนี้'
+              )}
+            </p>
+          </div>
+        </Card>
+      ) : null}
+
       {/* Mobile Agenda View */}
       {isMobile ? (
         <div className="space-y-4">
@@ -852,7 +1089,7 @@ export default function SchedulePage() {
             );
           })}
         </div>
-      ) : (
+      ) : view === 'week' ? (
         /* Desktop Calendar Grid */
         <DndContext
           sensors={sensors}
@@ -922,12 +1159,32 @@ export default function SchedulePage() {
                                 const percentage = Math.min((weeklyHours / 48) * 100, 100);
                                 const status = weeklyHours > 48 ? 'over' : weeklyHours >= 40 ? 'high' : 'normal';
 
+                                const warningMessage =
+                                  status === 'over'
+                                    ? `เกินจำนวนชั่วโมงต่อสัปดาห์ (${weeklyHours.toFixed(1)} / 48 ชม.)`
+                                    : status === 'high'
+                                    ? `ใกล้ถึงขีดจำกัดชั่วโมงต่อสัปดาห์ (${weeklyHours.toFixed(1)} / 48 ชม.)`
+                                    : undefined;
+
                                 return (
                                   <div className="mt-1">
-                                    <div className="flex items-center gap-1 text-[10px] text-neutral-500 mb-0.5">
-                                      <span>{formatHours(weeklyHours)}/48h</span>
+                                    <div className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400 mb-0.5">
+                                      <span className={status === 'over' ? 'text-error-600 dark:text-error-400 font-medium' : status === 'high' ? 'text-warning-600 dark:text-warning-400 font-medium' : ''}>
+                                        {formatHours(weeklyHours)}/48h
+                                      </span>
                                       <span>•</span>
                                       <span>{shiftCount} shifts</span>
+                                      {(status === 'over' || status === 'high') && warningMessage && (
+                                        <Tooltip content={warningMessage} placement="top">
+                                          <div className="inline-flex">
+                                            {status === 'over' ? (
+                                              <AlertCircle size={12} className="text-error-600 dark:text-error-400" />
+                                            ) : (
+                                              <AlertTriangle size={12} className="text-warning-600 dark:text-warning-400" />
+                                            )}
+                                          </div>
+                                        </Tooltip>
+                                      )}
                                     </div>
                                     <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
                                       <div
@@ -966,6 +1223,9 @@ export default function SchedulePage() {
                                   onClick={openEditModal}
                                   onDuplicate={duplicateShift}
                                   statusConfig={SHIFT_STATUS_CONFIG[shift.status as keyof typeof SHIFT_STATUS_CONFIG]}
+                                  warnings={getShiftWarnings(shift)}
+                                  isSelected={selectedShiftIds.has(shift.id)}
+                                  onToggleSelect={toggleShiftSelection}
                                 />
                               ))}
 
@@ -1034,10 +1294,11 @@ export default function SchedulePage() {
             ) : null}
           </DragOverlay>
         </DndContext>
-      )}
+      ) : null}
 
-      {/* Legend - hidden on mobile */}
-      <div className="hidden sm:flex items-center gap-6 text-sm text-neutral-500">
+      {/* Legend - hidden on mobile, only show in week view */}
+      {view === 'week' && (
+        <div className="hidden sm:flex items-center gap-6 text-sm text-neutral-500">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded bg-warning-100 border border-warning-200"></span>
           <span>{t('schedule.draftLegend', 'ร่าง (ยังไม่ประกาศ)')}</span>
@@ -1050,7 +1311,8 @@ export default function SchedulePage() {
           <span className="w-1 h-3 rounded-sm bg-primary-500"></span>
           <span>{t('schedule.colorCodeLegend', 'สีแสดงประเภทกะ')}</span>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Create/Edit Shift Modal */}
       <Modal
@@ -1077,7 +1339,42 @@ export default function SchedulePage() {
             </div>
           )}
 
-          {!editingShift && (
+          {/* Attendance Integrity Warning */}
+          {editingShift && editingShift.hasAttendance && (
+            <div className="p-3 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-700 rounded-lg flex items-start gap-2">
+              <div className="flex-shrink-0 text-error-600 dark:text-error-400 mt-0.5">🔒</div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-error-900 dark:text-error-100">
+                  {t('schedule.attendanceExistsWarningTitle', 'มีบันทึกการเข้า-ออกงานแล้ว')}
+                </p>
+                <p className="text-xs text-error-700 dark:text-error-300 mt-1">
+                  {t('schedule.attendanceExistsWarningText', 'การเปลี่ยนแปลงเวลาอาจส่งผลต่อการคำนวณเงินเดือนและ OT กรุณาตรวจสอบบันทึกเวลาก่อนบันทึก')}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {editingShift ? (
+            // Show locked employee field when editing
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                {t('schedule.employee', 'พนักงาน')}
+              </label>
+              <div className="px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
+                {editingShift.employee?.fullName} ({editingShift.employee?.employeeCode})
+                {editingShift.hasAttendance && (
+                  <span className="ml-2 text-xs text-warning-600 dark:text-warning-400">
+                    🔒 {t('schedule.attendanceLocked', 'ล็อกแล้ว: มีบันทึกเวลาเข้า-ออกงาน')}
+                  </span>
+                )}
+              </div>
+              {editingShift.hasAttendance && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  {t('schedule.cannotChangeEmployee', 'ไม่สามารถเปลี่ยนพนักงานได้เนื่องจากมีบันทึกการเข้า-ออกงานแล้ว')}
+                </p>
+              )}
+            </div>
+          ) : (
             <Select
               label={t('schedule.employee', 'พนักงาน')}
               value={formData.employeeId}
@@ -1240,19 +1537,30 @@ export default function SchedulePage() {
           <div className="flex justify-between pt-4 border-t border-neutral-200 dark:border-neutral-700">
             <div>
               {editingShift && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={<Trash2 size={16} />}
-                  className="text-error-600 hover:text-error-700 hover:bg-error-50"
-                  onClick={() => {
-                    handleDeleteShift(editingShift.id);
-                    setShowCreateModal(false);
-                    resetForm();
-                  }}
+                <Tooltip
+                  content={
+                    editingShift.hasAttendance
+                      ? t('schedule.cannotDeleteWithAttendance', 'ไม่สามารถลบกะได้เนื่องจากมีบันทึกการเข้า-ออกงานแล้ว')
+                      : ''
+                  }
+                  disabled={!editingShift.hasAttendance}
                 >
-                  {t('common.delete', 'ลบกะ')}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<Trash2 size={16} />}
+                    className="text-error-600 hover:text-error-700 hover:bg-error-50"
+                    onClick={() => {
+                      handleDeleteShift(editingShift.id);
+                      setShowCreateModal(false);
+                      resetForm();
+                    }}
+                    disabled={editingShift.hasAttendance}
+                  >
+                    {t('common.delete', 'ลบกะ')}
+                    {editingShift.hasAttendance && ' 🔒'}
+                  </Button>
+                </Tooltip>
               )}
             </div>
             <div className="flex gap-2">
@@ -1471,6 +1779,62 @@ export default function SchedulePage() {
         >
           <Plus size={24} />
         </button>
+      )}
+
+      {/* Bulk Action Bar */}
+      {selectedShiftIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-4 flex items-center gap-4">
+            {/* Selection info */}
+            <div className="flex items-center gap-2">
+              <CheckSquare size={20} className="text-primary-600 dark:text-primary-400" />
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                {selectedShiftIds.size} {t('schedule.shiftsSelected', 'กะที่เลือก')}
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-neutral-300 dark:bg-neutral-600" />
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAllVisibleShifts}
+              >
+                {t('schedule.selectAll', 'เลือกทั้งหมด')}
+              </Button>
+
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Send size={16} />}
+                onClick={handleBulkPublish}
+              >
+                {t('schedule.publish', 'ประกาศ')}
+              </Button>
+
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon={<Trash2 size={16} />}
+                onClick={handleBulkDelete}
+              >
+                {t('common.delete', 'ลบ')}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                leftIcon={<X size={16} />}
+                onClick={clearSelection}
+              >
+                {t('common.cancel', 'ยกเลิก')}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast */}

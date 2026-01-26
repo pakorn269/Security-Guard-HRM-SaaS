@@ -119,6 +119,7 @@ export interface Shift {
     createdBy: string | null;
     createdAt: string;
     updatedAt: string;
+    hasAttendance?: boolean; // Flag indicating if attendance logs exist for this shift
 }
 
 // Extended shift with employee and template info
@@ -227,6 +228,36 @@ export interface BulkCreateResult {
     skipped: Array<{
         index: number;
         reason: string;
+        reason_th?: string;
         conflict?: ShiftConflict;
+    }>;
+}
+
+// Bulk publish request
+export interface BulkPublishRequest {
+    shiftIds: string[];
+}
+
+// Bulk publish response
+export interface BulkPublishResult {
+    successCount: number;
+    notificationSentCount: number;
+    skippedPastCount: number;
+}
+
+// Bulk delete request
+export interface BulkDeleteRequest {
+    shiftIds: string[];
+}
+
+// Bulk delete response
+export interface BulkDeleteResult {
+    deletedCount: number;
+    skippedCount: number;
+    skippedIds: string[];
+    skippedReasons: Array<{
+        id: string;
+        reason: string;
+        reason_th: string;
     }>;
 }

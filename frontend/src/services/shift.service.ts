@@ -6,6 +6,8 @@ import type {
     CalendarResponse,
     MyShiftsResponse,
     BulkCreateResult,
+    BulkPublishResult,
+    BulkDeleteResult,
     CreateShiftTemplateRequest,
     UpdateShiftTemplateRequest,
     CreateShiftRequest,
@@ -133,6 +135,16 @@ export async function copyShifts(data: CopyShiftsRequest): Promise<BulkCreateRes
     return response.data.data;
 }
 
+export async function bulkPublishShifts(shiftIds: string[]): Promise<BulkPublishResult> {
+    const response = await api.post<ApiResponse<BulkPublishResult>>('/shifts/bulk/publish', { shiftIds });
+    return response.data.data;
+}
+
+export async function bulkDeleteShifts(shiftIds: string[]): Promise<BulkDeleteResult> {
+    const response = await api.post<ApiResponse<BulkDeleteResult>>('/shifts/bulk/delete', { shiftIds });
+    return response.data.data;
+}
+
 // ============================================================================
 // CALENDAR API
 // ============================================================================
@@ -187,6 +199,8 @@ export default {
     deleteShift,
     publishShifts,
     copyShifts,
+    bulkPublishShifts,
+    bulkDeleteShifts,
     // Calendar
     getCalendarData,
     // My shifts
