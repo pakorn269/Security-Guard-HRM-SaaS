@@ -78,6 +78,14 @@ export interface DataTableProps<T> {
   mobileCardRenderer?: (item: T, index: number) => React.ReactNode;
   /** Breakpoint for mobile cards in pixels (default: 768) */
   mobileBreakpoint?: number;
+  /** Enable row expansion */
+  isExpandable?: boolean;
+  /** Currently expanded row IDs */
+  expandedIds?: Set<string>;
+  /** Expansion change callback */
+  onExpansionChange?: (expandedIds: Set<string>) => void;
+  /** Render expanded content for a row */
+  renderSubComponent?: (item: T, index: number) => React.ReactNode;
 }
 
 export default function DataTable<T extends object>({
@@ -101,6 +109,10 @@ export default function DataTable<T extends object>({
   useMobileCards = false,
   mobileCardRenderer,
   mobileBreakpoint = 768,
+  isExpandable = false,
+  expandedIds = new Set(),
+
+  renderSubComponent,
 }: DataTableProps<T>) {
   // Mobile viewport detection
   const [isMobileView, setIsMobileView] = useState(false);
@@ -156,6 +168,7 @@ export default function DataTable<T extends object>({
     },
     [selectedIds, onSelectionChange]
   );
+
 
   // Handle sort
   const handleSort = useCallback(
@@ -396,50 +409,63 @@ export default function DataTable<T extends object>({
             {data.map((item, index) => {
               const rowId = getRowId(item);
               const isSelected = selectedIds.has(rowId);
+              const isExpanded = expandedIds.has(rowId);
+              const columnCount = columns.length + (isSelectable ? 1 : 0);
 
               return (
-                <tr
-                  key={rowId}
-                  onClick={() => onRowClick?.(item)}
-                  className={`
-                    bg-white dark:bg-neutral-900
-                    ${isStriped && index % 2 === 1 ? 'bg-neutral-25 dark:bg-white/5' : ''}
-                    ${isHoverable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''}
-                    ${isSelected ? 'bg-primary-50 dark:bg-primary-950/30' : ''}
-                    ${onRowClick ? 'cursor-pointer' : ''}
-                    transition-colors
-                  `}
-                >
-                  {/* Selection checkbox */}
-                  {isSelectable && (
-                    <td className="w-12 px-3 py-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleSelectRow(rowId);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
-                        aria-label={`Select row ${rowId}`}
-                      />
-                    </td>
+                <React.Fragment key={rowId}>
+                  <tr
+                    onClick={() => onRowClick?.(item)}
+                    className={`
+                      bg-white dark:bg-neutral-900
+                      ${isStriped && index % 2 === 1 ? 'bg-neutral-25 dark:bg-white/5' : ''}
+                      ${isHoverable ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''}
+                      ${isSelected ? 'bg-primary-50 dark:bg-primary-950/30' : ''}
+                      ${onRowClick ? 'cursor-pointer' : ''}
+                      transition-colors
+                    `}
+                  >
+                    {/* Selection checkbox */}
+                    {isSelectable && (
+                      <td className="w-12 px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectRow(rowId);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                          aria-label={`Select row ${rowId}`}
+                        />
+                      </td>
+                    )}
+                    {columns.map((column) => (
+                      <td
+                        key={column.id}
+                        className={`
+                          px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300
+                          ${column.hideOnMobile ? 'hidden sm:table-cell' : ''}
+                          ${column.align === 'center' ? 'text-center' : ''}
+                          ${column.align === 'right' ? 'text-right' : ''}
+                        `}
+                      >
+                        {getCellValue(item, column, index)}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* Expanded row content */}
+                  {isExpandable && isExpanded && renderSubComponent && (
+                    <tr className="bg-neutral-50/50 dark:bg-neutral-900/50">
+                      <td colSpan={columnCount} className="p-0">
+                        <div className="px-4 py-3">
+                          {renderSubComponent(item, index)}
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                  {columns.map((column) => (
-                    <td
-                      key={column.id}
-                      className={`
-                        px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300
-                        ${column.hideOnMobile ? 'hidden sm:table-cell' : ''}
-                        ${column.align === 'center' ? 'text-center' : ''}
-                        ${column.align === 'right' ? 'text-right' : ''}
-                      `}
-                    >
-                      {getCellValue(item, column, index)}
-                    </td>
-                  ))}
-                </tr>
+                </React.Fragment>
               );
             })}
           </tbody>

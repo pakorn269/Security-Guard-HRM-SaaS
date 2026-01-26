@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2 } from 'lucide-react';
-import { Modal, Button, Input } from '../../components/common';
+import { Plus, Trash2, Pencil, QrCode } from 'lucide-react';
+import { Modal, Button, Input, Badge } from '../../components/common';
 import { sitesService, type Site, type Zone } from '../../services/sites.service';
+import ZoneFormModal from '../../components/sites/ZoneFormModal';
+import QRCodeModal from '../../components/sites/QRCodeModal';
 
 const siteSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -29,7 +31,14 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'details' | 'zones'>('details');
     const [zones, setZones] = useState<Zone[]>([]);
-    const [newZoneName, setNewZoneName] = useState('');
+
+    // Zone Form Modal state
+    const [isZoneFormOpen, setIsZoneFormOpen] = useState(false);
+    const [editingZone, setEditingZone] = useState<Zone | null>(null);
+
+    // QR Code Modal state
+    const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+    const [selectedZoneForQR, setSelectedZoneForQR] = useState<Zone | null>(null);
 
     const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(siteSchema),
@@ -45,6 +54,8 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
         }
     });
 
+    // Form initialization effect - syncs form values, tab, and zones from site prop
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (isOpen) {
             if (site) {
@@ -54,9 +65,8 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                 setValue('contactName', site.contactName || '');
                 setValue('contactPhone', site.contactPhone || '');
                 setValue('isActive', site.isActive);
-                setValue('latitude', site.latitude as any);
-                setValue('longitude', site.longitude as any);
-
+                setValue('latitude', site.latitude);
+                setValue('longitude', site.longitude);
                 if (site.zones) setZones(site.zones);
             } else {
                 reset({
@@ -72,8 +82,9 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
             setActiveTab('details');
         }
     }, [isOpen, site, setValue, reset]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: z.infer<typeof siteSchema>) => {
         try {
             if (site) {
                 await sitesService.update(site.id, data);
@@ -86,28 +97,52 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
         }
     };
 
-    const handleAddZone = async () => {
-        if (!newZoneName.trim() || !site) return;
-        try {
-            const zone = await sitesService.createZone({
-                siteId: site.id,
-                name: newZoneName,
-            });
+    const handleAddZone = () => {
+        if (!site) return;
+        setEditingZone(null);
+        setIsZoneFormOpen(true);
+    };
+
+    const handleEditZone = (zone: Zone) => {
+        setEditingZone(zone);
+        setIsZoneFormOpen(true);
+    };
+
+    const handleZoneFormSuccess = (zone: Zone) => {
+        if (editingZone) {
+            // Update existing zone in list
+            setZones(zones.map(z => z.id === zone.id ? zone : z));
+        } else {
+            // Add new zone to list
             setZones([...zones, zone]);
-            setNewZoneName('');
-        } catch (err) {
-            console.error('Failed to create zone', err);
         }
+        setIsZoneFormOpen(false);
+        setEditingZone(null);
+    };
+
+    const handleZoneFormClose = () => {
+        setIsZoneFormOpen(false);
+        setEditingZone(null);
     };
 
     const handleDeleteZone = async (zoneId: string) => {
-        if (!confirm('Delete zone?')) return;
+        if (!confirm(t('sites.confirmDeleteZone', 'Are you sure you want to delete this zone?'))) return;
         try {
             await sitesService.deleteZone(zoneId);
             setZones(zones.filter(z => z.id !== zoneId));
         } catch (err) {
             console.error('Failed to delete zone', err);
         }
+    };
+
+    const handleShowQRCode = (zone: Zone) => {
+        setSelectedZoneForQR(zone);
+        setIsQRModalOpen(true);
+    };
+
+    const handleCloseQRModal = () => {
+        setIsQRModalOpen(false);
+        setSelectedZoneForQR(null);
     };
 
     return (
@@ -176,30 +211,85 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                 </form>
             ) : (
                 <div className="space-y-4">
-                    <div className="flex gap-2">
-                        <Input
-                            placeholder={t('sites.newZonePlaceholder', 'New Zone Name (e.g. Main Gate)')}
-                            value={newZoneName}
-                            onChange={(e) => setNewZoneName(e.target.value)}
-                            className="flex-1"
-                        />
-                        <Button variant="secondary" onClick={handleAddZone} disabled={!newZoneName}>
-                            <Plus size={16} /> {t('actions.add', 'Add')}
+                    {/* Add Zone Button */}
+                    <div className="flex justify-end">
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            leftIcon={<Plus size={16} />}
+                            onClick={handleAddZone}
+                            disabled={!site}
+                        >
+                            {t('sites.addZone', 'Add Zone')}
                         </Button>
                     </div>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+
+                    {/* Zones List */}
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
                         {zones.map(zone => (
-                            <div key={zone.id} className="flex justify-between items-center p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                                <span className="font-medium text-neutral-900 dark:text-white">{zone.name}</span>
-                                <div className="flex gap-2">
-                                    <button className="text-error-500 hover:text-error-700" onClick={() => handleDeleteZone(zone.id)}>
-                                        <Trash2 size={16} />
-                                    </button>
+                            <div key={zone.id} className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-neutral-900 dark:text-white mb-1 truncate">
+                                            {zone.name}
+                                        </h4>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            {zone.code && (
+                                                <Badge variant="neutral" className="text-xs">
+                                                    {t('sites.code', 'Code')}: {zone.code}
+                                                </Badge>
+                                            )}
+                                            <Badge variant={zone.isActive ? 'success' : 'neutral'} className="text-xs">
+                                                {zone.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                                            </Badge>
+                                        </div>
+                                        {zone.description && (
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 line-clamp-2">
+                                                {zone.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                            onClick={() => handleShowQRCode(zone)}
+                                            className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
+                                            title={t('sites.viewQR', 'View QR Code')}
+                                        >
+                                            <QrCode size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEditZone(zone)}
+                                            className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
+                                            title={t('common.edit', 'Edit')}
+                                        >
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteZone(zone.id)}
+                                            className="p-1.5 text-error-500 hover:bg-error-50 dark:hover:bg-error-950/30 rounded transition-colors"
+                                            title={t('common.delete', 'Delete')}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                         {zones.length === 0 && (
-                            <div className="text-center text-neutral-500 py-4">{t('sites.noZones', 'No zones added yet')}</div>
+                            <div className="text-center py-12">
+                                <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+                                    {t('sites.noZones', 'No zones added yet')}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<Plus size={16} />}
+                                    onClick={handleAddZone}
+                                    disabled={!site}
+                                >
+                                    {t('sites.addFirstZone', 'Add Your First Zone')}
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -215,6 +305,31 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                     </Button>
                 )}
             </div>
+
+            {/* Zone Form Modal */}
+            {site && (
+                <ZoneFormModal
+                    isOpen={isZoneFormOpen}
+                    onClose={handleZoneFormClose}
+                    onSuccess={handleZoneFormSuccess}
+                    zone={editingZone}
+                    siteId={site.id}
+                    siteName={site.name}
+                    existingZoneCodes={zones.map(z => z.code || '').filter(Boolean)}
+                />
+            )}
+
+            {/* QR Code Modal */}
+            {selectedZoneForQR && site && (
+                <QRCodeModal
+                    isOpen={isQRModalOpen}
+                    onClose={handleCloseQRModal}
+                    zoneName={selectedZoneForQR.name}
+                    siteName={site.name}
+                    zoneId={selectedZoneForQR.id}
+                    zoneCode={selectedZoneForQR.code}
+                />
+            )}
         </Modal>
     );
 }
