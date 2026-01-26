@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-
     MapPin,
     AlertCircle,
     LogIn,
@@ -18,26 +17,26 @@ import {
     getTodayAttendance,
     type TodayAttendanceResponse,
 } from '../../services/attendance.service';
-
-interface GeolocationData {
-    latitude: number;
-    longitude: number;
-    accuracy: number;
-}
-
-type GeolocationError = {
-    code: number;
-    message: string;
-};
+import useGeolocation from '../../hooks/useGeolocation';
+import GpsErrorModal from '../../components/common/GpsErrorModal';
 
 export default function LiffClockPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isClocking, setIsClocking] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [todayData, setTodayData] = useState<TodayAttendanceResponse | null>(null);
-    const [location, setLocation] = useState<GeolocationData | null>(null);
-    const [locationError, setLocationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [showGpsErrorModal, setShowGpsErrorModal] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'clock_in' | 'clock_out' | null>(null);
+
+    // Use the new geolocation hook with Fail-Fast strategy
+    const {
+        location,
+        error: geoError,
+        isLoading: isGettingLocation,
+        getLocation,
+        clearError: clearGeoError,
+    } = useGeolocation();
 
     // Fetch today's attendance status
     const fetchTodayStatus = useCallback(async () => {
@@ -58,61 +57,18 @@ export default function LiffClockPage() {
         fetchTodayStatus();
     }, [fetchTodayStatus]);
 
-    // Get current geolocation
-    const getGeolocation = (): Promise<GeolocationData> => {
-        return new Promise((resolve, reject) => {
-            if (!('geolocation' in navigator)) {
-                reject({ code: 0, message: 'Geolocation not supported' });
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    resolve({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                    });
-                },
-                (error) => {
-                    reject({
-                        code: error.code,
-                        message: getGeolocationErrorMessage(error.code),
-                    });
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 30000,
-                    maximumAge: 0,
-                }
-            );
-        });
-    };
-
-    const getGeolocationErrorMessage = (code: number): string => {
-        switch (code) {
-            case 1:
-                return 'กรุณาอนุญาตการเข้าถึงตำแหน่ง';
-            case 2:
-                return 'ไม่สามารถระบุตำแหน่งได้ กรุณาลองใหม่';
-            case 3:
-                return 'หมดเวลาการระบุตำแหน่ง กรุณาลองใหม่';
-            default:
-                return 'เกิดข้อผิดพลาดในการระบุตำแหน่ง';
-        }
-    };
-
-    // Handle clock in
+    /**
+     * Handle clock in with Fail-Fast geolocation
+     */
     const handleClockIn = async () => {
         setIsClocking(true);
-        setLocationError(null);
         setError(null);
         setSuccessMessage(null);
+        setPendingAction('clock_in');
 
         try {
-            // Get GPS location first
-            const geoData = await getGeolocation();
-            setLocation(geoData);
+            // Get GPS location first with 5-second timeout
+            const geoData = await getLocation();
 
             // Call API
             await clockIn({
@@ -123,32 +79,37 @@ export default function LiffClockPage() {
             });
 
             setSuccessMessage('ลงเวลาเข้างานสำเร็จ!');
+            setPendingAction(null);
 
             // Refresh status
             await fetchTodayStatus();
         } catch (err: unknown) {
-            if ((err as GeolocationError).code !== undefined) {
-                setLocationError((err as GeolocationError).message);
+            // Check if it's a geolocation error (has 'code' property from our hook)
+            if (err && typeof err === 'object' && 'code' in err) {
+                // Show the GPS error modal
+                setShowGpsErrorModal(true);
             } else {
                 const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาเข้าได้';
                 setError(errorMessage);
+                setPendingAction(null);
             }
         } finally {
             setIsClocking(false);
         }
     };
 
-    // Handle clock out
+    /**
+     * Handle clock out with Fail-Fast geolocation
+     */
     const handleClockOut = async () => {
         setIsClocking(true);
-        setLocationError(null);
         setError(null);
         setSuccessMessage(null);
+        setPendingAction('clock_out');
 
         try {
-            // Get GPS location first
-            const geoData = await getGeolocation();
-            setLocation(geoData);
+            // Get GPS location first with 5-second timeout
+            const geoData = await getLocation();
 
             // Call API
             const result = await clockOut({
@@ -158,19 +119,47 @@ export default function LiffClockPage() {
             });
 
             setSuccessMessage(`ลงเวลาออกสำเร็จ! (${result.totalHours} ชั่วโมง)`);
+            setPendingAction(null);
 
             // Refresh status
             await fetchTodayStatus();
         } catch (err: unknown) {
-            if ((err as GeolocationError).code !== undefined) {
-                setLocationError((err as GeolocationError).message);
+            // Check if it's a geolocation error (has 'code' property from our hook)
+            if (err && typeof err === 'object' && 'code' in err) {
+                // Show the GPS error modal
+                setShowGpsErrorModal(true);
             } else {
                 const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาออกได้';
                 setError(errorMessage);
+                setPendingAction(null);
             }
         } finally {
             setIsClocking(false);
         }
+    };
+
+    /**
+     * Handle retry from GPS error modal
+     */
+    const handleGpsRetry = async () => {
+        setShowGpsErrorModal(false);
+        clearGeoError();
+
+        // Retry the pending action
+        if (pendingAction === 'clock_in') {
+            await handleClockIn();
+        } else if (pendingAction === 'clock_out') {
+            await handleClockOut();
+        }
+    };
+
+    /**
+     * Handle close GPS error modal
+     */
+    const handleGpsModalClose = () => {
+        setShowGpsErrorModal(false);
+        clearGeoError();
+        setPendingAction(null);
     };
 
     // Format time for display
@@ -382,12 +371,12 @@ export default function LiffClockPage() {
                 </div>
             )}
 
-            {/* Error messages */}
-            {(error || locationError) && (
+            {/* Error messages (non-GPS errors only) */}
+            {error && (
                 <div className="mt-6 bg-error-50 dark:bg-error-900/30 border border-error-200 dark:border-error-700 rounded-lg p-4 max-w-sm w-full">
                     <div className="flex items-center gap-2 text-error-700 dark:text-error-300 text-sm">
                         <AlertCircle size={16} />
-                        <span>{locationError || error}</span>
+                        <span>{error}</span>
                     </div>
                 </div>
             )}
@@ -412,6 +401,15 @@ export default function LiffClockPage() {
                     <span>ระบบจะบันทึกตำแหน่ง GPS ของคุณเมื่อลงเวลา</span>
                 </div>
             </div>
+
+            {/* GPS Error Modal */}
+            <GpsErrorModal
+                isOpen={showGpsErrorModal}
+                onClose={handleGpsModalClose}
+                onRetry={handleGpsRetry}
+                error={geoError}
+                isRetrying={isGettingLocation}
+            />
         </div>
     );
 }
