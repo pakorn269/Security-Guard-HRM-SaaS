@@ -97,6 +97,85 @@ class AttendanceService {
         return hours * 60 + minutes;
     }
 
+    /**
+     * Creates a Date object representing a specific date and time in the company's timezone.
+     * This is critical for correct shift boundary calculations across timezones.
+     *
+     * @param dateStr - Date string in YYYY-MM-DD format
+     * @param timeStr - Time string in HH:mm or HH:mm:ss format
+     * @param timezone - IANA timezone (e.g., 'Asia/Bangkok')
+     * @returns Date object representing the given date/time in the specified timezone
+     */
+    private createDateInTimezone(dateStr: string, timeStr: string, timezone: string): Date {
+        // Normalize time to HH:mm:ss
+        const normalizedTime = timeStr.includes(':') && timeStr.split(':').length === 2
+            ? `${timeStr}:00`
+            : timeStr;
+
+        // Create a date string and parse it in the target timezone
+        const dateTimeStr = `${dateStr}T${normalizedTime}`;
+
+        // Use Intl.DateTimeFormat to determine the timezone offset
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+
+        // Create the date assuming local interpretation, then extract parts for the target timezone
+        const tempDate = new Date(dateTimeStr);
+        const parts = formatter.formatToParts(tempDate);
+
+        const getPart = (type: string): string =>
+            parts.find((p) => p.type === type)?.value || '0';
+
+        // Reconstruct date in local timezone to match the intended timezone time
+        // This creates a Date that, when compared to "now", gives correct relative difference
+        return new Date(
+            parseInt(getPart('year')),
+            parseInt(getPart('month')) - 1,
+            parseInt(getPart('day')),
+            parseInt(getPart('hour')),
+            parseInt(getPart('minute')),
+            parseInt(getPart('second'))
+        );
+    }
+
+    /**
+     * Gets the current time in the specified timezone as a Date object
+     */
+    private getNowInTimezone(timezone: string): Date {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+
+        const parts = formatter.formatToParts(now);
+        const getPart = (type: string): string =>
+            parts.find((p) => p.type === type)?.value || '0';
+
+        return new Date(
+            parseInt(getPart('year')),
+            parseInt(getPart('month')) - 1,
+            parseInt(getPart('day')),
+            parseInt(getPart('hour')),
+            parseInt(getPart('minute')),
+            parseInt(getPart('second'))
+        );
+    }
+
     // ========================================================================
     // CLOCK IN/OUT FUNCTIONS
     // ========================================================================
@@ -109,6 +188,16 @@ class AttendanceService {
     ): Promise<ClockInResponse> {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
+
+        // Fetch company settings early for timezone-aware calculations
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('settings')
+            .eq('id', companyId)
+            .single();
+
+        const companyTimezone = company?.settings?.timezone || 'Asia/Bangkok';
+        const nowInTimezone = this.getNowInTimezone(companyTimezone);
 
         // Check if already clocked in today
         const { data: existingAttendance } = await supabaseAdmin
@@ -173,10 +262,15 @@ class AttendanceService {
                         // Check if overnight shift (end_time < start_time)
                         if (this.isOvernightShift(ys.start_time, ys.end_time)) {
                             // Check if we're within valid clock-in window
-                            const shiftEndToday = new Date(`${today}T${ys.end_time}`);
+                            // Use timezone-aware date construction
+                            const shiftEndToday = this.createDateInTimezone(
+                                today,
+                                ys.end_time,
+                                companyTimezone
+                            );
                             const gracePeriodMs = 2 * 60 * 60 * 1000; // 2 hours after shift end
 
-                            if (now.getTime() < shiftEndToday.getTime() + gracePeriodMs) {
+                            if (nowInTimezone.getTime() < shiftEndToday.getTime() + gracePeriodMs) {
                                 shiftId = ys.id;
                                 shiftData = ys;
                                 shiftStartTime = ys.start_time;
@@ -202,15 +296,6 @@ class AttendanceService {
             shiftData = shift;
             shiftStartTime = shift.start_time;
         }
-
-        // Determine status (on_time or late)
-
-        // Fetch company settings once
-        const { data: company } = await supabaseAdmin
-            .from('companies')
-            .select('settings')
-            .eq('id', companyId)
-            .single();
 
         // Determine status (on_time or late) and validate geofence
         let status: AttendanceStatus = 'on_time';
@@ -298,12 +383,16 @@ class AttendanceService {
             .single();
 
         // Find active attendance record (clocked in but not out)
+        // Include company settings for timezone-aware calculations
         const { data: activeAttendance, error: findError } = await supabaseAdmin
             .from('attendance_logs')
             .select(`
                 *,
                 employees (id, full_name, employee_code),
-                shifts (id, date, start_time, end_time, location)
+                shifts (
+                    id, date, start_time, end_time, location,
+                    companies (settings)
+                )
             `)
             .eq('company_id', companyId)
             .eq('employee_id', employeeId)
@@ -343,22 +432,34 @@ class AttendanceService {
 
         // Check for early leave if there's a shift
         if (activeAttendance.shifts) {
-            // Calculate shift end datetime
-            const shiftEnd = new Date(
-                `${activeAttendance.shifts.date}T${activeAttendance.shifts.end_time}`
-            );
+            // Get company timezone from shift's company settings, fallback to Asia/Bangkok
+            const shiftCompanySettings = (activeAttendance.shifts as { companies?: { settings?: { timezone?: string } } }).companies?.settings;
+            const companyTimezone = shiftCompanySettings?.timezone || company?.settings?.timezone || 'Asia/Bangkok';
 
-            // Check if overnight shift (end_time < start_time means next day)
+            // Calculate shift end date (next day for overnight shifts)
+            let shiftEndDate = activeAttendance.shifts.date;
             if (this.isOvernightShift(activeAttendance.shifts.start_time, activeAttendance.shifts.end_time)) {
                 // Overnight shift - end time is next day
-                shiftEnd.setDate(shiftEnd.getDate() + 1);
+                const nextDay = new Date(activeAttendance.shifts.date);
+                nextDay.setDate(nextDay.getDate() + 1);
+                shiftEndDate = nextDay.toISOString().split('T')[0];
             }
+
+            // Create timezone-aware shift end datetime
+            const shiftEnd = this.createDateInTimezone(
+                shiftEndDate,
+                activeAttendance.shifts.end_time,
+                companyTimezone
+            );
+
+            // Get current time in company timezone for accurate comparison
+            const nowInTimezone = this.getNowInTimezone(companyTimezone);
 
             // Use fetched company settings
             const earlyLeaveThreshold = company?.settings?.early_leave_threshold_minutes ?? 15;
 
-            // Calculate minutes early
-            const diffMs = shiftEnd.getTime() - now.getTime();
+            // Calculate minutes early (positive = early, negative = overtime)
+            const diffMs = shiftEnd.getTime() - nowInTimezone.getTime();
             const minutesEarly = Math.floor(diffMs / 60000);
 
             if (minutesEarly > earlyLeaveThreshold) {
@@ -412,7 +513,17 @@ class AttendanceService {
         employeeId: string,
         date?: string
     ): Promise<TodayAttendanceResponse> {
+        // Fetch company settings for timezone-aware calculations
+        const { data: company } = await supabaseAdmin
+            .from('companies')
+            .select('settings')
+            .eq('id', companyId)
+            .single();
+
+        const companyTimezone = company?.settings?.timezone || 'Asia/Bangkok';
+
         const now = new Date();
+        const nowInTimezone = this.getNowInTimezone(companyTimezone);
         const targetDate = date || now.toISOString().split('T')[0];
 
         // Calculate yesterday's date for overnight shift lookback
@@ -498,10 +609,15 @@ class AttendanceService {
                     if (this.isOvernightShift(ys.start_time, ys.end_time)) {
                         // Calculate if the shift's end time is still in the future
                         // (within a reasonable grace period for late clock-in)
-                        const shiftEndTime = new Date(`${targetDate}T${ys.end_time}`);
+                        // Use timezone-aware date construction
+                        const shiftEndTime = this.createDateInTimezone(
+                            targetDate,
+                            ys.end_time,
+                            companyTimezone
+                        );
                         const gracePeriodMs = 4 * 60 * 60 * 1000; // 4 hours grace after shift end
 
-                        if (now.getTime() < shiftEndTime.getTime() + gracePeriodMs) {
+                        if (nowInTimezone.getTime() < shiftEndTime.getTime() + gracePeriodMs) {
                             shift = ys;
                             break;
                         }

@@ -175,34 +175,34 @@ describe('AttendanceService', () => {
                     },
                 };
 
-                let callCount = 0;
+                let attendanceCallCount = 0;
+                let shiftsCallCount = 0;
                 vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
-                    callCount++;
-
-                    if (table === 'attendance_logs' && callCount === 1) {
-                        // Check for existing active clock-in - none
-                        return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
-                    }
-
-                    if (table === 'shifts' && callCount === 2) {
-                        // Check today's shifts - none
-                        return createChainableMock([], null, true) as ReturnType<typeof supabaseAdmin.from>;
-                    }
-
-                    if (table === 'shifts' && callCount === 3) {
-                        // Check yesterday's shifts - find overnight shift
-                        return createChainableMock([mockYesterdayShift], null, true) as ReturnType<typeof supabaseAdmin.from>;
-                    }
-
+                    // Company settings are fetched first for timezone
                     if (table === 'companies') {
                         return createChainableMock({
-                            settings: { late_threshold_minutes: 15 },
+                            settings: { timezone: 'Asia/Bangkok', late_threshold_minutes: 15 },
                         }) as ReturnType<typeof supabaseAdmin.from>;
                     }
 
                     if (table === 'attendance_logs') {
+                        attendanceCallCount++;
+                        if (attendanceCallCount === 1) {
+                            // Check for existing active clock-in - none
+                            return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+                        }
                         // Insert new attendance
                         return createChainableMock(mockCreatedAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                    }
+
+                    if (table === 'shifts') {
+                        shiftsCallCount++;
+                        if (shiftsCallCount === 1) {
+                            // Check today's shifts - none
+                            return createChainableMock([], null, true) as ReturnType<typeof supabaseAdmin.from>;
+                        }
+                        // Check yesterday's shifts - find overnight shift
+                        return createChainableMock([mockYesterdayShift], null, true) as ReturnType<typeof supabaseAdmin.from>;
                     }
 
                     return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
@@ -261,29 +261,28 @@ describe('AttendanceService', () => {
                     },
                 };
 
-                let callCount = 0;
+                let attendanceCallCount = 0;
                 vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
-                    callCount++;
-
-                    if (table === 'attendance_logs' && callCount === 1) {
-                        // Check for existing active clock-in - none
-                        return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
-                    }
-
-                    if (table === 'shifts' && callCount === 2) {
-                        // Check today's shifts - found
-                        return createChainableMock([mockTodayShift], null, true) as ReturnType<typeof supabaseAdmin.from>;
-                    }
-
+                    // Company settings are fetched first for timezone
                     if (table === 'companies') {
                         return createChainableMock({
-                            settings: { late_threshold_minutes: 15 },
+                            settings: { timezone: 'Asia/Bangkok', late_threshold_minutes: 15 },
                         }) as ReturnType<typeof supabaseAdmin.from>;
                     }
 
                     if (table === 'attendance_logs') {
+                        attendanceCallCount++;
+                        if (attendanceCallCount === 1) {
+                            // Check for existing active clock-in - none
+                            return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+                        }
                         // Insert new attendance
                         return createChainableMock(mockCreatedAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                    }
+
+                    if (table === 'shifts') {
+                        // Check today's shifts - found
+                        return createChainableMock([mockTodayShift], null, true) as ReturnType<typeof supabaseAdmin.from>;
                     }
 
                     return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
@@ -547,22 +546,21 @@ describe('AttendanceService', () => {
             const morningTime = new Date('2026-01-26T09:00:00');
             vi.setSystemTime(morningTime);
 
-            let callCount = 0;
             vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
-                callCount++;
+                // Company settings are fetched first for timezone
+                if (table === 'companies') {
+                    return createChainableMock({
+                        settings: { timezone: 'Asia/Bangkok' },
+                    }) as ReturnType<typeof supabaseAdmin.from>;
+                }
 
-                if (table === 'attendance_logs' && callCount === 1) {
-                    // No active attendance
+                if (table === 'attendance_logs') {
+                    // No active attendance / no attendance records
                     return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
                 }
 
                 if (table === 'shifts') {
                     // No shifts found (today or yesterday)
-                    return createChainableMock([], null, true) as ReturnType<typeof supabaseAdmin.from>;
-                }
-
-                if (table === 'attendance_logs') {
-                    // No attendance records
                     return createChainableMock([], null, true) as ReturnType<typeof supabaseAdmin.from>;
                 }
 
@@ -576,6 +574,250 @@ describe('AttendanceService', () => {
             expect(result.canClockOut).toBe(false);
             expect(result.currentStatus).toBe('no_shift');
             expect(result.shift).toBeNull();
+        });
+    });
+
+    // =========================================================================
+    // Timezone Bug Tests - Early Leave Detection
+    // =========================================================================
+
+    describe('Timezone-aware Early Leave Detection', () => {
+        it('should mark as completed (not early_leave) when clocking out AFTER shift end', async () => {
+            // Scenario: Shift 22:00-07:00, clock out at 11:40 (4h 40min AFTER shift end)
+            // Expected: status = 'completed', overtime calculated
+            // Bug: Without timezone fix, 07:00 was interpreted as UTC (14:00 Bangkok)
+            // so 11:40 Bangkok < 14:00 Bangkok → incorrectly marked as early_leave
+
+            const clockOutTime = new Date('2026-01-26T11:40:00'); // 11:40 Bangkok
+            vi.setSystemTime(clockOutTime);
+
+            const mockActiveAttendance = {
+                id: 'attendance-overtime',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                shift_id: 'shift-overnight',
+                clock_in_time: '2026-01-25T22:15:00Z', // Clocked in 22:15
+                clock_out_time: null,
+                clock_in_latitude: 13.7563,
+                clock_in_longitude: 100.5018,
+                clock_in_accuracy: 10,
+                clock_out_latitude: null,
+                clock_out_longitude: null,
+                clock_out_accuracy: null,
+                status: 'on_time',
+                total_hours: null,
+                overtime_hours: null,
+                notes: null,
+                adjusted_by: null,
+                adjustment_reason: null,
+                created_at: '2026-01-25T22:15:00Z',
+                updated_at: '2026-01-25T22:15:00Z',
+                employees: {
+                    id: 'employee-1',
+                    full_name: 'John Guard',
+                    employee_code: 'G001',
+                },
+                shifts: {
+                    id: 'shift-overnight',
+                    date: '2026-01-25',
+                    start_time: '22:00:00',
+                    end_time: '07:00:00', // Shift ends at 07:00
+                    location: 'Site A',
+                    companies: {
+                        settings: {
+                            timezone: 'Asia/Bangkok',
+                            early_leave_threshold_minutes: 15,
+                        },
+                    },
+                },
+            };
+
+            const mockUpdatedAttendance = {
+                ...mockActiveAttendance,
+                clock_out_time: clockOutTime.toISOString(),
+                clock_out_latitude: 13.7563,
+                clock_out_longitude: 100.5018,
+                clock_out_accuracy: 10,
+                status: 'completed',
+                total_hours: 13.42, // ~13h 25min
+                overtime_hours: 4.67, // ~4h 40min overtime
+            };
+
+            let callCount = 0;
+            vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
+                callCount++;
+
+                if (table === 'companies') {
+                    return createChainableMock({
+                        settings: {
+                            timezone: 'Asia/Bangkok',
+                            early_leave_threshold_minutes: 15,
+                        },
+                    }) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                if (table === 'attendance_logs' && callCount <= 2) {
+                    // Find active attendance
+                    return createChainableMock(mockActiveAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                if (table === 'attendance_logs') {
+                    // Update attendance
+                    return createChainableMock(mockUpdatedAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+            });
+
+            const result = await attendanceService.clockOut('company-1', 'employee-1', {
+                latitude: 13.7563,
+                longitude: 100.5018,
+                accuracy: 10,
+            });
+
+            // KEY ASSERTION: Should be 'completed' NOT 'early_leave'
+            expect(result.message).toBe('Clocked out successfully!');
+            expect(result.totalHours).toBeGreaterThan(0);
+        });
+
+        it('should correctly identify early leave when clocking out BEFORE shift end', async () => {
+            // Scenario: Shift 22:00-07:00, clock out at 05:30 (1.5h BEFORE shift end)
+            // Expected: status = 'early_leave'
+
+            const clockOutTime = new Date('2026-01-26T05:30:00'); // 05:30 Bangkok (early)
+            vi.setSystemTime(clockOutTime);
+
+            const mockActiveAttendance = {
+                id: 'attendance-early',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                shift_id: 'shift-overnight',
+                clock_in_time: '2026-01-25T22:00:00Z',
+                clock_out_time: null,
+                clock_in_latitude: 13.7563,
+                clock_in_longitude: 100.5018,
+                clock_in_accuracy: 10,
+                clock_out_latitude: null,
+                clock_out_longitude: null,
+                clock_out_accuracy: null,
+                status: 'on_time',
+                total_hours: null,
+                overtime_hours: null,
+                notes: null,
+                adjusted_by: null,
+                adjustment_reason: null,
+                created_at: '2026-01-25T22:00:00Z',
+                updated_at: '2026-01-25T22:00:00Z',
+                employees: {
+                    id: 'employee-1',
+                    full_name: 'John Guard',
+                    employee_code: 'G001',
+                },
+                shifts: {
+                    id: 'shift-overnight',
+                    date: '2026-01-25',
+                    start_time: '22:00:00',
+                    end_time: '07:00:00',
+                    location: 'Site A',
+                    companies: {
+                        settings: {
+                            timezone: 'Asia/Bangkok',
+                            early_leave_threshold_minutes: 15,
+                        },
+                    },
+                },
+            };
+
+            const mockUpdatedAttendance = {
+                ...mockActiveAttendance,
+                clock_out_time: clockOutTime.toISOString(),
+                clock_out_latitude: 13.7563,
+                clock_out_longitude: 100.5018,
+                clock_out_accuracy: 10,
+                status: 'early_leave',
+                total_hours: 7.5,
+                overtime_hours: 0,
+            };
+
+            let callCount = 0;
+            vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
+                callCount++;
+
+                if (table === 'companies') {
+                    return createChainableMock({
+                        settings: {
+                            timezone: 'Asia/Bangkok',
+                            early_leave_threshold_minutes: 15,
+                        },
+                    }) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                if (table === 'attendance_logs' && callCount <= 2) {
+                    return createChainableMock(mockActiveAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                if (table === 'attendance_logs') {
+                    return createChainableMock(mockUpdatedAttendance) as ReturnType<typeof supabaseAdmin.from>;
+                }
+
+                return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+            });
+
+            const result = await attendanceService.clockOut('company-1', 'employee-1', {
+                latitude: 13.7563,
+                longitude: 100.5018,
+                accuracy: 10,
+            });
+
+            // Should be early_leave since 05:30 < 07:00 (90 minutes early)
+            expect(result.message).toBe('Clocked out (early leave)');
+        });
+    });
+
+    // =========================================================================
+    // Helper Method Tests - Timezone Functions
+    // =========================================================================
+
+    describe('createDateInTimezone Helper', () => {
+        it('should create date in Bangkok timezone correctly', () => {
+            const service = attendanceService as unknown as {
+                createDateInTimezone: (d: string, t: string, tz: string) => Date;
+            };
+
+            const result = service.createDateInTimezone('2026-01-26', '07:00', 'Asia/Bangkok');
+
+            // The result should represent 07:00 Bangkok time
+            expect(result.getHours()).toBe(7);
+            expect(result.getMinutes()).toBe(0);
+        });
+
+        it('should handle time with seconds', () => {
+            const service = attendanceService as unknown as {
+                createDateInTimezone: (d: string, t: string, tz: string) => Date;
+            };
+
+            const result = service.createDateInTimezone('2026-01-26', '07:30:45', 'Asia/Bangkok');
+
+            expect(result.getHours()).toBe(7);
+            expect(result.getMinutes()).toBe(30);
+            expect(result.getSeconds()).toBe(45);
+        });
+    });
+
+    describe('getNowInTimezone Helper', () => {
+        it('should return current time in specified timezone', () => {
+            const testTime = new Date('2026-01-26T10:00:00Z'); // 17:00 Bangkok
+            vi.setSystemTime(testTime);
+
+            const service = attendanceService as unknown as {
+                getNowInTimezone: (tz: string) => Date;
+            };
+
+            const result = service.getNowInTimezone('Asia/Bangkok');
+
+            // Result should be 17:00 in Bangkok (UTC+7)
+            expect(result.getHours()).toBe(17);
+            expect(result.getMinutes()).toBe(0);
         });
     });
 
