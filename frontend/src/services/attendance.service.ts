@@ -18,6 +18,8 @@ export interface TodayAttendanceResponse {
         startTime: string;
         endTime: string;
         location: string | null;
+        siteId: string | null;
+        zoneId: string | null;
     } | null;
     attendance: AttendanceLogWithDetails | null;
     canClockIn: boolean;

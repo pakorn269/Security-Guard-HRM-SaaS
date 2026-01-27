@@ -100,7 +100,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             `}
             {...props}
           >
-            {placeholder && (
+            {placeholder && !options.some(opt => opt.value === '') && (
               <option value="" disabled className="text-neutral-400">
                 {placeholder}
               </option>

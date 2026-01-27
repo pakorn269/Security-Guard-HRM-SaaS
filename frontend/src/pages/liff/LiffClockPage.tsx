@@ -54,7 +54,7 @@ export default function LiffClockPage() {
         clearError: clearGeoError,
     } = useGeolocation();
 
-    // Fetch available sites
+    // Fetch available sites (with graceful degradation for RBAC restrictions)
     const fetchSites = useCallback(async () => {
         try {
             setIsLoadingSites(true);
@@ -65,8 +65,26 @@ export default function LiffClockPage() {
             if (response.data.length === 1) {
                 setSelectedSiteId(response.data[0].id);
             }
-        } catch (err) {
-            console.error('Failed to load sites:', err);
+        } catch (err: unknown) {
+            // Check for permission errors (403 Forbidden or 401 Unauthorized)
+            // These are expected for security guards accessing via browser
+            const isPermissionError =
+                err &&
+                typeof err === 'object' &&
+                'response' in err &&
+                err.response &&
+                typeof err.response === 'object' &&
+                'status' in err.response &&
+                (err.response.status === 403 || err.response.status === 401);
+
+            if (isPermissionError) {
+                // Silent fail - just log a warning, don't block the UI
+                console.warn('Site fetch skipped due to permissions');
+            } else {
+                // Log other errors but still don't block the UI
+                console.error('Failed to load sites:', err);
+            }
+            // Keep sites array empty - UI will handle gracefully
         } finally {
             setIsLoadingSites(false);
         }
@@ -128,7 +146,9 @@ export default function LiffClockPage() {
 
     // Open QR Scanner
     const openQrScanner = useCallback(() => {
-        if (!selectedSiteId) {
+        const siteIdToUse = todayData?.shift?.siteId || selectedSiteId;
+
+        if (!siteIdToUse) {
             setError('กรุณาเลือกสถานที่ก่อนสแกน QR Code');
             return;
         }
@@ -140,7 +160,7 @@ export default function LiffClockPage() {
         setTimeout(() => {
             initQrScanner();
         }, 100);
-    }, [selectedSiteId, initQrScanner]);
+    }, [todayData?.shift?.siteId, selectedSiteId, initQrScanner]);
 
     // Close QR Scanner
     const closeQrScanner = useCallback(() => {
@@ -166,12 +186,15 @@ export default function LiffClockPage() {
             // Get GPS location
             const geoData = await getLocation();
 
+            // Use shift's siteId if available
+            const siteIdToUse = todayData?.shift?.siteId || selectedSiteId;
+
             // Call API with QR code
             await clockIn({
                 latitude: geoData.latitude,
                 longitude: geoData.longitude,
                 accuracy: geoData.accuracy,
-                siteId: selectedSiteId,
+                siteId: siteIdToUse,
                 zoneQrCode: qrCodeData,
                 shiftId: todayData?.shift?.id,
             });
@@ -208,7 +231,10 @@ export default function LiffClockPage() {
      * Handle clock in with GPS
      */
     const handleClockIn = async () => {
-        if (!selectedSiteId) {
+        // Use shift's siteId if available, otherwise require manual selection
+        const siteIdToUse = todayData?.shift?.siteId || selectedSiteId;
+
+        if (!siteIdToUse) {
             setError('กรุณาเลือกสถานที่ก่อนลงเวลา');
             return;
         }
@@ -222,12 +248,12 @@ export default function LiffClockPage() {
             // Get GPS location first with 5-second timeout
             const geoData = await getLocation();
 
-            // Call API
+            // Call API (siteId is optional, backend will use shift's siteId if not provided)
             await clockIn({
                 latitude: geoData.latitude,
                 longitude: geoData.longitude,
                 accuracy: geoData.accuracy,
-                siteId: selectedSiteId,
+                siteId: siteIdToUse,
                 shiftId: todayData?.shift?.id,
             });
 
@@ -435,8 +461,8 @@ export default function LiffClockPage() {
                 )}
             </div>
 
-            {/* Site selection - Only show when clocking in */}
-            {canClockIn && (
+            {/* Site selection - Only show when clocking in AND shift has no site assigned */}
+            {canClockIn && !shift?.siteId && (
                 <div className="w-full max-w-sm mb-6">
                     <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                         เลือกสถานที่
@@ -454,6 +480,16 @@ export default function LiffClockPage() {
                             </option>
                         ))}
                     </select>
+                </div>
+            )}
+
+            {/* Show assigned site info when shift has a site */}
+            {canClockIn && shift?.siteId && (
+                <div className="w-full max-w-sm mb-6 bg-primary-50 dark:bg-primary-900/20 rounded-lg p-4 border border-primary-100 dark:border-primary-800">
+                    <div className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
+                        <MapPin size={16} />
+                        <span className="text-sm font-medium">สถานที่ที่กำหนด: {shift.location || 'ระบุสถานที่'}</span>
+                    </div>
                 </div>
             )}
 
@@ -502,12 +538,12 @@ export default function LiffClockPage() {
                     {/* Main GPS Clock In Button */}
                     <button
                         onClick={handleClockIn}
-                        disabled={isClocking || !selectedSiteId}
+                        disabled={isClocking || (!shift?.siteId && !selectedSiteId)}
                         className={`
                             w-44 h-44 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg
                             shadow-xl transition-all transform hover:scale-105 active:scale-95
                             bg-gradient-to-br from-success-500 to-success-600
-                            ${isClocking || !selectedSiteId ? 'opacity-70 cursor-not-allowed' : ''}
+                            ${isClocking || (!shift?.siteId && !selectedSiteId) ? 'opacity-70 cursor-not-allowed' : ''}
                         `}
                         style={{
                             boxShadow: '0 0 40px -10px rgba(34, 197, 94, 0.5)',
@@ -526,12 +562,12 @@ export default function LiffClockPage() {
                     {/* QR Code Button */}
                     <button
                         onClick={openQrScanner}
-                        disabled={isClocking || !selectedSiteId}
+                        disabled={isClocking || (!shift?.siteId && !selectedSiteId)}
                         className={`
                             inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium
                             bg-primary-500 text-white hover:bg-primary-600
                             transition-all shadow-md
-                            ${isClocking || !selectedSiteId ? 'opacity-70 cursor-not-allowed' : ''}
+                            ${isClocking || (!shift?.siteId && !selectedSiteId) ? 'opacity-70 cursor-not-allowed' : ''}
                         `}
                     >
                         <QrCode size={20} />
