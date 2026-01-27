@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     Plus,
@@ -10,7 +11,10 @@ import {
     ShieldCheck,
     ChevronDown,
     ChevronRight,
-    QrCode
+    QrCode,
+    ChevronLeft,
+    ChevronsLeft,
+    ChevronsRight
 } from 'lucide-react';
 import { Button, Badge, Card } from '../../components/common';
 import { PageHeader } from '../../components/layout';
@@ -22,6 +26,7 @@ import SiteFormModal from './SiteFormModal';
 import AssignGuardsModal from './AssignGuardsModal';
 import QRCodeModal from '../../components/sites/QRCodeModal';
 import InlineZoneForm from '../../components/sites/InlineZoneForm';
+import BulkActionsToolbar from '../../components/shared/BulkActionsToolbar';
 
 export default function SitesPage() {
     const { t } = useTranslation();
@@ -33,6 +38,20 @@ export default function SitesPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSite, setEditingSite] = useState<Site | null>(null);
 
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        totalPages: 0
+    });
+
+    // Sorting state
+    const [sortConfig, setSortConfig] = useState({
+        sortBy: 'name',
+        sortOrder: 'asc' as 'asc' | 'desc'
+    });
+
     // Assign Guards Modal state
     const [isAssignOpen, setIsAssignOpen] = useState(false);
     const [selectedSiteForAssign, setSelectedSiteForAssign] = useState<Site | null>(null);
@@ -42,6 +61,10 @@ export default function SitesPage() {
 
     // Inline zone form state - tracks which site has inline form open
     const [inlineFormOpenForSiteId, setInlineFormOpenForSiteId] = useState<string | null>(null);
+
+    // Bulk selection state
+    const [selectedSiteIds, setSelectedSiteIds] = useState<Set<string>>(new Set());
+    const [isProcessingBulk, setIsProcessingBulk] = useState(false);
 
     const toggleExpand = useCallback((siteId: string) => {
         setExpandedSiteIds(prev => {
@@ -131,14 +154,26 @@ export default function SitesPage() {
     const fetchSites = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await sitesService.list();
-            setSites(data);
+            const result = await sitesService.list({
+                page: pagination.page,
+                pageSize: pagination.pageSize,
+                sortBy: sortConfig.sortBy,
+                sortOrder: sortConfig.sortOrder,
+                search,
+                status: statusFilter
+            });
+            setSites(result.data);
+            setPagination(prev => ({
+                ...prev,
+                total: result.meta.total,
+                totalPages: result.meta.totalPages
+            }));
         } catch (error) {
             console.error('Failed to fetch sites:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [pagination.page, pagination.pageSize, sortConfig.sortBy, sortConfig.sortOrder, search, statusFilter]);
 
     useEffect(() => {
         fetchSites();
@@ -186,14 +221,121 @@ export default function SitesPage() {
         fetchSites();
     };
 
-    const filteredSites = sites.filter(site => {
-        const matchesSearch = site.name.toLowerCase().includes(search.toLowerCase()) ||
-            site.address?.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === 'all' ||
-            (statusFilter === 'active' && site.isActive) ||
-            (statusFilter === 'inactive' && !site.isActive);
-        return matchesSearch && matchesStatus;
-    });
+    // Bulk operations handlers
+    const handleBulkActivate = useCallback(async () => {
+        if (selectedSiteIds.size === 0) return;
+
+        setIsProcessingBulk(true);
+        try {
+            const updatePromises = Array.from(selectedSiteIds).map(siteId =>
+                sitesService.update(siteId, { isActive: true })
+            );
+
+            await Promise.all(updatePromises);
+
+            // Optimistically update local state
+            setSites(prevSites =>
+                prevSites.map(site =>
+                    selectedSiteIds.has(site.id) ? { ...site, isActive: true } : site
+                )
+            );
+
+            // Clear selection
+            setSelectedSiteIds(new Set());
+
+            // Show success notification (you can integrate toast here)
+            console.log(`${selectedSiteIds.size} sites activated successfully`);
+        } catch (err) {
+            console.error('Failed to activate sites:', err);
+            // Show error notification
+        } finally {
+            setIsProcessingBulk(false);
+        }
+    }, [selectedSiteIds]);
+
+    const handleBulkDeactivate = useCallback(async () => {
+        if (selectedSiteIds.size === 0) return;
+
+        setIsProcessingBulk(true);
+        try {
+            const updatePromises = Array.from(selectedSiteIds).map(siteId =>
+                sitesService.update(siteId, { isActive: false })
+            );
+
+            await Promise.all(updatePromises);
+
+            // Optimistically update local state
+            setSites(prevSites =>
+                prevSites.map(site =>
+                    selectedSiteIds.has(site.id) ? { ...site, isActive: false } : site
+                )
+            );
+
+            // Clear selection
+            setSelectedSiteIds(new Set());
+
+            // Show success notification
+            console.log(`${selectedSiteIds.size} sites deactivated successfully`);
+        } catch (err) {
+            console.error('Failed to deactivate sites:', err);
+            // Show error notification
+        } finally {
+            setIsProcessingBulk(false);
+        }
+    }, [selectedSiteIds]);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (selectedSiteIds.size === 0) return;
+
+        const confirmMessage = selectedSiteIds.size === 1
+            ? t('sites.confirmDeleteOne', 'Are you sure you want to delete this site?')
+            : t('sites.confirmDeleteMultiple', `Are you sure you want to delete ${selectedSiteIds.size} sites?`);
+
+        if (!confirm(confirmMessage)) return;
+
+        setIsProcessingBulk(true);
+        try {
+            const deletePromises = Array.from(selectedSiteIds).map(siteId =>
+                sitesService.delete(siteId)
+            );
+
+            await Promise.all(deletePromises);
+
+            // Optimistically update local state
+            setSites(prevSites =>
+                prevSites.filter(site => !selectedSiteIds.has(site.id))
+            );
+
+            // Clear selection
+            setSelectedSiteIds(new Set());
+
+            // Show success notification
+            console.log(`${selectedSiteIds.size} sites deleted successfully`);
+        } catch (err) {
+            console.error('Failed to delete sites:', err);
+            // Show error notification
+        } finally {
+            setIsProcessingBulk(false);
+        }
+    }, [selectedSiteIds, t]);
+
+    const handleClearSelection = useCallback(() => {
+        setSelectedSiteIds(new Set());
+    }, []);
+
+    // Handlers for pagination controls
+    const handlePageChange = useCallback((newPage: number) => {
+        setPagination(prev => ({ ...prev, page: newPage }));
+    }, []);
+
+    const handlePageSizeChange = useCallback((newPageSize: number) => {
+        setPagination(prev => ({ ...prev, page: 1, pageSize: newPageSize }));
+    }, []);
+
+    // Reset page to 1 when search or status filter changes
+    useEffect(() => {
+        setPagination(prev => ({ ...prev, page: 1 }));
+    }, [search, statusFilter]);
 
     // Render expanded zones for a site
     const renderZonesSubComponent = useCallback((site: Site) => {
@@ -341,7 +483,12 @@ export default function SitesPage() {
                             <MapPin size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="font-medium text-neutral-900 dark:text-white mb-1 truncate">{site.name}</p>
+                            <Link
+                                to={`/sites/${site.id}`}
+                                className="font-medium text-neutral-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-1 block truncate"
+                            >
+                                {site.name}
+                            </Link>
                             <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
                                 <ShieldCheck size={12} />
                                 {t('sites.zones', 'Zones')}: {site.zones?.length || 0}
@@ -467,11 +614,20 @@ export default function SitesPage() {
         );
     }, [expandedSiteIds, inlineFormOpenForSiteId, t, toggleExpand, handleEditSite, handleAssignGuards, handleDeleteSite, handleShowQRCode, handleToggleInlineForm, handleToggleZoneStatus, handleQuickDeleteZone, handleInlineZoneSuccess]);
 
+    const handleSortChange = useCallback((column: string, direction: 'asc' | 'desc') => {
+        setSortConfig({
+            sortBy: column,
+            sortOrder: direction
+        });
+        setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on sort
+    }, []);
+
     const columns: ColumnDef<Site>[] = [
         {
             id: 'name',
             header: t('sites.name', 'Site Name'),
             accessorKey: 'name',
+            sortable: true,
             cell: (site) => {
                 const isExpanded = expandedSiteIds.has(site.id);
                 const hasZones = site.zones && site.zones.length > 0;
@@ -501,7 +657,12 @@ export default function SitesPage() {
                         </div>
                         {/* Site info */}
                         <div>
-                            <p className="font-medium text-neutral-900 dark:text-white mb-1">{site.name}</p>
+                            <Link
+                                to={`/sites/${site.id}`}
+                                className="font-medium text-neutral-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-1 inline-block"
+                            >
+                                {site.name}
+                            </Link>
                             <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
                                 <ShieldCheck size={12} />
                                 {t('sites.zones', 'Zones')}: {site.zones?.length || 0}
@@ -515,6 +676,7 @@ export default function SitesPage() {
             id: 'address',
             header: t('sites.address', 'Address'),
             accessorKey: 'address',
+            sortable: true,
             cell: (site) => <span className="text-neutral-600 dark:text-neutral-300 truncate max-w-[300px] block">{site.address || '-'}</span>
         },
         {
@@ -530,6 +692,7 @@ export default function SitesPage() {
         {
             id: 'status',
             header: t('sites.status', 'Status'),
+            sortable: true,
             cell: (site) => (
                 <Badge variant={site.isActive ? 'success' : 'neutral'}>
                     {site.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
@@ -602,7 +765,7 @@ export default function SitesPage() {
 
             <DataTable
                 columns={columns}
-                data={filteredSites}
+                data={sites}
                 isLoading={isLoading}
                 getRowId={(site) => site.id}
                 emptyMessage={t('sites.noSites', 'No sites found')}
@@ -612,7 +775,110 @@ export default function SitesPage() {
                 renderSubComponent={renderZonesSubComponent}
                 useMobileCards={true}
                 mobileCardRenderer={renderMobileCard}
+                isSelectable={true}
+                selectedIds={selectedSiteIds}
+                onSelectionChange={setSelectedSiteIds}
+                sortColumn={sortConfig.sortBy}
+                sortDirection={sortConfig.sortOrder}
+                onSortChange={handleSortChange}
             />
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 0 && (
+                <Card variant="bordered" padding="md">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        {/* Page info */}
+                        <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                            {t('common.showing', 'Showing')} {((pagination.page - 1) * pagination.pageSize) + 1} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} {t('common.of', 'of')} {pagination.total} {t('sites.sites', 'sites')}
+                        </div>
+
+                        {/* Pagination buttons */}
+                        <div className="flex items-center gap-2">
+                            {/* First page */}
+                            <button
+                                onClick={() => handlePageChange(1)}
+                                disabled={pagination.page === 1}
+                                className="p-2 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={t('common.firstPage', 'First page')}
+                            >
+                                <ChevronsLeft size={16} />
+                            </button>
+
+                            {/* Previous page */}
+                            <button
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                disabled={pagination.page === 1}
+                                className="p-2 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={t('common.previousPage', 'Previous page')}
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+
+                            {/* Page numbers */}
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (pagination.totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (pagination.page >= pagination.totalPages - 2) {
+                                        pageNum = pagination.totalPages - 4 + i;
+                                    } else {
+                                        pageNum = pagination.page - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                                pagination.page === pageNum
+                                                    ? 'bg-primary-600 text-white'
+                                                    : 'border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Next page */}
+                            <button
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                disabled={pagination.page === pagination.totalPages}
+                                className="p-2 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={t('common.nextPage', 'Next page')}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+
+                            {/* Last page */}
+                            <button
+                                onClick={() => handlePageChange(pagination.totalPages)}
+                                disabled={pagination.page === pagination.totalPages}
+                                className="p-2 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={t('common.lastPage', 'Last page')}
+                            >
+                                <ChevronsRight size={16} />
+                            </button>
+
+                            {/* Page size selector */}
+                            <select
+                                value={pagination.pageSize}
+                                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                className="ml-4 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value={5}>5 / {t('common.page', 'page')}</option>
+                                <option value={10}>10 / {t('common.page', 'page')}</option>
+                                <option value={20}>20 / {t('common.page', 'page')}</option>
+                                <option value={50}>50 / {t('common.page', 'page')}</option>
+                            </select>
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             <SiteFormModal
                 isOpen={isFormOpen}
@@ -638,6 +904,16 @@ export default function SitesPage() {
                     zoneCode={selectedZoneForQR.zone.code}
                 />
             )}
+
+            {/* Bulk Actions Toolbar */}
+            <BulkActionsToolbar
+                selectedCount={selectedSiteIds.size}
+                onActivate={handleBulkActivate}
+                onDeactivate={handleBulkDeactivate}
+                onDelete={handleBulkDelete}
+                onClear={handleClearSelection}
+                isProcessing={isProcessingBulk}
+            />
         </div>
     );
 }

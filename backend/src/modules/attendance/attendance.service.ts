@@ -574,6 +574,8 @@ class AttendanceService {
                 canClockIn: false,
                 canClockOut: true,
                 currentStatus: 'clocked_in',
+                serverTime: new Date().toISOString(),
+                companyTimezone,
             };
         }
 
@@ -707,6 +709,8 @@ class AttendanceService {
             canClockIn,
             canClockOut,
             currentStatus,
+            serverTime: new Date().toISOString(),
+            companyTimezone,
         };
     }
 

@@ -32,3 +32,6 @@ export type { MobileFilterDrawerProps, FilterTriggerButtonProps } from './Mobile
 export { default as ResponsiveFilters } from './ResponsiveFilters';
 export type { ResponsiveFiltersProps } from './ResponsiveFilters';
 
+// Debug components
+export { default as TimeDebugger } from './TimeDebugger';
+

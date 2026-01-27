@@ -19,6 +19,7 @@ import {
 } from '../../services/attendance.service';
 import useGeolocation from '../../hooks/useGeolocation';
 import GpsErrorModal from '../../components/common/GpsErrorModal';
+import { TimeDebugger } from '../../components/common';
 
 export default function LiffClockPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -241,8 +242,9 @@ export default function LiffClockPage() {
 
     const { shift, attendance, canClockIn, canClockOut, currentStatus } = todayData || {};
 
+    // Add extra padding at bottom (pb-20) to account for TimeDebugger (~60px) above the bottom nav
     return (
-        <div className="p-4 flex flex-col items-center justify-center min-h-screen animate-fade-in">
+        <div className="p-4 pb-20 flex flex-col items-center justify-center min-h-screen animate-fade-in">
             {/* Success message */}
             {successMessage && (
                 <div className="fixed top-4 left-4 right-4 bg-success-100 dark:bg-success-900/30 border border-success-300 dark:border-success-700 text-success-800 dark:text-success-200 px-4 py-3 rounded-lg shadow-lg animate-bounce-in z-50">
@@ -410,6 +412,14 @@ export default function LiffClockPage() {
                 error={geoError}
                 isRetrying={isGettingLocation}
             />
+
+            {/* Time Debugger - shows server vs device time comparison */}
+            {todayData?.serverTime && todayData?.companyTimezone && (
+                <TimeDebugger
+                    serverTime={todayData.serverTime}
+                    companyTimezone={todayData.companyTimezone}
+                />
+            )}
         </div>
     );
 }

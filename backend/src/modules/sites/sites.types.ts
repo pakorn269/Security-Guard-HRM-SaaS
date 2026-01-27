@@ -66,3 +66,24 @@ export interface UpdateZoneInput {
     qrCode?: string;
     isActive?: boolean;
 }
+
+export interface SiteQueryParams {
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    search?: string;
+    status?: 'active' | 'inactive' | 'all';
+}
+
+export interface PaginationMeta {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+}
+
+export interface PaginatedSitesResponse {
+    data: SiteWithZones[];
+    meta: PaginationMeta;
+}

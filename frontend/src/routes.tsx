@@ -28,6 +28,7 @@ const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'));
 // Sprint 6: Reports & Settings pages
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SitesPage = lazy(() => import('./pages/sites/SitesPage'));
+const SiteDetailPage = lazy(() => import('./pages/sites/SiteDetailPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 // Layouts
@@ -59,6 +60,7 @@ const ForgotPinPage = lazy(() => import('./pages/liff/ForgotPinPage'));
 const DebugEnvPage = lazy(() => import('./pages/debug/DebugEnvPage'));
 
 // Loading component
+// eslint-disable-next-line react-refresh/only-export-components
 const PageLoader = () => (
     <div className="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950">
         <div className="flex flex-col items-center gap-4">
@@ -146,6 +148,10 @@ const routes: RouteObject[] = [
             {
                 path: 'sites',
                 element: withSuspense(SitesPage),
+            },
+            {
+                path: 'sites/:id',
+                element: withSuspense(SiteDetailPage),
             },
             {
                 path: 'settings/:tab?',
