@@ -4,8 +4,26 @@ import { createSiteSchema, updateSiteSchema, createZoneSchema, updateZoneSchema 
 
 export const listSites = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const sites = await sitesService.listSites(req.user!.companyId);
-        res.json({ success: true, data: { sites } });
+        const {
+            page = '1',
+            pageSize = '10',
+            sortBy = 'name',
+            sortOrder = 'asc',
+            search = '',
+            status = 'all'
+        } = req.query;
+
+        const queryParams = {
+            page: parseInt(page as string, 10),
+            pageSize: parseInt(pageSize as string, 10),
+            sortBy: sortBy as string,
+            sortOrder: sortOrder as 'asc' | 'desc',
+            search: search as string,
+            status: status as 'active' | 'inactive' | 'all',
+        };
+
+        const result = await sitesService.listSites(req.user!.companyId, queryParams);
+        res.json({ success: true, data: result });
     } catch (error) {
         next(error);
     }

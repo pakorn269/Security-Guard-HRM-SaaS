@@ -9,6 +9,8 @@ import type {
     UpdateSiteInput,
     CreateZoneInput,
     UpdateZoneInput,
+    SiteQueryParams,
+    PaginatedSitesResponse,
 } from './sites.types.js';
 
 export class SitesService {
@@ -45,25 +47,74 @@ export class SitesService {
         };
     }
 
-    async listSites(companyId: string): Promise<SiteWithZones[]> {
-        const { data, error } = await supabaseAdmin
+    async listSites(companyId: string, params: SiteQueryParams = {}): Promise<PaginatedSitesResponse> {
+        const {
+            page = 1,
+            pageSize = 10,
+            sortBy = 'name',
+            sortOrder = 'asc',
+            search = '',
+            status = 'all'
+        } = params;
+
+        // Build base query
+        let query = supabaseAdmin
             .from('sites')
             .select(`
                 *,
                 zones (*)
-            `)
-            .eq('company_id', companyId)
-            .order('name');
+            `, { count: 'exact' })
+            .eq('company_id', companyId);
+
+        // Apply search filter
+        if (search && search.trim()) {
+            query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%`);
+        }
+
+        // Apply status filter
+        if (status === 'active') {
+            query = query.eq('is_active', true);
+        } else if (status === 'inactive') {
+            query = query.eq('is_active', false);
+        }
+
+        // Apply sorting
+        const sortColumn = sortBy === 'status' ? 'is_active' : sortBy;
+        query = query.order(sortColumn, { ascending: sortOrder === 'asc' });
+
+        // Get total count before pagination
+        const { count, error: countError } = await query;
+        if (countError) {
+            logger.error('Error counting sites:', countError);
+            throw new Error('Failed to count sites');
+        }
+
+        // Apply pagination
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+
+        const { data, error } = await query;
 
         if (error) {
             logger.error('Error listing sites:', error);
             throw new Error('Failed to list sites');
         }
 
-        return data.map((site: any) => ({
+        const sites = data.map((site: any) => ({
             ...this.mapToSite(site),
             zones: (site.zones || []).map((z: any) => this.mapToZone(z)),
         }));
+
+        return {
+            data: sites,
+            meta: {
+                total: count || 0,
+                page,
+                pageSize,
+                totalPages: Math.ceil((count || 0) / pageSize),
+            },
+        };
     }
 
     async getSiteById(siteId: string, companyId: string): Promise<SiteWithZones> {
@@ -161,11 +212,32 @@ export class SitesService {
         // Verify site belongs to company
         await this.getSiteById(input.siteId, companyId);
 
+        // Auto-generate zone code if not provided
+        let zoneCode = input.code;
+        if (!zoneCode || zoneCode.trim() === '') {
+            // Get count of existing zones for this site
+            const { count, error: countError } = await supabaseAdmin
+                .from('zones')
+                .select('*', { count: 'exact', head: true })
+                .eq('site_id', input.siteId);
+
+            if (countError) {
+                logger.error('Error counting zones:', countError);
+                throw new Error('Failed to count zones');
+            }
+
+            // Generate code in format Z-001, Z-002, etc.
+            const nextNumber = (count || 0) + 1;
+            zoneCode = `Z-${nextNumber.toString().padStart(3, '0')}`;
+
+            logger.info(`Auto-generated zone code: ${zoneCode} for site ${input.siteId}`);
+        }
+
         const dbInput = {
             company_id: companyId,
             site_id: input.siteId,
             name: input.name,
-            code: input.code,
+            code: zoneCode,
             description: input.description,
             qr_code: input.qrCode
         };

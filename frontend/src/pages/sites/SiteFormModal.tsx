@@ -8,6 +8,7 @@ import { Modal, Button, Input, Badge } from '../../components/common';
 import { sitesService, type Site, type Zone } from '../../services/sites.service';
 import ZoneFormModal from '../../components/sites/ZoneFormModal';
 import QRCodeModal from '../../components/sites/QRCodeModal';
+import LocationPicker from '../../components/sites/LocationPicker';
 
 const siteSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -40,7 +41,7 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
     const [selectedZoneForQR, setSelectedZoneForQR] = useState<Zone | null>(null);
 
-    const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
+    const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(siteSchema),
         defaultValues: {
             name: '',
@@ -53,6 +54,11 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
             longitude: undefined
         }
     });
+
+    // Watch form values for map updates
+    const latitude = watch('latitude');
+    const longitude = watch('longitude');
+    const radius = watch('radius');
 
     // Form initialization effect - syncs form values, tab, and zones from site prop
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -145,6 +151,11 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
         setSelectedZoneForQR(null);
     };
 
+    const handleLocationChange = (lat: number, lng: number) => {
+        setValue('latitude', lat);
+        setValue('longitude', lng);
+    };
+
     return (
         <Modal
             isOpen={isOpen}
@@ -191,23 +202,51 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
                             {...register('contactPhone')}
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input
-                            label={t('sites.latitude', 'Latitude')}
-                            {...register('latitude')}
-                            type="number" step="any"
-                        />
-                        <Input
-                            label={t('sites.longitude', 'Longitude')}
-                            {...register('longitude')}
-                            type="number" step="any"
-                        />
-                    </div>
+
+                    {/* Geofence Radius Input */}
                     <Input
                         label={t('sites.radius', 'Geofence Radius (m)')}
                         {...register('radius')}
                         type="number"
+                        helperText={t('sites.radiusHelper', 'The radius of the geofence area in meters')}
                     />
+
+                    {/* Location Picker Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                {t('sites.location', 'Location')}
+                            </label>
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                                {t('sites.optional', 'Optional')}
+                            </span>
+                        </div>
+
+                        <LocationPicker
+                            latitude={typeof latitude === 'number' ? latitude : null}
+                            longitude={typeof longitude === 'number' ? longitude : null}
+                            radius={typeof radius === 'number' ? radius : 100}
+                            onLocationChange={handleLocationChange}
+                        />
+                    </div>
+
+                    {/* Manual Coordinate Inputs (Read-only for precision checking) */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label={t('sites.latitude', 'Latitude')}
+                            {...register('latitude')}
+                            type="number"
+                            step="any"
+                            helperText={t('sites.latitudeHelper', 'Auto-filled from map')}
+                        />
+                        <Input
+                            label={t('sites.longitude', 'Longitude')}
+                            {...register('longitude')}
+                            type="number"
+                            step="any"
+                            helperText={t('sites.longitudeHelper', 'Auto-filled from map')}
+                        />
+                    </div>
                 </form>
             ) : (
                 <div className="space-y-4">

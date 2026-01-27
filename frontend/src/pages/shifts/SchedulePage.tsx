@@ -407,7 +407,7 @@ export default function SchedulePage() {
       setShifts(shiftsRes.shifts);
       setEmployees(employeesRes.data); // Use full Employee objects for validation
       setLeaveRequests(leaveRes.requests);
-      setSites(sitesRes.filter(s => s.isActive));
+      setSites(sitesRes.data.filter(s => s.isActive));
     } catch (error) {
       console.error('Error loading schedule data:', error);
       toast.error('Failed to load schedule');

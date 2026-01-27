@@ -193,6 +193,9 @@ export interface TodayAttendanceResponse {
     canClockIn: boolean;
     canClockOut: boolean;
     currentStatus: 'not_clocked_in' | 'clocked_in' | 'clocked_out' | 'no_shift';
+    // Time debugging info
+    serverTime: string; // ISO format server time
+    companyTimezone: string; // IANA timezone (e.g., 'Asia/Bangkok')
 }
 
 // My attendance response (for guards)

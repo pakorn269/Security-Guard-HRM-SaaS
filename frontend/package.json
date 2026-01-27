@@ -29,6 +29,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
     "@line/liff": "^2.27.3",
+    "@react-google-maps/api": "^2.20.8",
     "@sentry/react": "^10.36.0",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
