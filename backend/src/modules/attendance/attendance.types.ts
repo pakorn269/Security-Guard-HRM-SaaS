@@ -18,11 +18,14 @@ export interface AttendanceLogRow {
     company_id: string;
     employee_id: string;
     shift_id: string | null;
+    site_id: string | null;
+    zone_id: string | null;
 
     clock_in_time: string | null;
     clock_in_latitude: number | null;
     clock_in_longitude: number | null;
     clock_in_accuracy: number | null;
+    check_in_method: 'GPS' | 'QR' | null;
 
     clock_out_time: string | null;
     clock_out_latitude: number | null;
@@ -67,11 +70,14 @@ export interface AttendanceLog {
     companyId: string;
     employeeId: string;
     shiftId: string | null;
+    siteId: string | null;
+    zoneId: string | null;
 
     clockInTime: string | null;
     clockInLatitude: number | null;
     clockInLongitude: number | null;
     clockInAccuracy: number | null;
+    checkInMethod: 'GPS' | 'QR' | null;
 
     clockOutTime: string | null;
     clockOutLatitude: number | null;
@@ -116,6 +122,8 @@ export interface ClockInRequest {
     latitude: number;
     longitude: number;
     accuracy: number;
+    siteId: string; // Site ID for geofence validation
+    zoneQrCode?: string; // Optional QR code for zone-based check-in
 }
 
 // Clock-out request

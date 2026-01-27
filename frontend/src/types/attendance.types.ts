@@ -52,6 +52,8 @@ export interface ClockInRequest {
     latitude: number;
     longitude: number;
     accuracy: number;
+    siteId: string;
+    zoneQrCode?: string;
 }
 
 export interface ClockOutRequest {

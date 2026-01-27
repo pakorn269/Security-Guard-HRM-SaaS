@@ -25,6 +25,7 @@ export interface Zone {
     description?: string;
     qrCode?: string;
     isActive: boolean;
+    displayOrder?: number;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -53,6 +54,12 @@ export interface CreateZoneData {
 
 export interface UpdateZoneData extends Partial<Omit<CreateZoneData, 'siteId'>> {
     isActive?: boolean;
+    displayOrder?: number;
+}
+
+export interface ZoneOrderItem {
+    id: string;
+    displayOrder: number;
 }
 
 export interface SiteQueryParams {
@@ -140,6 +147,10 @@ export const sitesService = {
 
     async deleteZone(id: string): Promise<void> {
         await apiDelete(`${SITES_BASE}/zones/${id}`);
+    },
+
+    async updateZoneOrder(siteId: string, zones: ZoneOrderItem[]): Promise<void> {
+        await apiPost(`${SITES_BASE}/zones/reorder`, { siteId, zones });
     }
 };
 

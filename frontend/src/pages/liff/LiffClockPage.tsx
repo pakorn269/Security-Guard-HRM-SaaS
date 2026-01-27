@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     MapPin,
     AlertCircle,
@@ -10,6 +10,8 @@ import {
     Navigation,
     RefreshCw,
     Loader2,
+    QrCode,
+    X,
 } from 'lucide-react';
 import {
     clockIn,
@@ -17,9 +19,11 @@ import {
     getTodayAttendance,
     type TodayAttendanceResponse,
 } from '../../services/attendance.service';
+import sitesService, { type Site } from '../../services/sites.service';
 import useGeolocation from '../../hooks/useGeolocation';
 import GpsErrorModal from '../../components/common/GpsErrorModal';
 import { TimeDebugger } from '../../components/common';
+import QrScanner from 'qr-scanner';
 
 export default function LiffClockPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -30,6 +34,17 @@ export default function LiffClockPage() {
     const [showGpsErrorModal, setShowGpsErrorModal] = useState(false);
     const [pendingAction, setPendingAction] = useState<'clock_in' | 'clock_out' | null>(null);
 
+    // QR Scanner state
+    const [showQrScanner, setShowQrScanner] = useState(false);
+    const [qrError, setQrError] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const qrScannerRef = useRef<QrScanner | null>(null);
+
+    // Sites state
+    const [sites, setSites] = useState<Site[]>([]);
+    const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+    const [isLoadingSites, setIsLoadingSites] = useState(false);
+
     // Use the new geolocation hook with Fail-Fast strategy
     const {
         location,
@@ -38,6 +53,24 @@ export default function LiffClockPage() {
         getLocation,
         clearError: clearGeoError,
     } = useGeolocation();
+
+    // Fetch available sites
+    const fetchSites = useCallback(async () => {
+        try {
+            setIsLoadingSites(true);
+            const response = await sitesService.list({ status: 'active' });
+            setSites(response.data);
+
+            // Auto-select first site if only one available
+            if (response.data.length === 1) {
+                setSelectedSiteId(response.data[0].id);
+            }
+        } catch (err) {
+            console.error('Failed to load sites:', err);
+        } finally {
+            setIsLoadingSites(false);
+        }
+    }, []);
 
     // Fetch today's attendance status
     const fetchTodayStatus = useCallback(async () => {
@@ -56,12 +89,130 @@ export default function LiffClockPage() {
 
     useEffect(() => {
         fetchTodayStatus();
-    }, [fetchTodayStatus]);
+        fetchSites();
+    }, [fetchTodayStatus, fetchSites]);
+
+    // Initialize QR Scanner
+    const initQrScanner = useCallback(async () => {
+        if (!videoRef.current) return;
+
+        try {
+            setQrError(null);
+
+            // Clean up existing scanner
+            if (qrScannerRef.current) {
+                qrScannerRef.current.stop();
+                qrScannerRef.current.destroy();
+            }
+
+            const scanner = new QrScanner(
+                videoRef.current,
+                (result) => {
+                    // QR code detected
+                    handleQrCodeScanned(result.data);
+                },
+                {
+                    returnDetailedScanResult: true,
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                }
+            );
+
+            qrScannerRef.current = scanner;
+            await scanner.start();
+        } catch (err) {
+            console.error('QR Scanner error:', err);
+            setQrError('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง');
+        }
+    }, []);
+
+    // Open QR Scanner
+    const openQrScanner = useCallback(() => {
+        if (!selectedSiteId) {
+            setError('กรุณาเลือกสถานที่ก่อนสแกน QR Code');
+            return;
+        }
+
+        setShowQrScanner(true);
+        setQrError(null);
+
+        // Wait for video element to be rendered
+        setTimeout(() => {
+            initQrScanner();
+        }, 100);
+    }, [selectedSiteId, initQrScanner]);
+
+    // Close QR Scanner
+    const closeQrScanner = useCallback(() => {
+        if (qrScannerRef.current) {
+            qrScannerRef.current.stop();
+            qrScannerRef.current.destroy();
+            qrScannerRef.current = null;
+        }
+        setShowQrScanner(false);
+        setQrError(null);
+    }, []);
+
+    // Handle QR code scanned
+    const handleQrCodeScanned = async (qrCodeData: string) => {
+        closeQrScanner();
+
+        setIsClocking(true);
+        setError(null);
+        setSuccessMessage(null);
+        setPendingAction('clock_in');
+
+        try {
+            // Get GPS location
+            const geoData = await getLocation();
+
+            // Call API with QR code
+            await clockIn({
+                latitude: geoData.latitude,
+                longitude: geoData.longitude,
+                accuracy: geoData.accuracy,
+                siteId: selectedSiteId,
+                zoneQrCode: qrCodeData,
+                shiftId: todayData?.shift?.id,
+            });
+
+            setSuccessMessage('ลงเวลาเข้างานสำเร็จ (QR Code)!');
+            setPendingAction(null);
+
+            // Refresh status
+            await fetchTodayStatus();
+        } catch (err: unknown) {
+            if (err && typeof err === 'object' && 'code' in err) {
+                setShowGpsErrorModal(true);
+            } else {
+                const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาเข้าได้';
+                setError(errorMessage);
+                setPendingAction(null);
+            }
+        } finally {
+            setIsClocking(false);
+        }
+    };
+
+    // Cleanup QR scanner on unmount
+    useEffect(() => {
+        return () => {
+            if (qrScannerRef.current) {
+                qrScannerRef.current.stop();
+                qrScannerRef.current.destroy();
+            }
+        };
+    }, []);
 
     /**
-     * Handle clock in with Fail-Fast geolocation
+     * Handle clock in with GPS
      */
     const handleClockIn = async () => {
+        if (!selectedSiteId) {
+            setError('กรุณาเลือกสถานที่ก่อนลงเวลา');
+            return;
+        }
+
         setIsClocking(true);
         setError(null);
         setSuccessMessage(null);
@@ -76,6 +227,7 @@ export default function LiffClockPage() {
                 latitude: geoData.latitude,
                 longitude: geoData.longitude,
                 accuracy: geoData.accuracy,
+                siteId: selectedSiteId,
                 shiftId: todayData?.shift?.id,
             });
 
@@ -283,6 +435,28 @@ export default function LiffClockPage() {
                 )}
             </div>
 
+            {/* Site selection - Only show when clocking in */}
+            {canClockIn && (
+                <div className="w-full max-w-sm mb-6">
+                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                        เลือกสถานที่
+                    </label>
+                    <select
+                        value={selectedSiteId}
+                        onChange={(e) => setSelectedSiteId(e.target.value)}
+                        disabled={isLoadingSites || isClocking}
+                        className="w-full px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                    >
+                        <option value="">-- เลือกสถานที่ --</option>
+                        {sites.map((site) => (
+                            <option key={site.id} value={site.id}>
+                                {site.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
             {/* Current attendance status */}
             {attendance && (
                 <div className="w-full max-w-sm bg-neutral-50 dark:bg-neutral-800 rounded-lg p-4 mb-6">
@@ -322,36 +496,71 @@ export default function LiffClockPage() {
                 </div>
             )}
 
-            {/* Clock button */}
-            {(canClockIn || canClockOut) && (
+            {/* Clock buttons - GPS and QR */}
+            {canClockIn && (
+                <div className="flex flex-col items-center gap-4 mb-6">
+                    {/* Main GPS Clock In Button */}
+                    <button
+                        onClick={handleClockIn}
+                        disabled={isClocking || !selectedSiteId}
+                        className={`
+                            w-44 h-44 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg
+                            shadow-xl transition-all transform hover:scale-105 active:scale-95
+                            bg-gradient-to-br from-success-500 to-success-600
+                            ${isClocking || !selectedSiteId ? 'opacity-70 cursor-not-allowed' : ''}
+                        `}
+                        style={{
+                            boxShadow: '0 0 40px -10px rgba(34, 197, 94, 0.5)',
+                        }}
+                    >
+                        {isClocking ? (
+                            <Loader2 size={32} className="animate-spin" />
+                        ) : (
+                            <>
+                                <LogIn size={40} className="mb-2" />
+                                <span>ลงเวลาเข้า (GPS)</span>
+                            </>
+                        )}
+                    </button>
+
+                    {/* QR Code Button */}
+                    <button
+                        onClick={openQrScanner}
+                        disabled={isClocking || !selectedSiteId}
+                        className={`
+                            inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium
+                            bg-primary-500 text-white hover:bg-primary-600
+                            transition-all shadow-md
+                            ${isClocking || !selectedSiteId ? 'opacity-70 cursor-not-allowed' : ''}
+                        `}
+                    >
+                        <QrCode size={20} />
+                        <span>สแกน QR Code</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Clock Out Button */}
+            {canClockOut && (
                 <button
-                    onClick={canClockOut ? handleClockOut : handleClockIn}
+                    onClick={handleClockOut}
                     disabled={isClocking}
                     className={`
-                        w-44 h-44 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg 
+                        w-44 h-44 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg
                         shadow-xl transition-all transform hover:scale-105 active:scale-95
-                        ${canClockOut
-                            ? 'bg-gradient-to-br from-error-500 to-error-600'
-                            : 'bg-gradient-to-br from-success-500 to-success-600'
-                        } 
+                        bg-gradient-to-br from-error-500 to-error-600
                         ${isClocking ? 'opacity-70 cursor-not-allowed' : ''}
                     `}
                     style={{
-                        boxShadow: canClockOut
-                            ? '0 0 40px -10px rgba(239, 68, 68, 0.5)'
-                            : '0 0 40px -10px rgba(34, 197, 94, 0.5)',
+                        boxShadow: '0 0 40px -10px rgba(239, 68, 68, 0.5)',
                     }}
                 >
                     {isClocking ? (
                         <Loader2 size={32} className="animate-spin" />
                     ) : (
                         <>
-                            {canClockOut ? (
-                                <LogOut size={40} className="mb-2" />
-                            ) : (
-                                <LogIn size={40} className="mb-2" />
-                            )}
-                            <span>{canClockOut ? 'ลงเวลาออก' : 'ลงเวลาเข้า'}</span>
+                            <LogOut size={40} className="mb-2" />
+                            <span>ลงเวลาออก</span>
                         </>
                     )}
                 </button>
@@ -403,6 +612,57 @@ export default function LiffClockPage() {
                     <span>ระบบจะบันทึกตำแหน่ง GPS ของคุณเมื่อลงเวลา</span>
                 </div>
             </div>
+
+            {/* QR Scanner Modal */}
+            {showQrScanner && (
+                <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                    {/* Header */}
+                    <div className="bg-neutral-900 px-4 py-3 flex items-center justify-between">
+                        <h3 className="text-white font-medium">สแกน QR Code</h3>
+                        <button
+                            onClick={closeQrScanner}
+                            className="text-white hover:text-neutral-300 transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    {/* Scanner */}
+                    <div className="flex-1 relative">
+                        <video
+                            ref={videoRef}
+                            className="w-full h-full object-cover"
+                        />
+
+                        {/* Scanning overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-64 h-64 border-4 border-white rounded-lg shadow-lg">
+                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary-500 rounded-tl-lg"></div>
+                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary-500 rounded-tr-lg"></div>
+                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary-500 rounded-bl-lg"></div>
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary-500 rounded-br-lg"></div>
+                            </div>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="absolute bottom-8 left-0 right-0 text-center">
+                            <p className="text-white text-sm bg-black/50 px-4 py-2 rounded-lg inline-block">
+                                วาง QR Code ไว้ในกรอบสี่เหลี่ยม
+                            </p>
+                        </div>
+
+                        {/* QR Error */}
+                        {qrError && (
+                            <div className="absolute top-4 left-4 right-4 bg-error-500 text-white px-4 py-3 rounded-lg shadow-lg">
+                                <div className="flex items-center gap-2">
+                                    <AlertCircle size={18} />
+                                    <span className="text-sm">{qrError}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* GPS Error Modal */}
             <GpsErrorModal

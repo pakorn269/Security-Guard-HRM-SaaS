@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { NotFoundError, BadRequestError } from '../../utils/errors.js';
 import logger from '../../utils/logger.js';
+import { sitesService } from '../sites/sites.service.js';
 import type {
     AttendanceLog,
     AttendanceLogRow,
@@ -32,10 +33,13 @@ class AttendanceService {
             companyId: row.company_id,
             employeeId: row.employee_id,
             shiftId: row.shift_id,
+            siteId: row.site_id,
+            zoneId: row.zone_id,
             clockInTime: row.clock_in_time,
             clockInLatitude: row.clock_in_latitude,
             clockInLongitude: row.clock_in_longitude,
             clockInAccuracy: row.clock_in_accuracy,
+            checkInMethod: row.check_in_method,
             clockOutTime: row.clock_out_time,
             clockOutLatitude: row.clock_out_latitude,
             clockOutLongitude: row.clock_out_longitude,
@@ -297,29 +301,84 @@ class AttendanceService {
             shiftStartTime = shift.start_time;
         }
 
-        // Determine status (on_time or late) and validate geofence
+        // Site/Zone Validation
+        let validatedSiteId: string | null = null;
+        let validatedZoneId: string | null = null;
+        let checkInMethod: 'GPS' | 'QR' = 'GPS';
+
+        if (data.siteId) {
+            if (data.zoneQrCode) {
+                // QR Code validation
+                logger.info(`QR code validation for employee ${employeeId} at site ${data.siteId}`);
+                try {
+                    const qrResult = await sitesService.validateZoneQr(data.zoneQrCode, companyId);
+
+                    // Verify QR code belongs to the specified site
+                    if (qrResult.site.id !== data.siteId) {
+                        throw new BadRequestError(
+                            `QR code belongs to ${qrResult.site.name}, not the selected site`,
+                            `รหัส QR นี้เป็นของ ${qrResult.site.name} ไม่ใช่สถานที่ที่เลือก`
+                        );
+                    }
+
+                    validatedSiteId = qrResult.site.id;
+                    validatedZoneId = qrResult.zone.id;
+                    checkInMethod = 'QR';
+                    logger.info(`QR validation successful: Zone ${qrResult.zone.name} at ${qrResult.site.name}`);
+                } catch (error: any) {
+                    logger.warn(`QR validation failed: ${error.message}`);
+                    throw new BadRequestError(
+                        error.message || 'Invalid QR code',
+                        'รหัส QR ไม่ถูกต้อง'
+                    );
+                }
+            } else {
+                // GPS Geofence validation
+                logger.info(`GPS geofence validation for employee ${employeeId} at site ${data.siteId}`);
+                try {
+                    const geofenceResult = await sitesService.validateGeofence(
+                        data.siteId,
+                        companyId,
+                        data.latitude,
+                        data.longitude
+                    );
+
+                    if (!geofenceResult.isInside) {
+                        throw new BadRequestError(
+                            `You are ${geofenceResult.distance}m away from ${geofenceResult.siteName}. Please move closer.`,
+                            `คุณอยู่ห่างจากสถานที่ ${geofenceResult.distance} เมตร กรุณาเข้าใกล้มากขึ้น`
+                        );
+                    }
+
+                    validatedSiteId = geofenceResult.siteId;
+                    checkInMethod = 'GPS';
+                    logger.info(`GPS validation successful: ${geofenceResult.distance}m from ${geofenceResult.siteName}`);
+                } catch (error: any) {
+                    logger.error(`GPS validation failed: ${error.message}`);
+                    throw new BadRequestError(
+                        error.message || 'Geofence validation failed',
+                        'การตรวจสอบพื้นที่ล้มเหลว'
+                    );
+                }
+            }
+        }
+
+        // Determine status (on_time or late)
         let status: AttendanceStatus = 'on_time';
 
-        if (shiftData) {
-            // Geofence Validation
-            const allowOutside = company?.settings?.allow_clock_in_outside_geofence;
-            const radius = company?.settings?.geofence_radius_meters || 500;
-            // NOTE: Skipping Strict Geofence Check for now as discussed.
+        if (shiftData && shiftStartTime) {
+            const [hours, minutes] = shiftStartTime.split(':').map(Number);
+            const shiftStart = new Date(now);
+            shiftStart.setHours(hours, minutes, 0, 0);
 
-            if (shiftStartTime) {
-                const [hours, minutes] = shiftStartTime.split(':').map(Number);
-                const shiftStart = new Date(now);
-                shiftStart.setHours(hours, minutes, 0, 0);
+            const lateThreshold = company?.settings?.late_threshold_minutes ?? 15;
 
-                const lateThreshold = company?.settings?.late_threshold_minutes ?? 15;
+            // Calculate minutes late
+            const diffMs = now.getTime() - shiftStart.getTime();
+            const minutesLate = Math.floor(diffMs / 60000);
 
-                // Calculate minutes late
-                const diffMs = now.getTime() - shiftStart.getTime();
-                const minutesLate = Math.floor(diffMs / 60000);
-
-                if (minutesLate > lateThreshold) {
-                    status = 'late';
-                }
+            if (minutesLate > lateThreshold) {
+                status = 'late';
             }
         }
 
@@ -330,10 +389,13 @@ class AttendanceService {
                 company_id: companyId,
                 employee_id: employeeId,
                 shift_id: shiftId || null,
+                site_id: validatedSiteId,
+                zone_id: validatedZoneId,
                 clock_in_time: now.toISOString(),
                 clock_in_latitude: data.latitude,
                 clock_in_longitude: data.longitude,
                 clock_in_accuracy: data.accuracy,
+                check_in_method: checkInMethod,
                 status,
             })
             .select(`

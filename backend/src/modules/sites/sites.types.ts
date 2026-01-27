@@ -22,6 +22,7 @@ export interface Zone {
     description?: string | null;
     qrCode?: string | null;
     isActive: boolean;
+    displayOrder?: number | null;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -65,6 +66,12 @@ export interface UpdateZoneInput {
     description?: string;
     qrCode?: string;
     isActive?: boolean;
+    displayOrder?: number;
+}
+
+export interface ZoneOrderItem {
+    id: string;
+    displayOrder: number;
 }
 
 export interface SiteQueryParams {
@@ -86,4 +93,20 @@ export interface PaginationMeta {
 export interface PaginatedSitesResponse {
     data: SiteWithZones[];
     meta: PaginationMeta;
+}
+
+// Attendance Validation Types
+export interface GeofenceValidationResult {
+    isInside: boolean;
+    distance: number;
+    siteId: string;
+    siteName: string;
+}
+
+export interface ZoneValidationResult {
+    zone: Zone;
+    site: {
+        id: string;
+        name: string;
+    };
 }
