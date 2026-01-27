@@ -52,7 +52,7 @@ export interface ClockInRequest {
     latitude: number;
     longitude: number;
     accuracy: number;
-    siteId: string;
+    siteId?: string; // Optional: will use shift's siteId if not provided
     zoneQrCode?: string;
 }
 

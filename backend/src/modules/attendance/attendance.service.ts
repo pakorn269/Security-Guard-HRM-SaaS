@@ -230,6 +230,7 @@ class AttendanceService {
             start_time: string;
             end_time: string;
             location: string | null;
+            site_id?: string | null;
         } | null = null;
 
         if (!shiftId) {
@@ -288,7 +289,7 @@ class AttendanceService {
             // Verify the provided shift
             const { data: shift } = await supabaseAdmin
                 .from('shifts')
-                .select('id, date, start_time, end_time, location')
+                .select('id, date, start_time, end_time, location, site_id')
                 .eq('id', shiftId)
                 .eq('company_id', companyId)
                 .eq('employee_id', employeeId)
@@ -306,18 +307,23 @@ class AttendanceService {
         let validatedZoneId: string | null = null;
         let checkInMethod: 'GPS' | 'QR' = 'GPS';
 
-        if (data.siteId) {
+        // Determine which site to validate:
+        // 1. If shift has site_id, use it (shift assignment takes priority)
+        // 2. Otherwise, use data.siteId (manual selection)
+        const siteIdToValidate = shiftData?.site_id || data.siteId;
+
+        if (siteIdToValidate) {
             if (data.zoneQrCode) {
                 // QR Code validation
-                logger.info(`QR code validation for employee ${employeeId} at site ${data.siteId}`);
+                logger.info(`QR code validation for employee ${employeeId} at site ${siteIdToValidate}`);
                 try {
                     const qrResult = await sitesService.validateZoneQr(data.zoneQrCode, companyId);
 
-                    // Verify QR code belongs to the specified site
-                    if (qrResult.site.id !== data.siteId) {
+                    // Verify QR code belongs to the expected site
+                    if (qrResult.site.id !== siteIdToValidate) {
                         throw new BadRequestError(
-                            `QR code belongs to ${qrResult.site.name}, not the selected site`,
-                            `รหัส QR นี้เป็นของ ${qrResult.site.name} ไม่ใช่สถานที่ที่เลือก`
+                            `QR code belongs to ${qrResult.site.name}, not the expected site`,
+                            `รหัส QR นี้เป็นของ ${qrResult.site.name} ไม่ใช่สถานที่ที่กำหนด`
                         );
                     }
 
@@ -334,10 +340,10 @@ class AttendanceService {
                 }
             } else {
                 // GPS Geofence validation
-                logger.info(`GPS geofence validation for employee ${employeeId} at site ${data.siteId}`);
+                logger.info(`GPS geofence validation for employee ${employeeId} at site ${siteIdToValidate}`);
                 try {
                     const geofenceResult = await sitesService.validateGeofence(
-                        data.siteId,
+                        siteIdToValidate,
                         companyId,
                         data.latitude,
                         data.longitude
@@ -602,7 +608,7 @@ class AttendanceService {
             .select(`
                 *,
                 employees (id, full_name, employee_code),
-                shifts (id, date, start_time, end_time, location)
+                shifts (id, date, start_time, end_time, location, site_id, zone_id)
             `)
             .eq('company_id', companyId)
             .eq('employee_id', employeeId)
@@ -630,6 +636,8 @@ class AttendanceService {
                           startTime: shift.start_time,
                           endTime: shift.end_time,
                           location: shift.location,
+                          siteId: shift.site_id || null,
+                          zoneId: shift.zone_id || null,
                       }
                     : null,
                 attendance,
@@ -646,7 +654,7 @@ class AttendanceService {
         // ========================================================================
         const { data: todayShifts } = await supabaseAdmin
             .from('shifts')
-            .select('id, date, start_time, end_time, location')
+            .select('id, date, start_time, end_time, location, site_id, zone_id')
             .eq('company_id', companyId)
             .eq('employee_id', employeeId)
             .eq('date', targetDate)
@@ -661,7 +669,7 @@ class AttendanceService {
         if (!shift) {
             const { data: yesterdayShifts } = await supabaseAdmin
                 .from('shifts')
-                .select('id, date, start_time, end_time, location')
+                .select('id, date, start_time, end_time, location, site_id, zone_id')
                 .eq('company_id', companyId)
                 .eq('employee_id', employeeId)
                 .eq('date', yesterdayDate)
@@ -698,7 +706,7 @@ class AttendanceService {
             .select(`
                 *,
                 employees (id, full_name, employee_code),
-                shifts (id, date, start_time, end_time, location)
+                shifts (id, date, start_time, end_time, location, site_id, zone_id)
             `)
             .eq('company_id', companyId)
             .eq('employee_id', employeeId)
@@ -720,7 +728,7 @@ class AttendanceService {
                 .select(`
                     *,
                     employees (id, full_name, employee_code),
-                    shifts (id, date, start_time, end_time, location)
+                    shifts (id, date, start_time, end_time, location, site_id, zone_id)
                 `)
                 .eq('company_id', companyId)
                 .eq('employee_id', employeeId)
@@ -765,6 +773,8 @@ class AttendanceService {
                       startTime: shift.start_time,
                       endTime: shift.end_time,
                       location: shift.location,
+                      siteId: shift.site_id || null,
+                      zoneId: shift.zone_id || null,
                   }
                 : null,
             attendance,

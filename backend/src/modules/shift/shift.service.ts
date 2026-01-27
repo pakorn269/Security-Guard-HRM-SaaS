@@ -58,6 +58,8 @@ class ShiftService {
             startTime: row.start_time.substring(0, 5),
             endTime: row.end_time.substring(0, 5),
             location: row.location,
+            siteId: row.site_id,
+            zoneId: row.zone_id,
             status: row.status,
             notes: row.notes,
             publishedAt: row.published_at,
@@ -82,6 +84,16 @@ class ShiftService {
                 name: row.shift_templates.name,
                 nameTh: row.shift_templates.name_th,
                 color: row.shift_templates.color,
+            } : null,
+            site: row.sites ? {
+                id: row.sites.id,
+                name: row.sites.name,
+                address: row.sites.address,
+            } : null,
+            zone: row.zones ? {
+                id: row.zones.id,
+                name: row.zones.name,
+                code: row.zones.code,
             } : null,
         };
     }
@@ -260,18 +272,19 @@ class ShiftService {
 
         const { data: adjacentShifts } = await supabaseAdmin
             .from('shifts')
-            .select('date, start_time, end_time')
+            .select('id, date, start_time, end_time')
             .eq('employee_id', employeeId)
             .neq('status', 'cancelled')
             .gte('date', checkStart.split('T')[0])
             .lte('date', checkEnd.split('T')[0]);
 
-        if (adjacentShifts) {
-            for (const s of adjacentShifts) {
-                // Skip self if updating
-                // Note: We can't easily skip by ID here without fetching it, but the date range checks handle strict exclusion mostly.
-                // If excludeShiftId is passed, we should have excluded it in the query ideally, but we'll check logic here.
+        // Filter out the shift being updated to avoid comparing against itself
+        const filteredAdjacentShifts = excludeShiftId && adjacentShifts
+            ? adjacentShifts.filter(s => s.id !== excludeShiftId)
+            : adjacentShifts;
 
+        if (filteredAdjacentShifts) {
+            for (const s of filteredAdjacentShifts) {
                 const sStart = new Date(`${s.date}T${s.start_time}`);
                 let sEnd = new Date(`${s.date}T${s.end_time}`);
                 if (this.timeToMinutes(s.end_time) < this.timeToMinutes(s.start_time)) {
@@ -312,15 +325,15 @@ class ShiftService {
 
         const { data: weekShifts } = await supabaseAdmin
             .from('shifts')
-            .select('date, start_time, end_time')
+            .select('id, date, start_time, end_time')
             .eq('employee_id', employeeId)
             .neq('status', 'cancelled')
             .gte('date', monday)
             .lte('date', sunday);
 
-        // Filter out the shift being updated
-        const otherWeekShifts = excludeShiftId
-            ? weekShifts // We can't filter by ID easily here without fetching IDs, but update logic handles replacement
+        // Filter out the shift being updated to avoid double-counting
+        const otherWeekShifts = excludeShiftId && weekShifts
+            ? weekShifts.filter(s => s.id !== excludeShiftId)
             : weekShifts;
 
         let totalWeeklyHours = 0;
@@ -334,16 +347,8 @@ class ShiftService {
             }
         }
 
-        // Subtract the old duration of the shift being updated? 
-        // Logic simplification: If excludeShiftId is provided, we should have excluded it from the query.
-        // Since we didn't fetch IDs in the quick query above, strict exact calculation requires exclusion.
-        // Let's rely on loose check for now or refactor query to include ID for filtering.
-
-        // Correct approach: Sum new shift
+        // Add the new shift's hours to calculate the total
         const newTotal = totalWeeklyHours + shiftDurationHours;
-
-        // IMPORTANT: If updating, we are double counting the old version of this shift if we didn't exclude it!
-        // To fix this properly, we should actually fetch IDs in the weekShifts query.
 
         if (newTotal > 48) {
             return {
@@ -539,6 +544,16 @@ class ShiftService {
                     name,
                     name_th,
                     color
+                ),
+                sites (
+                    id,
+                    name,
+                    address
+                ),
+                zones (
+                    id,
+                    name,
+                    code
                 )
             `)
             .eq('id', shiftId)
@@ -575,6 +590,16 @@ class ShiftService {
                     name,
                     name_th,
                     color
+                ),
+                sites (
+                    id,
+                    name,
+                    address
+                ),
+                zones (
+                    id,
+                    name,
+                    code
                 )
             `, { count: 'exact' })
             .eq('company_id', companyId)
@@ -674,6 +699,8 @@ class ShiftService {
                 company_id: companyId,
                 employee_id: data.employeeId,
                 template_id: data.templateId || null,
+                site_id: data.siteId || null,
+                zone_id: data.zoneId || null,
                 date: data.date,
                 start_time: data.startTime,
                 end_time: data.endTime,
@@ -833,6 +860,8 @@ class ShiftService {
 
         if (data.employeeId !== undefined) updateData.employee_id = data.employeeId;
         if (data.templateId !== undefined) updateData.template_id = data.templateId;
+        if (data.siteId !== undefined) updateData.site_id = data.siteId;
+        if (data.zoneId !== undefined) updateData.zone_id = data.zoneId;
         if (data.date !== undefined) updateData.date = data.date;
         if (data.startTime !== undefined) updateData.start_time = data.startTime;
         if (data.endTime !== undefined) updateData.end_time = data.endTime;

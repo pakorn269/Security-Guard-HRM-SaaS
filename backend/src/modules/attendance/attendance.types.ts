@@ -122,7 +122,7 @@ export interface ClockInRequest {
     latitude: number;
     longitude: number;
     accuracy: number;
-    siteId: string; // Site ID for geofence validation
+    siteId?: string; // Optional: will use shift's siteId if not provided
     zoneQrCode?: string; // Optional QR code for zone-based check-in
 }
 
@@ -196,6 +196,8 @@ export interface TodayAttendanceResponse {
         startTime: string;
         endTime: string;
         location: string | null;
+        siteId: string | null;
+        zoneId: string | null;
     } | null;
     attendance: AttendanceLogWithDetails | null;
     canClockIn: boolean;

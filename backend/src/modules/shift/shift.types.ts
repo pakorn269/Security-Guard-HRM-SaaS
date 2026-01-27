@@ -80,6 +80,8 @@ export interface ShiftRow {
     start_time: string;
     end_time: string;
     location: string | null;
+    site_id: string | null;
+    zone_id: string | null;
     status: ShiftStatus;
     notes: string | null;
     published_at: string | null;
@@ -101,6 +103,16 @@ export interface ShiftRowWithEmployee extends ShiftRow {
         name_th: string | null;
         color: string;
     } | null;
+    sites?: {
+        id: string;
+        name: string;
+        address: string | null;
+    } | null;
+    zones?: {
+        id: string;
+        name: string;
+        code: string | null;
+    } | null;
 }
 
 // API response type for shifts
@@ -113,6 +125,8 @@ export interface Shift {
     startTime: string;
     endTime: string;
     location: string | null;
+    siteId: string | null;
+    zoneId: string | null;
     status: ShiftStatus;
     notes: string | null;
     publishedAt: string | null;
@@ -135,6 +149,16 @@ export interface ShiftWithDetails extends Shift {
         nameTh: string | null;
         color: string;
     } | null;
+    site?: {
+        id: string;
+        name: string;
+        address?: string | null;
+    } | null;
+    zone?: {
+        id: string;
+        name: string;
+        code?: string | null;
+    } | null;
 }
 
 // Create shift request
@@ -145,6 +169,8 @@ export interface CreateShiftRequest {
     startTime: string; // HH:mm
     endTime: string;
     location?: string;
+    siteId?: string;
+    zoneId?: string;
     notes?: string;
 }
 
@@ -161,6 +187,8 @@ export interface UpdateShiftRequest {
     startTime?: string;
     endTime?: string;
     location?: string | null;
+    siteId?: string | null;
+    zoneId?: string | null;
     notes?: string | null;
     status?: ShiftStatus;
 }

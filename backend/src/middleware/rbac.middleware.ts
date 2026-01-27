@@ -42,8 +42,9 @@ const GUARD_ALLOWED_PATHS = [
     /^\/api\/v\d+\/notifications$/,
     /^\/api\/v\d+\/notifications\/.*$/,
 
-    // Sites (viewing assigned sites)
-    /^\/api\/v\d+\/sites\/.*$/, // Only specific operations allowed by controller logic, but path is open
+    // Sites (viewing assigned sites for clock-in)
+    /^\/api\/v\d+\/sites$/, // List sites (GET only, for clock-in site selection)
+    /^\/api\/v\d+\/sites\/.*$/, // Specific site operations
 
     // Reports (Guards might need to submit incident reports? Assuming yes for now)
     /^\/api\/v\d+\/reports\/incident$/,
