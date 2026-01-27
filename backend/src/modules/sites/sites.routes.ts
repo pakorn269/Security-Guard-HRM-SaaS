@@ -19,5 +19,6 @@ router.delete('/:id', sitesController.deleteSite);
 router.post('/zones', sitesController.createZone);
 router.put('/zones/:id', sitesController.updateZone);
 router.delete('/zones/:id', sitesController.deleteZone);
+router.post('/zones/reorder', sitesController.updateZoneOrder);
 
 export default router;

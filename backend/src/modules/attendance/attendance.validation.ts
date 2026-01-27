@@ -31,6 +31,8 @@ export const clockInSchema = z.object({
         .min(-180, 'Longitude must be between -180 and 180')
         .max(180, 'Longitude must be between -180 and 180'),
     accuracy: z.number().min(0, 'Accuracy must be positive'),
+    siteId: z.string().uuid('Invalid site ID'),
+    zoneQrCode: z.string().optional(),
 });
 
 export const clockOutSchema = z.object({

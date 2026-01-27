@@ -96,3 +96,34 @@ export const deleteZone = async (req: Request, res: Response, next: NextFunction
         next(error);
     }
 };
+
+export const updateZoneOrder = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { siteId, zones } = req.body;
+
+        if (!siteId || !Array.isArray(zones)) {
+            return res.status(400).json({
+                success: false,
+                message: 'siteId and zones array are required'
+            });
+        }
+
+        // Validate zones array structure
+        const isValid = zones.every(zone =>
+            typeof zone.id === 'string' &&
+            typeof zone.displayOrder === 'number'
+        );
+
+        if (!isValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Each zone must have id (string) and displayOrder (number)'
+            });
+        }
+
+        await sitesService.updateZoneOrder(req.user!.companyId, siteId, zones);
+        res.json({ success: true });
+    } catch (error) {
+        next(error);
+    }
+};

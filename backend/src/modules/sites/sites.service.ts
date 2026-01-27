@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { NotFoundError } from '../../utils/errors.js';
 import logger from '../../utils/logger.js';
+import { calculateDistance } from '../attendance/attendance.utils.js';
 import type {
     Site,
     Zone,
@@ -11,6 +12,9 @@ import type {
     UpdateZoneInput,
     SiteQueryParams,
     PaginatedSitesResponse,
+    ZoneOrderItem,
+    GeofenceValidationResult,
+    ZoneValidationResult,
 } from './sites.types.js';
 
 export class SitesService {
@@ -42,6 +46,7 @@ export class SitesService {
             description: row.description,
             qrCode: row.qr_code,
             isActive: row.is_active,
+            displayOrder: row.display_order,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
         };
@@ -62,9 +67,10 @@ export class SitesService {
             .from('sites')
             .select(`
                 *,
-                zones (*)
+                zones!inner (*)
             `, { count: 'exact' })
-            .eq('company_id', companyId);
+            .eq('company_id', companyId)
+            .order('display_order', { foreignTable: 'zones', ascending: true, nullsFirst: false });
 
         // Apply search filter
         if (search && search.trim()) {
@@ -126,6 +132,7 @@ export class SitesService {
             `)
             .eq('id', siteId)
             .eq('company_id', companyId)
+            .order('display_order', { foreignTable: 'zones', ascending: true, nullsFirst: false })
             .single();
 
         if (error || !data) {
@@ -212,24 +219,24 @@ export class SitesService {
         // Verify site belongs to company
         await this.getSiteById(input.siteId, companyId);
 
+        // Get count of existing zones for this site (used for both code and display_order)
+        const { count, error: countError } = await supabaseAdmin
+            .from('zones')
+            .select('*', { count: 'exact', head: true })
+            .eq('site_id', input.siteId);
+
+        if (countError) {
+            logger.error('Error counting zones:', countError);
+            throw new Error('Failed to count zones');
+        }
+
+        const nextNumber = (count || 0) + 1;
+
         // Auto-generate zone code if not provided
         let zoneCode = input.code;
         if (!zoneCode || zoneCode.trim() === '') {
-            // Get count of existing zones for this site
-            const { count, error: countError } = await supabaseAdmin
-                .from('zones')
-                .select('*', { count: 'exact', head: true })
-                .eq('site_id', input.siteId);
-
-            if (countError) {
-                logger.error('Error counting zones:', countError);
-                throw new Error('Failed to count zones');
-            }
-
             // Generate code in format Z-001, Z-002, etc.
-            const nextNumber = (count || 0) + 1;
             zoneCode = `Z-${nextNumber.toString().padStart(3, '0')}`;
-
             logger.info(`Auto-generated zone code: ${zoneCode} for site ${input.siteId}`);
         }
 
@@ -239,7 +246,8 @@ export class SitesService {
             name: input.name,
             code: zoneCode,
             description: input.description,
-            qr_code: input.qrCode
+            qr_code: input.qrCode,
+            display_order: nextNumber
         };
 
         const { data, error } = await supabaseAdmin
@@ -266,6 +274,7 @@ export class SitesService {
         if (input.description !== undefined) dbInput.description = input.description;
         if (input.qrCode !== undefined) dbInput.qr_code = input.qrCode;
         if (input.isActive !== undefined) dbInput.is_active = input.isActive;
+        if (input.displayOrder !== undefined) dbInput.display_order = input.displayOrder;
 
         const { data, error } = await supabaseAdmin
             .from('zones')
@@ -294,6 +303,167 @@ export class SitesService {
             logger.error('Error deleting zone:', error);
             throw new Error('Failed to delete zone');
         }
+    }
+
+    async updateZoneOrder(companyId: string, siteId: string, zones: ZoneOrderItem[]): Promise<void> {
+        // Verify site belongs to company
+        await this.getSiteById(siteId, companyId);
+
+        // Verify all zones belong to the site and company
+        const { data: existingZones, error: fetchError } = await supabaseAdmin
+            .from('zones')
+            .select('id')
+            .eq('site_id', siteId)
+            .eq('company_id', companyId);
+
+        if (fetchError) {
+            logger.error('Error fetching zones for order update:', fetchError);
+            throw new Error('Failed to verify zones');
+        }
+
+        const existingZoneIds = new Set(existingZones.map(z => z.id));
+        const invalidZones = zones.filter(z => !existingZoneIds.has(z.id));
+
+        if (invalidZones.length > 0) {
+            throw new Error('Invalid zone IDs provided');
+        }
+
+        // Update each zone's display_order in a transaction-like manner
+        // Supabase doesn't support traditional transactions, so we update one by one
+        const updatePromises = zones.map(zone =>
+            supabaseAdmin
+                .from('zones')
+                .update({
+                    display_order: zone.displayOrder,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', zone.id)
+                .eq('company_id', companyId)
+        );
+
+        const results = await Promise.all(updatePromises);
+
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) {
+            logger.error('Error updating zone order:', errors);
+            throw new Error('Failed to update zone order');
+        }
+
+        logger.info(`Updated order for ${zones.length} zones in site ${siteId}`);
+    }
+
+    // Attendance Validation Methods
+
+    /**
+     * Validate if user is within the geofence of a site
+     * @param siteId - The ID of the site to validate against
+     * @param companyId - The company ID for security
+     * @param userLat - User's current latitude
+     * @param userLng - User's current longitude
+     * @returns GeofenceValidationResult with isInside flag and distance
+     */
+    async validateGeofence(
+        siteId: string,
+        companyId: string,
+        userLat: number,
+        userLng: number
+    ): Promise<GeofenceValidationResult> {
+        // Fetch only the necessary fields for validation
+        const { data: site, error } = await supabaseAdmin
+            .from('sites')
+            .select('id, name, latitude, longitude, radius, is_active')
+            .eq('id', siteId)
+            .eq('company_id', companyId)
+            .single();
+
+        if (error || !site) {
+            throw new NotFoundError('Site', 'Site not found or does not belong to your company');
+        }
+
+        if (!site.is_active) {
+            throw new Error('Site is not active');
+        }
+
+        // Check if site has geolocation configured
+        if (site.latitude === null || site.longitude === null) {
+            throw new Error('Site does not have geolocation configured');
+        }
+
+        // Calculate distance using Haversine formula
+        const distance = calculateDistance(
+            site.latitude,
+            site.longitude,
+            userLat,
+            userLng
+        );
+
+        // Check if user is within the geofence radius
+        const isInside = distance <= site.radius;
+
+        logger.info(
+            `Geofence validation for site ${siteId}: distance=${distance}m, radius=${site.radius}m, isInside=${isInside}`
+        );
+
+        return {
+            isInside,
+            distance,
+            siteId: site.id,
+            siteName: site.name,
+        };
+    }
+
+    /**
+     * Validate a Zone QR code and return zone information
+     * @param qrCodeString - The QR code string to validate
+     * @param companyId - The company ID for security
+     * @returns ZoneValidationResult with zone and site information
+     */
+    async validateZoneQr(
+        qrCodeString: string,
+        companyId: string
+    ): Promise<ZoneValidationResult> {
+        // Query the zone by QR code
+        const { data: zone, error } = await supabaseAdmin
+            .from('zones')
+            .select(`
+                *,
+                sites!inner (
+                    id,
+                    name,
+                    is_active
+                )
+            `)
+            .eq('qr_code', qrCodeString)
+            .eq('company_id', companyId)
+            .single();
+
+        if (error || !zone) {
+            logger.warn(`Invalid QR code attempted: ${qrCodeString}`);
+            throw new NotFoundError('Zone', 'Invalid QR Code');
+        }
+
+        // Check if zone is active
+        if (!zone.is_active) {
+            throw new Error('Zone is not active');
+        }
+
+        // Check if site is active
+        if (!zone.sites.is_active) {
+            throw new Error('Site is not active');
+        }
+
+        logger.info(`QR code validated successfully for zone ${zone.id} at site ${zone.sites.id}`);
+
+        // Map to proper Zone type and return result
+        const mappedZone = this.mapToZone(zone);
+
+        return {
+            zone: mappedZone,
+            site: {
+                id: zone.sites.id,
+                name: zone.sites.name,
+            },
+        };
     }
 }
 

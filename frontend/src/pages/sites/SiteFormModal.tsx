@@ -3,7 +3,24 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Pencil, QrCode } from 'lucide-react';
+import { Plus, Trash2, Pencil, QrCode, GripVertical } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Modal, Button, Input, Badge } from '../../components/common';
 import { sitesService, type Site, type Zone } from '../../services/sites.service';
 import ZoneFormModal from '../../components/sites/ZoneFormModal';
@@ -26,6 +43,98 @@ interface SiteFormModalProps {
     onClose: () => void;
     onSuccess: () => void;
     site: Site | null;
+}
+
+interface SortableZoneItemProps {
+    zone: Zone;
+    onEdit: (zone: Zone) => void;
+    onDelete: (zoneId: string) => void;
+    onShowQR: (zone: Zone) => void;
+    t: ReturnType<typeof useTranslation>['t'];
+}
+
+function SortableZoneItem({ zone, onEdit, onDelete, onShowQR, t }: SortableZoneItemProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: zone.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
+        >
+            <div className="flex items-start gap-3 mb-3">
+                {/* Drag Handle */}
+                <button
+                    {...attributes}
+                    {...listeners}
+                    className="mt-1 p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 cursor-grab active:cursor-grabbing touch-none"
+                    title={t('common.dragToReorder', 'Drag to reorder')}
+                >
+                    <GripVertical size={20} />
+                </button>
+
+                {/* Zone Content */}
+                <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-neutral-900 dark:text-white mb-1 truncate">
+                        {zone.name}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {zone.code && (
+                            <Badge variant="neutral" className="text-xs">
+                                {t('sites.code', 'Code')}: {zone.code}
+                            </Badge>
+                        )}
+                        <Badge variant={zone.isActive ? 'success' : 'neutral'} className="text-xs">
+                            {zone.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                        </Badge>
+                    </div>
+                    {zone.description && (
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 line-clamp-2">
+                            {zone.description}
+                        </p>
+                    )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-1 shrink-0">
+                    <button
+                        onClick={() => onShowQR(zone)}
+                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
+                        title={t('sites.viewQR', 'View QR Code')}
+                    >
+                        <QrCode size={16} />
+                    </button>
+                    <button
+                        onClick={() => onEdit(zone)}
+                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
+                        title={t('common.edit', 'Edit')}
+                    >
+                        <Pencil size={16} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(zone.id)}
+                        className="p-1.5 text-error-500 hover:bg-error-50 dark:hover:bg-error-950/30 rounded transition-colors"
+                        title={t('common.delete', 'Delete')}
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: SiteFormModalProps) {
@@ -144,6 +253,43 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
     const handleShowQRCode = (zone: Zone) => {
         setSelectedZoneForQR(zone);
         setIsQRModalOpen(true);
+    };
+
+    // Drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id || !site) return;
+
+        const oldIndex = zones.findIndex((zone) => zone.id === active.id);
+        const newIndex = zones.findIndex((zone) => zone.id === over.id);
+
+        const reorderedZones = arrayMove(zones, oldIndex, newIndex);
+
+        // Optimistic UI update
+        setZones(reorderedZones);
+
+        // Update display_order for all zones
+        const zonesWithOrder = reorderedZones.map((zone, index) => ({
+            id: zone.id,
+            displayOrder: index + 1,
+        }));
+
+        // Call API to save new order
+        try {
+            await sitesService.updateZoneOrder(site.id, zonesWithOrder);
+        } catch (err) {
+            console.error('Failed to update zone order', err);
+            // Revert on error
+            setZones(zones);
+        }
     };
 
     const handleCloseQRModal = () => {
@@ -265,55 +411,27 @@ export default function SiteFormModal({ isOpen, onClose, onSuccess, site }: Site
 
                     {/* Zones List */}
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                        {zones.map(zone => (
-                            <div key={zone.id} className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
-                                <div className="flex items-start justify-between gap-3 mb-3">
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-medium text-neutral-900 dark:text-white mb-1 truncate">
-                                            {zone.name}
-                                        </h4>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                                            {zone.code && (
-                                                <Badge variant="neutral" className="text-xs">
-                                                    {t('sites.code', 'Code')}: {zone.code}
-                                                </Badge>
-                                            )}
-                                            <Badge variant={zone.isActive ? 'success' : 'neutral'} className="text-xs">
-                                                {zone.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
-                                            </Badge>
-                                        </div>
-                                        {zone.description && (
-                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 line-clamp-2">
-                                                {zone.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <button
-                                            onClick={() => handleShowQRCode(zone)}
-                                            className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
-                                            title={t('sites.viewQR', 'View QR Code')}
-                                        >
-                                            <QrCode size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleEditZone(zone)}
-                                            className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors"
-                                            title={t('common.edit', 'Edit')}
-                                        >
-                                            <Pencil size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteZone(zone.id)}
-                                            className="p-1.5 text-error-500 hover:bg-error-50 dark:hover:bg-error-950/30 rounded transition-colors"
-                                            title={t('common.delete', 'Delete')}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={zones.map(z => z.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                {zones.map(zone => (
+                                    <SortableZoneItem
+                                        key={zone.id}
+                                        zone={zone}
+                                        onEdit={handleEditZone}
+                                        onDelete={handleDeleteZone}
+                                        onShowQR={handleShowQRCode}
+                                        t={t}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
                         {zones.length === 0 && (
                             <div className="text-center py-12">
                                 <p className="text-neutral-500 dark:text-neutral-400 mb-4">
