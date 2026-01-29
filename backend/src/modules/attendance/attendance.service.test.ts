@@ -22,6 +22,14 @@ vi.mock('../../utils/logger.js', () => ({
     },
 }));
 
+vi.mock('../sites/sites.service.js', () => ({
+    sitesService: {
+        validateZoneQr: vi.fn(),
+        validateGeofence: vi.fn(),
+    },
+}));
+
+import { sitesService } from '../sites/sites.service.js';
 import { attendanceService } from './attendance.service.js';
 import { supabaseAdmin } from '../../config/supabase.js';
 import { BadRequestError } from '../../utils/errors.js';
@@ -818,6 +826,74 @@ describe('AttendanceService', () => {
             // Result should be 17:00 in Bangkok (UTC+7)
             expect(result.getHours()).toBe(17);
             expect(result.getMinutes()).toBe(0);
+        });
+    });
+
+    // =========================================================================
+    // Geofence Validation Tests
+    // =========================================================================
+
+    describe('Geofence Validation', () => {
+        it('should throw error with specific Thai message including Site Name when outside geofence', async () => {
+            const morningTime = new Date('2026-01-26T08:00:00');
+            vi.setSystemTime(morningTime);
+
+            const mockSiteName = "Test Site HQ";
+            const mockShift = {
+                id: 'shift-geofence',
+                date: '2026-01-26',
+                start_time: '08:00:00',
+                end_time: '17:00:00',
+                location: 'Office',
+                site_id: 'site-1'
+            };
+
+            // Mock Supabase responses
+            let attendanceCallCount = 0;
+            vi.mocked(supabaseAdmin.from).mockImplementation((table: string) => {
+                if (table === 'companies') {
+                    return createChainableMock({
+                        settings: { timezone: 'Asia/Bangkok' },
+                    }) as ReturnType<typeof supabaseAdmin.from>;
+                }
+                if (table === 'attendance_logs') {
+                    // No existing attendance
+                    return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+                }
+                if (table === 'shifts') {
+                    // Return mock shift
+                    return createChainableMock(mockShift) as ReturnType<typeof supabaseAdmin.from>;
+                }
+                return createChainableMock(null) as ReturnType<typeof supabaseAdmin.from>;
+            });
+
+            // Mock sitesService.validateGeofence to fail
+            vi.mocked(sitesService.validateGeofence).mockResolvedValue({
+                isInside: false,
+                distance: 500,
+                siteName: mockSiteName,
+                siteId: 'site-1',
+                zoneId: 'zone-1' // Add zoneId to satisfy type if needed, though mostly unused in this error path
+            } as any);
+
+            // Execute & Assert
+            try {
+                // We provide shiftId to ensure we hit the shift verification path
+                await attendanceService.clockIn('company-1', 'employee-1', {
+                    latitude: 0,
+                    longitude: 0,
+                    accuracy: 10,
+                    shiftId: 'shift-geofence'
+                });
+                // If it doesn't throw, we fail the test
+                expect(true).toBe(false);
+            } catch (error: any) {
+                expect(error).toBeInstanceOf(BadRequestError);
+                // Verify the error message contains the expected Thai phrase and Site Name
+                // The Thai message is stored in messageTh property of BadRequestError
+                expect(error.messageTh).toContain('คุณอยู่ห่างจาก');
+                expect(error.messageTh).toContain(mockSiteName);
+            }
         });
     });
 

@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   ChevronDown,
   Filter,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, Avatar, LoadingSpinner } from '../../components/common';
 import { PageHeader } from '../../components/layout';
@@ -68,6 +70,26 @@ function ApprovalModal({
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [loadingDocument, setLoadingDocument] = useState(false);
+
+  // Load document URL if document exists
+  useEffect(() => {
+    const loadDocumentUrl = async () => {
+      if (request.documentUrl) {
+        try {
+          setLoadingDocument(true);
+          const response = await leaveService.getLeaveDocumentUrl(request.id);
+          setDocumentUrl(response.url);
+        } catch (err) {
+          console.error('Error loading document URL:', err);
+        } finally {
+          setLoadingDocument(false);
+        }
+      }
+    };
+    loadDocumentUrl();
+  }, [request.id, request.documentUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,6 +171,32 @@ function ApprovalModal({
             <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
               <p className="text-xs text-neutral-500 mb-1">{t('leave.reason', 'เหตุผล')}</p>
               <p className="text-neutral-800 dark:text-neutral-100">{request.reason}</p>
+            </div>
+          )}
+          {request.documentUrl && (
+            <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+              <p className="text-xs text-neutral-500 mb-2">{t('leave.document', 'เอกสารแนบ')}</p>
+              {loadingDocument ? (
+                <div className="flex items-center gap-2 text-neutral-500">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+                  <span className="text-sm">กำลังโหลดเอกสาร...</span>
+                </div>
+              ) : documentUrl ? (
+                <a
+                  href={documentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+                >
+                  <FileText size={18} />
+                  <span className="text-sm font-medium">{t('leave.viewDocument', 'ดูเอกสาร')}</span>
+                  <Download size={16} className="ml-1" />
+                </a>
+              ) : (
+                <p className="text-sm text-error-600 dark:text-error-400">
+                  {t('leave.documentLoadError', 'ไม่สามารถโหลดเอกสารได้')}
+                </p>
+              )}
             </div>
           )}
         </div>

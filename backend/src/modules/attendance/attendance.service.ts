@@ -352,7 +352,7 @@ class AttendanceService {
                     if (!geofenceResult.isInside) {
                         throw new BadRequestError(
                             `You are ${geofenceResult.distance}m away from ${geofenceResult.siteName}. Please move closer.`,
-                            `คุณอยู่ห่างจากสถานที่ ${geofenceResult.distance} เมตร กรุณาเข้าใกล้มากขึ้น`
+                            `คุณอยู่ห่างจาก ${geofenceResult.siteName} ${geofenceResult.distance} เมตร กรุณาเข้าใกล้สถานที่มากขึ้น`
                         );
                     }
 
@@ -361,6 +361,10 @@ class AttendanceService {
                     logger.info(`GPS validation successful: ${geofenceResult.distance}m from ${geofenceResult.siteName}`);
                 } catch (error: any) {
                     logger.error(`GPS validation failed: ${error.message}`);
+                    // Preserve the original error if it's already a BadRequestError with Thai message
+                    if (error instanceof BadRequestError) {
+                        throw error;
+                    }
                     throw new BadRequestError(
                         error.message || 'Geofence validation failed',
                         'การตรวจสอบพื้นที่ล้มเหลว'
@@ -837,7 +841,7 @@ class AttendanceService {
         companyId: string,
         query: ListAttendanceQuery
     ): Promise<{ records: AttendanceLogWithDetails[]; total: number }> {
-        const { page = 1, pageSize = 50, startDate, endDate, employeeId, status } = query;
+        const { page = 1, pageSize = 50, startDate, endDate, employeeId, siteId, zoneId, status, maxAccuracy } = query;
 
         let dbQuery = supabaseAdmin
             .from('attendance_logs')
@@ -860,8 +864,19 @@ class AttendanceService {
         if (employeeId) {
             dbQuery = dbQuery.eq('employee_id', employeeId);
         }
+        if (siteId) {
+            dbQuery = dbQuery.eq('site_id', siteId);
+        }
+        if (zoneId) {
+            dbQuery = dbQuery.eq('zone_id', zoneId);
+        }
         if (status) {
             dbQuery = dbQuery.eq('status', status);
+        }
+        if (maxAccuracy !== undefined) {
+            // Filter records where clock-in OR clock-out accuracy is within threshold
+            // Note: This is a simple filter; for more complex queries, consider using RPC
+            dbQuery = dbQuery.or(`clock_in_accuracy.lte.${maxAccuracy},clock_out_accuracy.lte.${maxAccuracy}`);
         }
 
         dbQuery = dbQuery
@@ -1107,6 +1122,222 @@ class AttendanceService {
             summary,
             records,
         };
+    }
+
+    // ========================================================================
+    // EXPORT FUNCTIONALITY
+    // ========================================================================
+
+    /**
+     * Generate export data for attendance records
+     * Returns data formatted for CSV or Excel export
+     */
+    async generateExportData(
+        companyId: string,
+        filters: {
+            startDate?: string;
+            endDate?: string;
+            employeeId?: string;
+            siteId?: string;
+            status?: AttendanceStatus;
+        }
+    ): Promise<AttendanceLogWithDetails[]> {
+        let query = supabaseAdmin
+            .from('attendance_logs')
+            .select(`
+                *,
+                employees (id, full_name, employee_code),
+                shifts (id, date, start_time, end_time, location)
+            `)
+            .eq('company_id', companyId)
+            .order('clock_in_time', { ascending: false });
+
+        // Apply filters
+        if (filters.startDate) {
+            query = query.gte('clock_in_time', `${filters.startDate}T00:00:00`);
+        }
+
+        if (filters.endDate) {
+            query = query.lte('clock_in_time', `${filters.endDate}T23:59:59`);
+        }
+
+        if (filters.employeeId) {
+            query = query.eq('employee_id', filters.employeeId);
+        }
+
+        if (filters.siteId) {
+            query = query.eq('site_id', filters.siteId);
+        }
+
+        if (filters.status) {
+            query = query.eq('status', filters.status);
+        }
+
+        // Limit to 10,000 records to prevent timeout
+        query = query.limit(10000);
+
+        const { data, error } = await query;
+
+        if (error) {
+            logger.error('Failed to fetch attendance data for export', { error });
+            throw new BadRequestError(
+                'Failed to generate export data',
+                'ไม่สามารถสร้างข้อมูลส่งออกได้'
+            );
+        }
+
+        return (data || []).map((log) =>
+            this.mapToAttendanceLogWithDetails(log as AttendanceLogRowWithEmployee)
+        );
+    }
+
+    // ========================================================================
+    // BULK OPERATIONS
+    // ========================================================================
+
+    /**
+     * Bulk update attendance records
+     * Supports: approve adjustments, update status, delete records
+     */
+    async bulkUpdate(
+        companyId: string,
+        userId: string,
+        data: {
+            ids: string[];
+            action: 'approve' | 'update_status' | 'delete';
+            status?: AttendanceStatus;
+            reason: string;
+        }
+    ): Promise<{ updated: number; message: string; messageTh: string }> {
+        const { ids, action, status, reason } = data;
+
+        // Verify all records belong to the company
+        const { data: records, error: fetchError } = await supabaseAdmin
+            .from('attendance_logs')
+            .select('id, company_id')
+            .in('id', ids)
+            .eq('company_id', companyId);
+
+        if (fetchError) {
+            logger.error('Failed to fetch attendance records for bulk update', { error: fetchError });
+            throw new BadRequestError(
+                'Failed to fetch attendance records',
+                'ไม่สามารถดึงข้อมูลการลงเวลาได้'
+            );
+        }
+
+        if (!records || records.length === 0) {
+            throw new NotFoundError('No attendance records found', 'ไม่พบข้อมูลการลงเวลา');
+        }
+
+        if (records.length !== ids.length) {
+            throw new BadRequestError(
+                'Some attendance records not found or do not belong to your company',
+                'ไม่พบข้อมูลการลงเวลาบางรายการหรือไม่ได้อยู่ในบริษัทของคุณ'
+            );
+        }
+
+        let result;
+        let updated = 0;
+
+        if (action === 'delete') {
+            // Bulk delete
+            const { error: deleteError, count } = await supabaseAdmin
+                .from('attendance_logs')
+                .delete({ count: 'exact' })
+                .in('id', ids)
+                .eq('company_id', companyId);
+
+            if (deleteError) {
+                logger.error('Failed to bulk delete attendance', { error: deleteError });
+                throw new BadRequestError(
+                    'Failed to delete attendance records',
+                    'ไม่สามารถลบข้อมูลการลงเวลาได้'
+                );
+            }
+
+            updated = count || 0;
+            result = {
+                updated,
+                message: `Successfully deleted ${updated} attendance record(s)`,
+                messageTh: `ลบข้อมูลการลงเวลาสำเร็จ ${updated} รายการ`,
+            };
+        } else if (action === 'update_status') {
+            // Bulk update status
+            if (!status) {
+                throw new BadRequestError('Status is required for update_status action', 'กรุณาระบุสถานะ');
+            }
+
+            const { error: updateError, count } = await supabaseAdmin
+                .from('attendance_logs')
+                .update(
+                    {
+                        status,
+                        adjusted_by: userId,
+                        adjustment_reason: reason,
+                        updated_at: new Date().toISOString(),
+                    },
+                    { count: 'exact' }
+                )
+                .in('id', ids)
+                .eq('company_id', companyId);
+
+            if (updateError) {
+                logger.error('Failed to bulk update attendance status', { error: updateError });
+                throw new BadRequestError(
+                    'Failed to update attendance records',
+                    'ไม่สามารถอัปเดตข้อมูลการลงเวลาได้'
+                );
+            }
+
+            updated = count || 0;
+            result = {
+                updated,
+                message: `Successfully updated ${updated} attendance record(s) to status: ${status}`,
+                messageTh: `อัปเดตสถานะการลงเวลาสำเร็จ ${updated} รายการ`,
+            };
+        } else if (action === 'approve') {
+            // Bulk approve adjustments (mark as completed or appropriate status)
+            const { error: approveError, count } = await supabaseAdmin
+                .from('attendance_logs')
+                .update(
+                    {
+                        status: 'completed',
+                        adjusted_by: userId,
+                        adjustment_reason: reason,
+                        updated_at: new Date().toISOString(),
+                    },
+                    { count: 'exact' }
+                )
+                .in('id', ids)
+                .eq('company_id', companyId);
+
+            if (approveError) {
+                logger.error('Failed to bulk approve attendance', { error: approveError });
+                throw new BadRequestError(
+                    'Failed to approve attendance records',
+                    'ไม่สามารถอนุมัติข้อมูลการลงเวลาได้'
+                );
+            }
+
+            updated = count || 0;
+            result = {
+                updated,
+                message: `Successfully approved ${updated} attendance record(s)`,
+                messageTh: `อนุมัติการลงเวลาสำเร็จ ${updated} รายการ`,
+            };
+        } else {
+            throw new BadRequestError('Invalid action', 'การดำเนินการไม่ถูกต้อง');
+        }
+
+        logger.info('Bulk attendance update completed', {
+            action,
+            count: updated,
+            userId,
+            companyId,
+        });
+
+        return result;
     }
 }
 

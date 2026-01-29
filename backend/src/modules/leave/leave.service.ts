@@ -81,6 +81,7 @@ class LeaveService {
                 id: row.employees.id,
                 fullName: row.employees.full_name,
                 employeeCode: row.employees.employee_code,
+                userId: row.employees.user_id,
             } : undefined,
             leaveType: row.leave_types ? {
                 id: row.leave_types.id,
@@ -141,6 +142,7 @@ class LeaveService {
                 id: row.employees.id,
                 fullName: row.employees.full_name,
                 employeeCode: row.employees.employee_code,
+                userId: row.employees.user_id,
             } : undefined,
         };
     }
@@ -469,7 +471,11 @@ class LeaveService {
             .lte('date', data.endDate);
 
         if (conflictingShifts && conflictingShifts.length > 0) {
-            logger.info(`Leave request overlaps with ${conflictingShifts.length} shifts`);
+            logger.warn(`Leave request overlaps with ${conflictingShifts.length} shifts`, {
+                employeeId,
+                conflictCount: conflictingShifts.length,
+                shifts: conflictingShifts
+            });
             // We don't block, just log for now - manager will see when approving
         }
 
@@ -493,7 +499,7 @@ class LeaveService {
             })
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `)
             .single();
@@ -579,7 +585,7 @@ class LeaveService {
             .from('leave_requests')
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `, { count: 'exact' })
             .eq('company_id', companyId)
@@ -621,7 +627,7 @@ class LeaveService {
             .from('leave_requests')
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid),
                 reviewer:reviewed_by (id, email)
             `)
@@ -664,7 +670,7 @@ class LeaveService {
             .eq('company_id', companyId)
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `)
             .single();
@@ -730,7 +736,7 @@ class LeaveService {
             .eq('company_id', companyId)
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `)
             .single();
@@ -803,7 +809,7 @@ class LeaveService {
             .eq('company_id', companyId)
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `)
             .single();
@@ -878,7 +884,7 @@ class LeaveService {
                 .from('leave_requests')
                 .select(`
                     *,
-                    employees:employee_id (id, full_name, employee_code),
+                    employees:employee_id (id, full_name, employee_code, user_id),
                     leave_types:leave_type_id (id, name, name_th, is_paid)
                 `)
                 .eq('company_id', companyId)
@@ -889,7 +895,7 @@ class LeaveService {
                 .from('leave_requests')
                 .select(`
                     *,
-                    employees:employee_id (id, full_name, employee_code),
+                    employees:employee_id (id, full_name, employee_code, user_id),
                     leave_types:leave_type_id (id, name, name_th, is_paid)
                 `)
                 .eq('company_id', companyId)
@@ -933,7 +939,7 @@ class LeaveService {
             .from('leave_requests')
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th, is_paid)
             `)
             .eq('company_id', companyId)
@@ -993,7 +999,7 @@ class LeaveService {
             .from('leave_requests')
             .select(`
                 *,
-                employees:employee_id (id, full_name, employee_code),
+                employees:employee_id (id, full_name, employee_code, user_id),
                 leave_types:leave_type_id (id, name, name_th)
             `)
             .eq('company_id', companyId)
@@ -1122,7 +1128,7 @@ class LeaveService {
             .select(`
                 *,
                 leave_types:leave_type_id (id, name, name_th, is_paid),
-                employees:employee_id (id, full_name, employee_code)
+                employees:employee_id (id, full_name, employee_code, user_id)
             `, { count: 'exact' })
             .eq('company_id', companyId)
             .eq('year', year);
@@ -1331,6 +1337,41 @@ class LeaveService {
         }
 
         return { created: balancesToCreate.length };
+    }
+
+    // ========================================================================
+    // DOCUMENT MANAGEMENT
+    // ========================================================================
+
+    /**
+     * Update document URL for a leave request
+     * @param requestId - Leave request ID
+     * @param documentUrl - Storage path of document (null to remove)
+     */
+    async updateDocumentUrl(
+        requestId: string,
+        documentUrl: string | null
+    ): Promise<void> {
+        const { error } = await supabaseAdmin
+            .from('leave_requests')
+            .update({
+                document_url: documentUrl,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', requestId);
+
+        if (error) {
+            logger.error('Failed to update document URL', {
+                error: error.message,
+                requestId,
+            });
+            throw new Error('Failed to update document URL');
+        }
+
+        logger.info('Document URL updated', {
+            requestId,
+            hasDocument: !!documentUrl,
+        });
     }
 }
 

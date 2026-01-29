@@ -65,7 +65,7 @@ export interface DataTableProps<T> {
   /** Sort change callback */
   onSortChange?: (column: string, direction: 'asc' | 'desc') => void;
   /** Empty state message */
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   /** Empty state icon */
   emptyIcon?: React.ReactNode;
   /** Custom empty state component */

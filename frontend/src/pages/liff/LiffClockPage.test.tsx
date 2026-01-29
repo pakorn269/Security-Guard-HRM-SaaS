@@ -163,7 +163,7 @@ describe('LiffClockPage', () => {
 
     it('GPS Clock In (Error): Displays error message on failure', async () => {
         // Setup geolocation failure
-        const mockError = { code: 'TIMEOUT', message: 'Location timeout' };
+        const mockError = { code: 3, message: 'Location timeout' };
         mockGetLocation.mockRejectedValue(mockError);
 
         render(<LiffClockPage />);

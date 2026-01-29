@@ -30,11 +30,17 @@ router.get('/my', attendanceController.getMyAttendance);
 // Get daily attendance report (managers and above)
 router.get('/report', requireManager, attendanceController.getDailyReport);
 
+// Export attendance records (managers and above)
+router.get('/export', requireManager, attendanceController.export);
+
 // List all attendance records (managers and above)
 router.get('/', requireManager, attendanceController.list);
 
 // Create attendance manually (managers and above)
 router.post('/', requireManager, attendanceController.create);
+
+// Bulk update attendance records (managers and above)
+router.post('/bulk', requireManager, attendanceController.bulkUpdate);
 
 // Get attendance by ID (managers and above)
 router.get('/:id', requireManager, attendanceController.getById);

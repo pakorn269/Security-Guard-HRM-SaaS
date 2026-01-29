@@ -167,7 +167,10 @@ export interface ListAttendanceQuery {
     startDate?: string;
     endDate?: string;
     employeeId?: string;
+    siteId?: string;
+    zoneId?: string;
     status?: AttendanceStatus;
+    maxAccuracy?: number;
 }
 
 // ============================================================================

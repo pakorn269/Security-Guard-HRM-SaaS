@@ -590,12 +590,17 @@ export async function sendShiftChangeNotification(
 export async function sendAttendanceAlert(
     companyId: string,
     employeeId: string,
-    alertType: 'late' | 'missing',
+    alertType: 'late' | 'missing' | 'no_show',
     details: {
-        date: string;
+        date?: string;
         expectedTime?: string;
         actualTime?: string;
         minutesLate?: number;
+        employeeName?: string;
+        employeeCode?: string;
+        shiftDate?: string;
+        shiftTime?: string;
+        location?: string;
     }
 ): Promise<{ success: boolean; error?: string }> {
     if (!isLineConfigured()) {
@@ -627,14 +632,20 @@ export async function sendAttendanceAlert(
         }
 
         // Check user preferences
-        const preferenceType = alertType === 'late' ? 'attendanceLate' : 'attendanceMissing';
+        const preferenceType =
+            alertType === 'late' ? 'attendanceLate' :
+            alertType === 'missing' ? 'attendanceMissing' :
+            'attendanceMissing'; // Use same preference for no_show
         const shouldSend = await lineService.shouldNotify(employee.user_id, preferenceType);
         if (!shouldSend) {
             return { success: true };
         }
 
         // Get template
-        const templateCategory = alertType === 'late' ? 'attendance_late' : 'attendance_missing';
+        const templateCategory =
+            alertType === 'late' ? 'attendance_late' :
+            alertType === 'missing' ? 'attendance_missing' :
+            'attendance_no_show';
         const templates = await lineService.listTemplates(companyId, {
             category: templateCategory,
             isActive: true,
@@ -649,6 +660,10 @@ export async function sendAttendanceAlert(
                 message: 'Attendance alert: Missing clock-in for your shift on {{date}}. Expected time: {{expected_time}}',
                 messageTh: 'แจ้งเตือนการลงเวลา: ยังไม่ได้ลงเวลาเข้างานสำหรับกะวันที่ {{date}} เวลาที่กำหนด: {{expected_time}}',
             },
+            no_show: {
+                message: 'No-show alert: {{employee_name}} ({{employee_code}}) did not clock in for shift on {{shift_date}} {{shift_time}} at {{location}}',
+                messageTh: 'แจ้งเตือน: {{employee_name}} ({{employee_code}}) ไม่มาทำงาน วันที่ {{shift_date}} เวลา {{shift_time}} สถานที่ {{location}}',
+            },
         };
 
         const template = templates.length > 0
@@ -656,8 +671,12 @@ export async function sendAttendanceAlert(
             : defaultTemplates[alertType];
 
         const variables = {
-            employee_name: employee.full_name,
-            date: details.date,
+            employee_name: details.employeeName || employee.full_name,
+            employee_code: details.employeeCode || '',
+            date: details.date || details.shiftDate || '',
+            shift_date: details.shiftDate || details.date || '',
+            shift_time: details.shiftTime || '',
+            location: details.location || '',
             expected_time: details.expectedTime || 'N/A',
             actual_time: details.actualTime || 'N/A',
             minutes_late: details.minutesLate?.toString() || '0',

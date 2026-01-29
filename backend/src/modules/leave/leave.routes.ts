@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { leaveController } from './leave.controller.js';
 import { authMiddleware, requireManager } from '../../middleware/auth.middleware.js';
+import { leaveDocumentUpload } from '../../middleware/upload.middleware.js';
 
 // ============================================================================
 // LEAVE TYPES ROUTER
@@ -47,6 +48,19 @@ leaveRequestsRouter.post('/', leaveController.createLeaveRequest);
 
 // Cancel my leave request
 leaveRequestsRouter.post('/:id/cancel', leaveController.cancelMyLeaveRequest);
+
+// --------------------------------
+// Document management routes
+// --------------------------------
+
+// Upload document for leave request (request owner or manager)
+leaveRequestsRouter.post('/:id/document', leaveDocumentUpload, leaveController.uploadDocument);
+
+// Get document URL for leave request (request owner or manager)
+leaveRequestsRouter.get('/:id/document', leaveController.getDocumentUrl);
+
+// Delete document from leave request (request owner or manager)
+leaveRequestsRouter.delete('/:id/document', leaveController.deleteDocument);
 
 // --------------------------------
 // Manager routes

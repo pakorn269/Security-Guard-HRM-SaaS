@@ -15,7 +15,8 @@ import {
     initializeBalancesSchema,
 } from './leave.validation.js';
 import { success } from '../../utils/response.js';
-import { BadRequestError, UnauthorizedError } from '../../utils/errors.js';
+import { BadRequestError, UnauthorizedError, ForbiddenError } from '../../utils/errors.js';
+import { storageService } from '../../services/storage.service.js';
 
 class LeaveController {
     // ========================================================================
@@ -475,6 +476,149 @@ class LeaveController {
 
             return res.json(
                 success(result, `Initialized ${result.created} leave balances`)
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ========================================================================
+    // DOCUMENT MANAGEMENT ENDPOINTS
+    // ========================================================================
+
+    // POST /leave-requests/:id/document - Upload document for leave request
+    async uploadDocument(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const leaveRequestId = req.params.id as string;
+
+            // Get the uploaded file from multer
+            const file = req.file;
+            if (!file) {
+                throw new BadRequestError('No file uploaded');
+            }
+
+            // Get leave request to verify ownership or manager access
+            const leaveRequest = await leaveService.getLeaveRequestById(leaveRequestId, companyId);
+
+            // Check if user is request owner or manager
+            const isOwner = leaveRequest.employee?.userId === userId;
+            const isManager = userRole === 'manager' || userRole === 'company_admin' || userRole === 'super_admin';
+
+            if (!isOwner && !isManager) {
+                throw new ForbiddenError('You do not have permission to upload documents for this leave request');
+            }
+
+            // Upload document to storage
+            const storagePath = await storageService.uploadLeaveDocument(
+                file.buffer,
+                file.originalname,
+                file.mimetype,
+                companyId,
+                leaveRequestId
+            );
+
+            // Update leave request with document URL
+            await leaveService.updateDocumentUrl(leaveRequestId, storagePath);
+
+            return res.status(201).json(
+                success(
+                    { documentUrl: storagePath },
+                    'Document uploaded successfully'
+                )
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave-requests/:id/document - Get document URL for leave request
+    async getDocumentUrl(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const leaveRequestId = req.params.id as string;
+
+            // Get leave request to verify ownership or manager access
+            const leaveRequest = await leaveService.getLeaveRequestById(leaveRequestId, companyId);
+
+            // Check if user is request owner or manager
+            const isOwner = leaveRequest.employee?.userId === userId;
+            const isManager = userRole === 'manager' || userRole === 'company_admin' || userRole === 'super_admin';
+
+            if (!isOwner && !isManager) {
+                throw new ForbiddenError('You do not have permission to view this document');
+            }
+
+            // Check if document exists
+            if (!leaveRequest.documentUrl) {
+                throw new BadRequestError('No document found for this leave request');
+            }
+
+            // Generate signed URL (valid for 1 hour)
+            const signedUrl = await storageService.getLeaveDocumentUrl(leaveRequest.documentUrl);
+
+            return res.json(
+                success(
+                    { url: signedUrl },
+                    'Document URL generated successfully'
+                )
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // DELETE /leave-requests/:id/document - Delete document from leave request
+    async deleteDocument(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const leaveRequestId = req.params.id as string;
+
+            // Get leave request to verify ownership or manager access
+            const leaveRequest = await leaveService.getLeaveRequestById(leaveRequestId, companyId);
+
+            // Check if user is request owner or manager
+            const isOwner = leaveRequest.employee?.userId === userId;
+            const isManager = userRole === 'manager' || userRole === 'company_admin' || userRole === 'super_admin';
+
+            if (!isOwner && !isManager) {
+                throw new ForbiddenError('You do not have permission to delete this document');
+            }
+
+            // Check if document exists
+            if (!leaveRequest.documentUrl) {
+                throw new BadRequestError('No document found for this leave request');
+            }
+
+            // Delete document from storage
+            await storageService.deleteLeaveDocument(leaveRequest.documentUrl);
+
+            // Remove document URL from leave request
+            await leaveService.updateDocumentUrl(leaveRequestId, null);
+
+            return res.json(
+                success(null, 'Document deleted successfully')
             );
         } catch (error) {
             next(error);

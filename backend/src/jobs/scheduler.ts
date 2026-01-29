@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import logger from '../utils/logger.js';
 import { checkLicenses } from './licenseChecker.js';
 import { sendShiftReminders } from './lineNotifications.js';
+import { detectNoShows, detectMissedClockOuts } from './noShowDetection.js';
 
 export const initScheduler = () => {
     logger.info('Initializing Job Scheduler...');
@@ -27,6 +28,48 @@ export const initScheduler = () => {
         }
     });
 
+    // Schedule No-Show Detection
+    // Run every 30 minutes (*/30 * * * *)
+    // Detects shifts that started 30+ minutes ago without clock-in
+    cron.schedule('*/30 * * * *', async () => {
+        try {
+            logger.info('Running scheduled job: No-Show Detection');
+
+            // Grace period: 30 minutes after shift start
+            const result = await detectNoShows(30);
+
+            logger.info('No-Show Detection job completed', {
+                detected: result.detected,
+                marked: result.marked,
+                notified: result.notified,
+                errors: result.errors,
+            });
+        } catch (error) {
+            logger.error('Error running No-Show Detection job', error);
+        }
+    });
+
+    // Schedule Missed Clock-Out Detection
+    // Run every hour at minute 15 (15 * * * *)
+    // Detects shifts that ended without clock-out
+    cron.schedule('15 * * * *', async () => {
+        try {
+            logger.info('Running scheduled job: Missed Clock-Out Detection');
+
+            // Check shifts that ended 1+ hours ago
+            const result = await detectMissedClockOuts(1);
+
+            logger.info('Missed Clock-Out Detection job completed', {
+                detected: result.detected,
+                marked: result.marked,
+                notified: result.notified,
+                errors: result.errors,
+            });
+        } catch (error) {
+            logger.error('Error running Missed Clock-Out Detection job', error);
+        }
+    });
+
     // Schedule License Compliance Check
     // Run every day at midnight (0 0 * * *)
     cron.schedule('0 0 * * *', async () => {
@@ -37,5 +80,10 @@ export const initScheduler = () => {
         }
     });
 
-    logger.info('Job Scheduler initialized');
+    logger.info('Job Scheduler initialized successfully');
+    logger.info('Scheduled jobs:');
+    logger.info('  - Shift Reminders: Every hour (0 * * * *)');
+    logger.info('  - No-Show Detection: Every 30 minutes (*/30 * * * *)');
+    logger.info('  - Missed Clock-Out Detection: Every hour at :15 (15 * * * *)');
+    logger.info('  - License Compliance Check: Daily at midnight (0 0 * * *)');
 };

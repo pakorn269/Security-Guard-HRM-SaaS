@@ -44,6 +44,19 @@ export default function AttendanceDetailModal({
         });
     };
 
+    // Format datetime for datetime-local input (local time)
+    const formatDateTimeForInput = (isoString: string | null | undefined): string => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        // Format as YYYY-MM-DDTHH:mm (local time)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
     // Handle submit
     const handleSubmit = async () => {
         if (!editData.adjustmentReason.trim()) {
@@ -94,7 +107,7 @@ export default function AttendanceDetailModal({
             case 'no_show':
                 return 'text-error-600';
             default:
-                return 'text-surface-600';
+                return 'text-neutral-600 dark:text-neutral-400';
         }
     };
 
@@ -107,18 +120,18 @@ export default function AttendanceDetailModal({
         >
             <div className="space-y-6">
                 {/* Employee Info */}
-                <div className="bg-surface-50 rounded-xl p-4">
+                <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                            <span className="text-primary-600 font-bold text-lg">
+                        <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                            <span className="text-primary-600 dark:text-primary-300 font-bold text-lg">
                                 {attendance.employee?.fullName?.charAt(0) || '?'}
                             </span>
                         </div>
                         <div>
-                            <p className="font-semibold text-surface-800">
+                            <p className="font-semibold text-neutral-800 dark:text-neutral-100">
                                 {attendance.employee?.fullName || '-'}
                             </p>
-                            <p className="text-sm text-surface-500">
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
                                 รหัส: {attendance.employee?.employeeCode || '-'}
                             </p>
                         </div>
@@ -131,7 +144,7 @@ export default function AttendanceDetailModal({
                         <Input
                             type="datetime-local"
                             label="เวลาเข้า"
-                            value={editData.clockInTime?.slice(0, 16) || ''}
+                            value={formatDateTimeForInput(editData.clockInTime)}
                             onChange={(e) => setEditData(prev => ({
                                 ...prev,
                                 clockInTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
@@ -140,18 +153,18 @@ export default function AttendanceDetailModal({
                         <Input
                             type="datetime-local"
                             label="เวลาออก"
-                            value={editData.clockOutTime?.slice(0, 16) || ''}
+                            value={formatDateTimeForInput(editData.clockOutTime)}
                             onChange={(e) => setEditData(prev => ({
                                 ...prev,
                                 clockOutTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
                             }))}
                         />
                         <div>
-                            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
                                 สถานะ
                             </label>
                             <select
-                                className="appearance-none block w-full rounded-xl border px-4 py-2.5 pr-10 bg-white dark:bg-surface-800 text-surface-900 dark:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent border-surface-300 dark:border-surface-600"
+                                className="appearance-none block w-full rounded-xl border px-4 py-2.5 pr-10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent border-neutral-300 dark:border-neutral-600"
                                 value={editData.status || ''}
                                 onChange={(e) => setEditData(prev => ({
                                     ...prev,
@@ -212,14 +225,14 @@ export default function AttendanceDetailModal({
                         {/* Status & Hours */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm text-surface-500">สถานะ</p>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400">สถานะ</p>
                                 <p className={`font-semibold ${getStatusColor(attendance.status)}`}>
                                     {getStatusLabel(attendance.status)}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-sm text-surface-500">รวมชั่วโมง</p>
-                                <p className="font-semibold text-primary-600">
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400">รวมชั่วโมง</p>
+                                <p className="font-semibold text-primary-600 dark:text-primary-400">
                                     {attendance.totalHours ? `${attendance.totalHours} ชม.` : '-'}
                                 </p>
                             </div>
@@ -228,8 +241,8 @@ export default function AttendanceDetailModal({
                         {/* Shift Info */}
                         {attendance.shift && (
                             <div>
-                                <p className="text-sm text-surface-500">กะ</p>
-                                <p className="font-medium">
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400">กะ</p>
+                                <p className="font-medium text-neutral-800 dark:text-neutral-200">
                                     {attendance.shift.startTime} - {attendance.shift.endTime}
                                     {attendance.shift.location && ` @ ${attendance.shift.location}`}
                                 </p>
@@ -238,19 +251,19 @@ export default function AttendanceDetailModal({
 
                         {/* GPS Locations */}
                         {(attendance.clockInLatitude || attendance.clockOutLatitude) && (
-                            <div className="bg-surface-50 rounded-xl p-4 space-y-2">
-                                <p className="text-sm font-medium text-surface-700 flex items-center gap-2">
+                            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 space-y-2">
+                                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-2">
                                     <MapPin size={16} />
                                     ตำแหน่ง GPS
                                 </p>
                                 {attendance.clockInLatitude && (
-                                    <p className="text-xs text-surface-500">
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                         เข้า: {attendance.clockInLatitude?.toFixed(6)}, {attendance.clockInLongitude?.toFixed(6)}
                                         {attendance.clockInAccuracy && ` (±${Math.round(attendance.clockInAccuracy)}m)`}
                                     </p>
                                 )}
                                 {attendance.clockOutLatitude && (
-                                    <p className="text-xs text-surface-500">
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                         ออก: {attendance.clockOutLatitude?.toFixed(6)}, {attendance.clockOutLongitude?.toFixed(6)}
                                         {attendance.clockOutAccuracy && ` (±${Math.round(attendance.clockOutAccuracy)}m)`}
                                     </p>
@@ -261,8 +274,8 @@ export default function AttendanceDetailModal({
                         {/* Notes */}
                         {attendance.notes && (
                             <div>
-                                <p className="text-sm text-surface-500">หมายเหตุ</p>
-                                <p className="text-surface-700">{attendance.notes}</p>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400">หมายเหตุ</p>
+                                <p className="text-neutral-700 dark:text-neutral-300">{attendance.notes}</p>
                             </div>
                         )}
 
@@ -284,7 +297,7 @@ export default function AttendanceDetailModal({
                 )}
 
                 {/* Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-surface-200">
+                <div className="flex justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-700">
                     {isEditing ? (
                         <>
                             <Button

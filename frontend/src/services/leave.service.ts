@@ -307,4 +307,29 @@ export default {
     },
     updateLeaveBalance,
     initializeBalances,
+    // Document management
+    uploadLeaveDocument: async (requestId: string, file: File): Promise<{ documentUrl: string }> => {
+        const formData = new FormData();
+        formData.append('document', file);
+
+        const response = await api.post<ApiResponse<{ documentUrl: string }>>(
+            `/leave-requests/${requestId}/document`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        return response.data.data;
+    },
+    getLeaveDocumentUrl: async (requestId: string): Promise<{ url: string }> => {
+        const response = await api.get<ApiResponse<{ url: string }>>(
+            `/leave-requests/${requestId}/document`
+        );
+        return response.data.data;
+    },
+    deleteLeaveDocument: async (requestId: string): Promise<void> => {
+        await api.delete(`/leave-requests/${requestId}/document`);
+    },
 };
