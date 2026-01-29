@@ -31,3 +31,7 @@ dist-ssr
 .env.production.local
 .env.development
 .env.preview
+
+# Test output
+test_output.txt
+

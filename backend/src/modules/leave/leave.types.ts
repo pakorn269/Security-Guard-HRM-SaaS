@@ -48,6 +48,7 @@ export interface LeaveRequestRowWithDetails extends LeaveRequestRow {
         id: string;
         full_name: string;
         employee_code: string;
+        user_id: string;
     };
     leave_types: {
         id: string;
@@ -97,6 +98,7 @@ export interface LeaveBalanceRowWithDetails extends LeaveBalanceRow {
         id: string;
         full_name: string;
         employee_code: string;
+        user_id: string;
     };
 }
 
@@ -146,6 +148,7 @@ export interface LeaveRequestWithDetails extends LeaveRequest {
         id: string;
         fullName: string;
         employeeCode: string;
+        userId: string;
     };
     leaveType?: {
         id: string;
@@ -196,6 +199,7 @@ export interface LeaveBalanceWithDetails extends LeaveBalance {
         id: string;
         fullName: string;
         employeeCode: string;
+        userId: string;
     };
 }
 

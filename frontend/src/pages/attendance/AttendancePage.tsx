@@ -11,11 +11,16 @@ import {
   List,
   Map,
   MapPin,
-
+  Download,
   Filter,
   ChevronDown,
+  FileX,
+  Trash2,
+  Check,
+  Edit3,
 } from 'lucide-react';
 import { Button, Card, Input, Badge, Avatar } from '../../components/common';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { PageHeader } from '../../components/layout';
 import { Stat } from '../../components/data-display';
 import { Tabs, TabList, Tab, Menu, MenuItem } from '../../components/navigation';
@@ -23,11 +28,15 @@ import { DataTable, Pagination, type ColumnDef } from '../../components/data-dis
 import {
   listAttendance,
   getDailyReport,
+  exportAttendance,
+  bulkUpdateAttendance,
   type AttendanceLogWithDetails,
   type AttendanceSummary,
   type ListAttendanceQuery,
+  type AttendanceStatus,
 } from '../../services/attendance.service';
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
+import { sitesService, type Site } from '../../services/sites.service';
 import AttendanceDetailModal from './AttendanceDetailModal';
 
 /**
@@ -80,12 +89,21 @@ export default function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceLogWithDetails[]>([]);
   const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceLogWithDetails | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'approve' | 'update_status' | 'delete' | null>(null);
+  const [bulkStatus, setBulkStatus] = useState<AttendanceStatus | undefined>();
+  const [bulkReason, setBulkReason] = useState('');
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState<ListAttendanceQuery>({
@@ -137,6 +155,16 @@ export default function AttendancePage() {
     }
   }, []);
 
+  // Fetch sites for filter
+  const fetchSites = useCallback(async () => {
+    try {
+      const result = await sitesService.list({ pageSize: 100 });
+      setSites(result.data || []);
+    } catch (err) {
+      console.error('Failed to load sites:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -144,6 +172,10 @@ export default function AttendancePage() {
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
+
+  useEffect(() => {
+    fetchSites();
+  }, [fetchSites]);
 
   // Format time
   const formatTime = (timeStr: string | null | undefined): string => {
@@ -179,6 +211,80 @@ export default function AttendancePage() {
       [key]: value || undefined,
       page: 1,
     }));
+  };
+
+  // Handle export
+  const handleExport = async (format: 'csv' | 'excel') => {
+    setIsExporting(true);
+    try {
+      const blob = await exportAttendance(format, {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        employeeId: filters.employeeId,
+        siteId: filters.siteId,
+        status: filters.status,
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `attendance_${new Date().toISOString().split('T')[0]}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export attendance');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handle bulk action confirmation
+  const handleBulkAction = (action: 'approve' | 'update_status' | 'delete') => {
+    setBulkAction(action);
+    setBulkReason('');
+    setBulkStatus(undefined);
+  };
+
+  // Execute bulk action
+  const executeBulkAction = async () => {
+    if (!bulkAction || !bulkReason.trim()) {
+      setError('กรุณาระบุเหตุผลในการดำเนินการ');
+      return;
+    }
+
+    if (bulkAction === 'update_status' && !bulkStatus) {
+      setError('กรุณาเลือกสถานะ');
+      return;
+    }
+
+    setIsBulkProcessing(true);
+    setError(null);
+
+    try {
+      const result = await bulkUpdateAttendance({
+        ids: Array.from(selectedIds),
+        action: bulkAction,
+        status: bulkStatus,
+        reason: bulkReason,
+      });
+
+      // Success - refresh data and clear selection
+      await fetchData();
+      setSelectedIds(new Set());
+      setBulkAction(null);
+      setBulkReason('');
+      setBulkStatus(undefined);
+
+      // Show success message (you could use a toast notification here)
+      alert(`สำเร็จ: ${result.updated} รายการ`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to perform bulk action');
+    } finally {
+      setIsBulkProcessing(false);
+    }
   };
 
   // Handle page change
@@ -308,6 +414,27 @@ export default function AttendancePage() {
                 </Tab>
               </TabList>
             </Tabs>
+            <Menu
+              trigger={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={isExporting ? <LoadingSpinner size="sm" className="mr-1" /> : <Download size={16} />}
+                  disabled={isExporting || records.length === 0}
+                >
+                  {isExporting ? t('common.exporting', 'กำลังส่งออก...') : t('common.export', 'ส่งออก')}
+                </Button>
+              }
+            >
+              <MenuItem onClick={() => handleExport('csv')} disabled={isExporting}>
+                <Download size={16} className="mr-2" />
+                {t('attendance.exportCsv', 'ส่งออก CSV')}
+              </MenuItem>
+              <MenuItem onClick={() => handleExport('excel')} disabled={isExporting}>
+                <Download size={16} className="mr-2" />
+                {t('attendance.exportExcel', 'ส่งออก Excel')}
+              </MenuItem>
+            </Menu>
             <Button variant="outline" size="sm" leftIcon={<RefreshCw size={16} />} onClick={fetchData} disabled={isLoading}>
               {t('common.refresh', 'รีเฟรช')}
             </Button>
@@ -444,24 +571,53 @@ export default function AttendancePage() {
         {/* Advanced Filters (Collapsible) */}
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Site Filter */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
-                  {t('attendance.location', 'สถานที่')}
+                  {t('attendance.site', 'สถานที่')}
                 </label>
-                <select className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm">
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
+                  value={filters.siteId || ''}
+                  onChange={(e) => handleFilterChange('siteId', e.target.value)}
+                >
                   <option value="">{t('common.all', 'ทั้งหมด')}</option>
+                  {sites.map((site) => (
+                    <option key={site.id} value={site.id}>
+                      {site.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              {/* GPS Accuracy Filter */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
                   {t('attendance.accuracy', 'ความแม่นยำ GPS')}
                 </label>
-                <select className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm">
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
+                  value={
+                    filters.maxAccuracy === undefined
+                      ? ''
+                      : filters.maxAccuracy <= 10
+                        ? '10'
+                        : filters.maxAccuracy <= 30
+                          ? '30'
+                          : filters.maxAccuracy <= 100
+                            ? '100'
+                            : ''
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleFilterChange('maxAccuracy', value ? value : undefined);
+                  }}
+                >
                   <option value="">{t('common.all', 'ทั้งหมด')}</option>
-                  <option value="high">{t('attendance.highAccuracy', 'แม่นยำมาก (≤10m)')}</option>
-                  <option value="medium">{t('attendance.mediumAccuracy', 'ปานกลาง (≤100m)')}</option>
-                  <option value="low">{t('attendance.lowAccuracy', 'ไม่แม่นยำ (>100m)')}</option>
+                  <option value="10">{t('attendance.highAccuracy', 'แม่นยำมาก (≤10m)')}</option>
+                  <option value="30">{t('attendance.goodAccuracy', 'แม่นยำ (≤30m)')}</option>
+                  <option value="100">{t('attendance.mediumAccuracy', 'ปานกลาง (≤100m)')}</option>
                 </select>
               </div>
               <div>
@@ -480,11 +636,77 @@ export default function AttendancePage() {
       </Card>
 
       {/* Error State */}
-      {error && (
+      {error && !isLoading && (
         <Card variant="bordered" padding="md" className="border-error-200 bg-error-50 dark:bg-error-900/20">
-          <div className="flex items-center gap-3 text-error-700 dark:text-error-400">
-            <AlertTriangle size={20} />
-            <p>{error}</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-error-700 dark:text-error-400">
+              <AlertTriangle size={20} />
+              <div>
+                <p className="font-medium">{t('common.error', 'เกิดข้อผิดพลาด')}</p>
+                <p className="text-sm mt-1">{error}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setError(null);
+                fetchData();
+              }}
+              className="border-error-300 text-error-700 hover:bg-error-100 dark:border-error-700 dark:text-error-400 dark:hover:bg-error-900/40"
+            >
+              {t('common.retry', 'ลองอีกครั้ง')}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <Card variant="bordered" padding="md" className="border-primary-200 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-800">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle size={20} className="text-primary-600 dark:text-primary-400" />
+              <span className="font-medium text-primary-900 dark:text-primary-100">
+                {t('common.selected', 'เลือกแล้ว')}: {selectedIds.size} {t('common.items', 'รายการ')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Check size={16} />}
+                onClick={() => handleBulkAction('approve')}
+                className="border-success-300 text-success-700 hover:bg-success-100 dark:border-success-700 dark:text-success-400"
+              >
+                {t('attendance.bulkApprove', 'อนุมัติ')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Edit3 size={16} />}
+                onClick={() => handleBulkAction('update_status')}
+                className="border-primary-300 text-primary-700 hover:bg-primary-100 dark:border-primary-700 dark:text-primary-400"
+              >
+                {t('attendance.bulkUpdate', 'เปลี่ยนสถานะ')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Trash2 size={16} />}
+                onClick={() => handleBulkAction('delete')}
+                className="border-error-300 text-error-700 hover:bg-error-100 dark:border-error-700 dark:text-error-400"
+              >
+                {t('attendance.bulkDelete', 'ลบ')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                {t('common.cancel', 'ยกเลิก')}
+              </Button>
+            </div>
           </div>
         </Card>
       )}
@@ -499,8 +721,42 @@ export default function AttendancePage() {
             getRowId={(record) => record.id}
             isLoading={isLoading}
             isHoverable
+            isSelectable={true}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
             onRowClick={handleRowClick}
-            emptyMessage={t('attendance.noRecords', 'ไม่พบข้อมูลการลงเวลา')}
+            emptyMessage={
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileX size={48} className="text-neutral-300 dark:text-neutral-600 mb-4" />
+                <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                  {t('attendance.noRecords', 'ไม่พบข้อมูลการลงเวลา')}
+                </h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md">
+                  {filters.startDate || filters.endDate || filters.employeeId || filters.siteId || filters.status
+                    ? t('attendance.noRecordsFiltered', 'ลองปรับเปลี่ยนตัวกรองเพื่อค้นหาข้อมูลอื่น')
+                    : t('attendance.noRecordsYet', 'ยังไม่มีข้อมูลการลงเวลา กรุณาเพิ่มข้อมูลใหม่')
+                  }
+                </p>
+                {(filters.startDate || filters.endDate || filters.employeeId || filters.siteId || filters.status) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      setFilters({
+                        page: 1,
+                        pageSize: 20,
+                        startDate: new Date().toISOString().split('T')[0],
+                        endDate: new Date().toISOString().split('T')[0],
+                      });
+                    }}
+                    leftIcon={<XCircle size={16} />}
+                  >
+                    {t('common.clearFilters', 'ล้างตัวกรอง')}
+                  </Button>
+                )}
+              </div>
+            }
             useMobileCards
           />
 
@@ -544,6 +800,100 @@ export default function AttendancePage() {
             setSelectedRecord(null);
           }}
         />
+      )}
+
+      {/* Bulk Action Confirmation Modal */}
+      {bulkAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <Card className="w-full max-w-md bg-white dark:bg-neutral-900">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                {bulkAction === 'delete' && <Trash2 size={24} className="text-error-600" />}
+                {bulkAction === 'approve' && <Check size={24} className="text-success-600" />}
+                {bulkAction === 'update_status' && <Edit3 size={24} className="text-primary-600" />}
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  {bulkAction === 'delete' && t('attendance.confirmDelete', 'ยืนยันการลบ')}
+                  {bulkAction === 'approve' && t('attendance.confirmApprove', 'ยืนยันการอนุมัติ')}
+                  {bulkAction === 'update_status' && t('attendance.confirmUpdate', 'ยืนยันการเปลี่ยนสถานะ')}
+                </h3>
+              </div>
+
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                {t('attendance.bulkActionConfirmMessage', `คุณกำลังจะดำเนินการกับ ${selectedIds.size} รายการ`)}
+              </p>
+
+              {bulkAction === 'update_status' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                    {t('attendance.status', 'สถานะ')} *
+                  </label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
+                    value={bulkStatus || ''}
+                    onChange={(e) => setBulkStatus(e.target.value as AttendanceStatus)}
+                  >
+                    <option value="">{t('common.selectStatus', 'เลือกสถานะ')}</option>
+                    <option value="on_time">{t('attendance.onTime', 'ตรงเวลา')}</option>
+                    <option value="late">{t('attendance.late', 'สาย')}</option>
+                    <option value="completed">{t('attendance.completed', 'เสร็จสิ้น')}</option>
+                    <option value="early_leave">{t('attendance.earlyLeave', 'ออกก่อน')}</option>
+                    <option value="no_show">{t('attendance.noShow', 'ไม่มา')}</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+                  {t('attendance.reason', 'เหตุผล')} *
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
+                  rows={3}
+                  placeholder={t('attendance.reasonPlaceholder', 'ระบุเหตุผลในการดำเนินการ')}
+                  value={bulkReason}
+                  onChange={(e) => setBulkReason(e.target.value)}
+                />
+              </div>
+
+              {error && (
+                <div className="bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg p-3">
+                  <p className="text-error-700 dark:text-error-400 text-sm">{error}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkAction(null);
+                    setBulkReason('');
+                    setBulkStatus(undefined);
+                    setError(null);
+                  }}
+                  disabled={isBulkProcessing}
+                >
+                  {t('common.cancel', 'ยกเลิก')}
+                </Button>
+                <Button
+                  variant={bulkAction === 'delete' ? 'danger' : 'primary'}
+                  size="sm"
+                  onClick={executeBulkAction}
+                  disabled={isBulkProcessing || !bulkReason.trim()}
+                >
+                  {isBulkProcessing ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      {t('common.processing', 'กำลังดำเนินการ...')}
+                    </>
+                  ) : (
+                    t('common.confirm', 'ยืนยัน')
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

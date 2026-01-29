@@ -11,6 +11,7 @@ export type LineTemplateCategory =
     | 'leave_rejected'
     | 'attendance_late'
     | 'attendance_missing'
+    | 'attendance_no_show'
     | 'announcement'
     | 'custom';
 

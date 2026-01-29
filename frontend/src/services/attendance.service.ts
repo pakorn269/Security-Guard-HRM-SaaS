@@ -102,7 +102,10 @@ export interface ListAttendanceQuery {
     startDate?: string;
     endDate?: string;
     employeeId?: string;
+    siteId?: string;
+    zoneId?: string;
     status?: AttendanceStatus;
+    maxAccuracy?: number;
 }
 
 export interface AdjustAttendanceRequest {
@@ -217,6 +220,36 @@ export async function createAttendance(data: CreateAttendanceRequest): Promise<A
     return response.data.data;
 }
 
+export async function exportAttendance(
+    format: 'csv' | 'excel',
+    filters?: {
+        startDate?: string;
+        endDate?: string;
+        employeeId?: string;
+        siteId?: string;
+        status?: AttendanceStatus;
+    }
+): Promise<Blob> {
+    const response = await api.get('/attendance/export', {
+        params: {
+            format,
+            ...filters,
+        },
+        responseType: 'blob', // Important for file download
+    });
+    return response.data;
+}
+
+export async function bulkUpdateAttendance(data: {
+    ids: string[];
+    action: 'approve' | 'update_status' | 'delete';
+    status?: AttendanceStatus;
+    reason: string;
+}): Promise<{ updated: number }> {
+    const response = await api.post<ApiResponse<{ updated: number }>>('/attendance/bulk', data);
+    return response.data.data;
+}
+
 // Re-export types for convenience
 export type { AttendanceLog, AttendanceStatus, ClockInRequest, ClockOutRequest };
 
@@ -232,4 +265,6 @@ export default {
     getDailyReport,
     adjustAttendance,
     createAttendance,
+    exportAttendance,
+    bulkUpdateAttendance,
 };

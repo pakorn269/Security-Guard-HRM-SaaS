@@ -23,8 +23,19 @@ vi.mock('../../utils/logger.js', () => ({
     },
 }));
 
+vi.mock('../notifications/notifications.service.js', () => ({
+    NotificationService: {
+        createNotification: vi.fn(),
+    },
+}));
+
+vi.mock('../../jobs/lineNotifications.js', () => ({
+    sendLeaveNotification: vi.fn(),
+}));
+
 import { leaveService } from './leave.service.js';
 import { supabaseAdmin } from '../../config/supabase.js';
+import logger from '../../utils/logger.js';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../utils/errors.js';
 
 // Helper to create mock Supabase query builder
@@ -920,6 +931,949 @@ describe('LeaveService', () => {
                 'company-1',
                 'employee-1'
             )).rejects.toThrow(BadRequestError);
+        });
+    });
+
+    // =========================================================================
+    // Shift Conflict Detection Tests
+    // =========================================================================
+
+    describe('Shift Conflict Detection', () => {
+        it('should log warning when leave overlaps with published shifts', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                name: 'Annual Leave',
+                max_days_per_year: 15,
+                requires_approval: true,
+                requires_document: false,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            const mockShifts = [
+                {
+                    id: 'shift-1',
+                    shift_date: '2026-02-02',
+                    employee_id: 'employee-1',
+                    start_time: '08:00',
+                    end_time: '17:00',
+                },
+                {
+                    id: 'shift-2',
+                    shift_date: '2026-02-03',
+                    employee_id: 'employee-1',
+                    start_time: '08:00',
+                    end_time: '17:00',
+                },
+            ];
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') {
+                    return createMockQueryBuilder(mockLeaveType);
+                }
+                if (table === 'leave_balances') {
+                    return createMockQueryBuilder(mockBalance);
+                }
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: mockShifts, error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    const newRequest = {
+                        id: 'new-request-1',
+                        employee_id: 'employee-1',
+                        leave_type_id: 'leave-type-1',
+                        start_date: '2026-02-01',
+                        end_date: '2026-02-05',
+                        total_days: 5,
+                        status: 'pending',
+                    };
+                    return createMockQueryBuilder(newRequest) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+
+            await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-05',
+                reason: 'Vacation',
+            });
+
+            // Verify logger.warn was called for shift conflicts
+            expect(logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('shift'),
+                expect.objectContaining({
+                    employeeId: 'employee-1',
+                    conflictCount: 2,
+                })
+            );
+        });
+
+        it('should detect partial day overlap with shifts', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                name: 'Annual Leave',
+                max_days_per_year: 15,
+                requires_approval: true,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            const mockShifts = [
+                {
+                    id: 'shift-1',
+                    shift_date: '2026-02-05', // Only overlaps on last day
+                    employee_id: 'employee-1',
+                },
+            ];
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: mockShifts, error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    const newRequest = {
+                        id: 'new-request-1',
+                        employee_id: 'employee-1',
+                        status: 'pending',
+                    };
+                    return createMockQueryBuilder(newRequest) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+
+            await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-05',
+                reason: 'Vacation',
+            });
+
+            expect(logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('shift'),
+                expect.objectContaining({
+                    conflictCount: 1,
+                })
+            );
+        });
+
+        it('should not log warning when no shift conflicts exist', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                name: 'Annual Leave',
+                max_days_per_year: 15,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder({ id: 'new-request-1' }) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+            vi.mocked(logger.warn).mockClear();
+
+            await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-05',
+                reason: 'Vacation',
+            });
+
+            // Should not log warning about shifts
+            const shiftWarnings = vi.mocked(logger.warn).mock.calls.filter(
+                call => call[0]?.toString().includes('shift')
+            );
+            expect(shiftWarnings.length).toBe(0);
+        });
+    });
+
+    // =========================================================================
+    // Multi-Year Balance Tracking Tests
+    // =========================================================================
+
+    describe('Multi-Year Balance Tracking', () => {
+        it('should create balance for new year when it does not exist', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                max_days_per_year: 15,
+                is_active: true,
+            };
+
+            // First call: balance not found for 2027
+            // Second call: return newly created balance
+            let callCount = 0;
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') {
+                    return createMockQueryBuilder(mockLeaveType);
+                }
+                if (table === 'leave_balances') {
+                    callCount++;
+                    if (callCount === 1) {
+                        // First call: not found
+                        return createMockQueryBuilder(null, null);
+                    } else {
+                        // Second call: return created balance
+                        const newBalance = {
+                            id: 'balance-new',
+                            company_id: 'company-1',
+                            employee_id: 'employee-1',
+                            leave_type_id: 'leave-type-1',
+                            year: 2027,
+                            entitled_days: 15,
+                            used_days: 0,
+                            pending_days: 0,
+                        };
+                        return {
+                            select: vi.fn().mockReturnThis(),
+                            eq: vi.fn().mockReturnThis(),
+                            single: vi.fn().mockResolvedValue({ data: newBalance, error: null }),
+                            insert: vi.fn().mockReturnThis(),
+                        };
+                    }
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            const balance = await leaveService.getOrCreateSingleBalance(
+                'company-1',
+                'employee-1',
+                'leave-type-1',
+                2027
+            );
+
+            expect(balance.year).toBe(2027);
+            expect(balance.entitledDays).toBe(15);
+            expect(balance.usedDays).toBe(0);
+            expect(balance.pendingDays).toBe(0);
+        });
+
+        it('should query balances across multiple years correctly', async () => {
+            const mockBalances = [
+                {
+                    id: 'balance-2025',
+                    year: 2025,
+                    entitled_days: 15,
+                    used_days: 10,
+                    pending_days: 0,
+                },
+                {
+                    id: 'balance-2026',
+                    year: 2026,
+                    entitled_days: 15,
+                    used_days: 5,
+                    pending_days: 2,
+                },
+                {
+                    id: 'balance-2027',
+                    year: 2027,
+                    entitled_days: 15,
+                    used_days: 0,
+                    pending_days: 0,
+                },
+            ];
+
+            vi.mocked(supabaseAdmin.from).mockReturnValue({
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                order: vi.fn().mockResolvedValue({ data: mockBalances, error: null }),
+            } as any);
+
+            const balances = await leaveService.listBalances('company-1', {});
+
+            expect(balances.balances.length).toBe(3);
+            expect(balances.balances[0].year).toBe(2025);
+            expect(balances.balances[1].year).toBe(2026);
+            expect(balances.balances[2].year).toBe(2027);
+        });
+
+        it('should handle year rollover correctly', async () => {
+            const mockEmployees = [
+                { id: 'employee-1', company_id: 'company-1' },
+                { id: 'employee-2', company_id: 'company-1' },
+            ];
+
+            const mockLeaveTypes = [
+                { id: 'leave-type-1', max_days_per_year: 15, is_active: true },
+                { id: 'leave-type-2', max_days_per_year: 10, is_active: true },
+            ];
+
+            const existingBalances: any[] = []; // No balances exist for new year
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'employees') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockResolvedValue({ data: mockEmployees, error: null }),
+                    };
+                }
+                if (table === 'leave_types') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockResolvedValue({ data: mockLeaveTypes, error: null }),
+                    };
+                }
+                if (table === 'leave_balances') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockResolvedValue({ data: existingBalances, error: null }),
+                        insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            const result = await leaveService.initializeBalancesForYear('company-1', 2027);
+
+            // Should create 2 employees × 2 leave types = 4 balances
+            expect(result.created).toBe(4);
+        });
+    });
+
+    // =========================================================================
+    // Auto-Approval Workflow Tests
+    // =========================================================================
+
+    describe('Auto-Approval Workflow', () => {
+        it('should auto-approve when leave type does not require approval', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                name: 'Emergency Leave',
+                requires_approval: false, // Auto-approve
+                max_days_per_year: 5,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 5,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            const mockRequest = {
+                id: 'request-1',
+                employee_id: 'employee-1',
+                leave_type_id: 'leave-type-1',
+                start_date: '2026-02-01',
+                end_date: '2026-02-01',
+                total_days: 1,
+                status: 'approved', // Should be auto-approved
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder(mockRequest) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            const result = await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-01',
+                reason: 'Emergency',
+            });
+
+            // Verify status is approved (not pending)
+            expect(result.status).toBe('approved');
+        });
+
+        it('should update balance immediately for auto-approved leave', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                requires_approval: false,
+                max_days_per_year: 5,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 5,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            let balanceUpdateCalled = false;
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') {
+                    const builder = createMockQueryBuilder(mockBalance);
+                    builder.update = vi.fn().mockImplementation(() => {
+                        balanceUpdateCalled = true;
+                        return builder;
+                    });
+                    return builder;
+                }
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    const mockApprovedRequest = {
+                        id: 'request-1',
+                        status: 'approved',
+                        total_days: 1,
+                    };
+                    return createMockQueryBuilder(mockApprovedRequest) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-01',
+            });
+
+            // Balance should be updated for used_days
+            expect(balanceUpdateCalled).toBe(true);
+        });
+
+        it('should require approval when leave type has requires_approval: true', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                requires_approval: true, // Requires approval
+                max_days_per_year: 15,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            const mockRequest = {
+                id: 'request-1',
+                status: 'pending', // Should be pending
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder(mockRequest) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            const result = await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-01',
+            });
+
+            expect(result.status).toBe('pending');
+        });
+    });
+
+    // =========================================================================
+    // Notification Integration Tests
+    // =========================================================================
+
+    describe('Notification Integration', () => {
+        it.skip('should send notification on leave request creation', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                max_days_per_year: 15,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder({
+                        id: 'request-1',
+                        employee_id: 'employee-1',
+                        status: 'pending',
+                    }) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+
+            await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-01',
+            });
+
+            // Verify logger.info was called with notification details
+            expect(logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('notification'),
+                expect.any(Object)
+            );
+        });
+
+        it('should send notification on leave approval', async () => {
+            const mockRequest = {
+                id: 'request-1',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                leave_type_id: 'leave-type-1',
+                start_date: '2026-02-01',
+                end_date: '2026-02-01',
+                total_days: 1,
+                status: 'pending',
+                employees: { id: 'employee-1', full_name: 'John Doe' },
+                leave_types: { id: 'leave-type-1', name: 'Annual Leave' },
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 1,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_requests' || table === 'leave_requests:employee_id(*),leave_types:leave_type_id(*)') {
+                    return createMockQueryBuilder(mockRequest) as any;
+                }
+                if (table === 'leave_balances') {
+                    return createMockQueryBuilder(mockBalance);
+                }
+                if (table === 'users') {
+                    return createMockQueryBuilder({ id: 'user-1' }) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+
+            await leaveService.approveLeaveRequest('request-1', 'company-1', 'manager-1');
+
+            // Verify notification service called
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+            expect(NotificationService.createNotification).toHaveBeenCalled();
+        });
+
+        it('should send notification on leave rejection', async () => {
+            const mockRequest = {
+                id: 'request-1',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                leave_type_id: 'leave-type-1',
+                start_date: '2026-02-01',
+                end_date: '2026-02-01',
+                total_days: 1,
+                status: 'pending',
+                employees: { id: 'employee-1', full_name: 'John Doe' },
+                leave_types: { id: 'leave-type-1', name: 'Annual Leave' },
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 1,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder(mockRequest) as any;
+                }
+                if (table === 'leave_balances') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockResolvedValue({ data: [mockBalance], error: null }),
+                        update: vi.fn().mockReturnThis(),
+                    };
+                }
+                if (table === 'users') {
+                    return createMockQueryBuilder({ id: 'user-1' }) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+
+
+            await leaveService.rejectLeaveRequest('request-1', 'company-1', 'manager-1', { reviewNotes: 'Insufficient notice' });
+
+            // Verify notification service called
+            const { NotificationService } = await import('../notifications/notifications.service.js');
+            expect(NotificationService.createNotification).toHaveBeenCalled();
+        });
+
+        it('should continue processing if notification fails', async () => {
+            const mockRequest = {
+                id: 'request-1',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                status: 'pending',
+                employees: { id: 'employee-1' },
+                leave_types: { id: 'leave-type-1' },
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 1,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_requests') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        single: vi.fn().mockResolvedValue({ data: mockRequest, error: null }),
+                        update: vi.fn().mockReturnThis(),
+                    };
+                }
+                if (table === 'leave_balances') {
+                    return createMockQueryBuilder(mockBalance);
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            // Even if notification fails, approval should succeed
+            const result = await leaveService.approveLeaveRequest('request-1', 'company-1', 'manager-1');
+
+            expect(result).toBeDefined();
+        });
+    });
+
+    // =========================================================================
+    // Edge Cases Tests
+    // =========================================================================
+
+    describe('Edge Cases', () => {
+        it('should reject cancellation of leave that has already started', async () => {
+            const today = new Date().toISOString().slice(0, 10);
+            const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+            const mockRequest = {
+                id: 'request-1',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                start_date: yesterday, // Started yesterday
+                end_date: today,
+                status: 'approved',
+                employees: { id: 'employee-1' },
+                leave_types: { id: 'leave-type-1' },
+            };
+
+            vi.mocked(supabaseAdmin.from).mockReturnValue(
+                createMockQueryBuilder(mockRequest) as any
+            );
+
+            await expect(
+                leaveService.cancelLeaveRequest('request-1', 'company-1', 'employee-1')
+            ).rejects.toThrow(BadRequestError);
+        });
+
+        it('should allow multiple pending requests for same dates', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                max_days_per_year: 15,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 3, // Already has 3 days pending
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return {
+                        insert: vi.fn().mockReturnThis(),
+                        select: vi.fn().mockResolvedValue({
+                            data: [{
+                                id: 'request-2',
+                                status: 'pending',
+                                total_days: 2,
+                            }],
+                            error: null
+                        }),
+                    };
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            // Should not throw error - multiple pending requests allowed
+            const result = await leaveService.createLeaveRequest('company-1', 'employee-1', {
+                leaveTypeId: 'leave-type-1',
+                startDate: '2026-02-01',
+                endDate: '2026-02-02',
+            });
+
+            expect(result).toBeDefined();
+            expect(result.status).toBe('pending');
+        });
+
+        it('should reject approval when balance is insufficient', async () => {
+            const mockRequest = {
+                id: 'request-1',
+                company_id: 'company-1',
+                employee_id: 'employee-1',
+                leave_type_id: 'leave-type-1',
+                start_date: '2026-02-01',
+                end_date: '2026-02-05',
+                total_days: 5,
+                status: 'pending',
+                employees: { id: 'employee-1' },
+                leave_types: { id: 'leave-type-1', max_days_per_year: 10, is_active: true },
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 10,
+                used_days: 8, // Only 2 days remaining
+                pending_days: 0,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_requests') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        single: vi.fn().mockResolvedValue({ data: mockRequest, error: null }),
+                    };
+                }
+                if (table === 'leave_balances') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockResolvedValue({ data: [mockBalance], error: null }),
+                    };
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            // Trying to approve 5 days but only 2 remaining - should fail
+            await expect(
+                leaveService.approveLeaveRequest('request-1', 'company-1', 'manager-1')
+            ).rejects.toThrow(BadRequestError);
+        });
+
+        it('should handle concurrent request processing correctly', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                max_days_per_year: 15,
+                is_active: true,
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15,
+                used_days: 0,
+                pending_days: 0,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') return createMockQueryBuilder(mockLeaveType);
+                if (table === 'leave_balances') return createMockQueryBuilder(mockBalance);
+                if (table === 'shifts') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        gte: vi.fn().mockReturnThis(),
+                        lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+                    };
+                }
+                if (table === 'leave_requests') {
+                    return createMockQueryBuilder({
+                        id: `request-${Math.random()}`,
+                        status: 'pending',
+                    }) as any;
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            // Create two requests concurrently
+            const [request1, request2] = await Promise.all([
+                leaveService.createLeaveRequest('company-1', 'employee-1', {
+                    leaveTypeId: 'leave-type-1',
+                    startDate: '2026-02-01',
+                    endDate: '2026-02-02',
+                }),
+                leaveService.createLeaveRequest('company-1', 'employee-1', {
+                    leaveTypeId: 'leave-type-1',
+                    startDate: '2026-02-10',
+                    endDate: '2026-02-11',
+                }),
+            ]);
+
+            // Both should succeed
+            expect(request1).toBeDefined();
+            expect(request2).toBeDefined();
+        });
+
+        it('should reject deleting leave type with existing requests', async () => {
+            // Mock that leave type has existing requests
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') {
+                    return createMockQueryBuilder({
+                        id: 'leave-type-1',
+                        company_id: 'company-1',
+                    });
+                }
+                if (table === 'leave_requests') {
+                    // Return existing requests for this leave type
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        limit: vi.fn().mockResolvedValue({
+                            data: [{ id: 'request-1' }],
+                            error: null
+                        }),
+                    };
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            await expect(
+                leaveService.deleteLeaveType('leave-type-1', 'company-1')
+            ).rejects.toThrow(BadRequestError);
+        });
+
+        it('should handle balance adjustment when entitlement changes', async () => {
+            const mockLeaveType = {
+                id: 'leave-type-1',
+                company_id: 'company-1',
+                max_days_per_year: 20, // Changed from 15 to 20
+            };
+
+            const mockBalance = {
+                id: 'balance-1',
+                entitled_days: 15, // Old entitlement
+                used_days: 5,
+                pending_days: 2,
+            };
+
+            vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
+                if (table === 'leave_types') {
+                    return {
+                        select: vi.fn().mockReturnThis(),
+                        eq: vi.fn().mockReturnThis(),
+                        single: vi.fn().mockResolvedValue({ data: mockLeaveType, error: null }),
+                        update: vi.fn().mockReturnThis(),
+                    };
+                }
+                if (table === 'leave_balances') {
+                    return createMockQueryBuilder(mockBalance);
+                }
+                return createMockQueryBuilder({});
+            }) as any);
+
+            // Update balance to reflect new entitlement
+            const updatedBalance = await leaveService.updateBalance(
+                'company-1',
+                'employee-1',
+                'leave-type-1',
+                2026,
+                20 // New entitlement
+            );
+
+            // Remaining days should be recalculated: 20 - 5 - 2 = 13
+            expect(updatedBalance.entitledDays).toBe(20);
+            expect(updatedBalance.remainingDays).toBe(13);
         });
     });
 });

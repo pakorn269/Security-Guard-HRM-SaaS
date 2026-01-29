@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import * as ExcelJS from 'exceljs';
 import { attendanceService } from './attendance.service.js';
 import {
     clockInSchema,
@@ -9,6 +10,8 @@ import {
     myAttendanceQuerySchema,
     todayAttendanceQuerySchema,
     attendanceReportQuerySchema,
+    exportAttendanceQuerySchema,
+    bulkUpdateAttendanceSchema,
 } from './attendance.validation.js';
 import { success } from '../../utils/response.js';
 import { BadRequestError, UnauthorizedError } from '../../utils/errors.js';
@@ -236,6 +239,221 @@ class AttendanceController {
 
             return res.json(
                 success(attendance, 'Attendance record adjusted', 'แก้ไขบันทึกการลงเวลาสำเร็จ')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /attendance/export - Export attendance records
+    async export(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const query = exportAttendanceQuerySchema.parse(req.query);
+            const { format, ...filters } = query;
+
+            // Fetch data
+            const records = await attendanceService.generateExportData(
+                req.user.companyId,
+                filters
+            );
+
+            if (format === 'csv') {
+                // Generate CSV
+                const csvLines: string[] = [];
+
+                // Header row (Thai)
+                csvLines.push([
+                    'รหัสพนักงาน',
+                    'ชื่อพนักงาน',
+                    'วันที่เข้า',
+                    'เวลาเข้า',
+                    'ละติจูด (เข้า)',
+                    'ลองจิจูด (เข้า)',
+                    'วันที่ออก',
+                    'เวลาออก',
+                    'ละติจูด (ออก)',
+                    'ลองจิจูด (ออก)',
+                    'สถานะ',
+                    'รวมชั่วโมง',
+                    'ชั่วโมงล่วงเวลา',
+                    'หมายเหตุ',
+                    'กะงาน',
+                    'สถานที่',
+                ].join(','));
+
+                // Data rows
+                for (const record of records) {
+                    const clockInDate = record.clockInTime
+                        ? new Date(record.clockInTime).toLocaleDateString('th-TH')
+                        : '-';
+                    const clockInTime = record.clockInTime
+                        ? new Date(record.clockInTime).toLocaleTimeString('th-TH')
+                        : '-';
+                    const clockOutDate = record.clockOutTime
+                        ? new Date(record.clockOutTime).toLocaleDateString('th-TH')
+                        : '-';
+                    const clockOutTime = record.clockOutTime
+                        ? new Date(record.clockOutTime).toLocaleTimeString('th-TH')
+                        : '-';
+
+                    const statusMap: Record<string, string> = {
+                        on_time: 'ตรงเวลา',
+                        late: 'สาย',
+                        completed: 'เสร็จสิ้น',
+                        early_leave: 'ออกก่อน',
+                        no_show: 'ไม่มา',
+                        pending: 'รอดำเนินการ',
+                    };
+
+                    const row = [
+                        record.employee?.employeeCode || '-',
+                        record.employee?.fullName || '-',
+                        clockInDate,
+                        clockInTime,
+                        record.clockInLatitude?.toFixed(6) || '-',
+                        record.clockInLongitude?.toFixed(6) || '-',
+                        clockOutDate,
+                        clockOutTime,
+                        record.clockOutLatitude?.toFixed(6) || '-',
+                        record.clockOutLongitude?.toFixed(6) || '-',
+                        statusMap[record.status] || record.status,
+                        record.totalHours?.toString() || '-',
+                        record.overtimeHours?.toString() || '-',
+                        (record.notes || '-').replace(/,/g, ';'), // Escape commas
+                        record.shift
+                            ? `${record.shift.startTime}-${record.shift.endTime}`
+                            : '-',
+                        record.shift?.location || '-',
+                    ];
+
+                    csvLines.push(row.map(v => `"${v}"`).join(','));
+                }
+
+                const csv = '\uFEFF' + csvLines.join('\n'); // Add BOM for Thai chars
+
+                res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+                res.setHeader(
+                    'Content-Disposition',
+                    `attachment; filename="attendance_${new Date().toISOString().split('T')[0]}.csv"`
+                );
+                return res.send(csv);
+            } else {
+                // Generate Excel
+                const workbook = new ExcelJS.default.Workbook();
+                const worksheet = workbook.addWorksheet('Attendance Records');
+
+                // Define columns
+                worksheet.columns = [
+                    { header: 'รหัสพนักงาน', key: 'employeeCode', width: 15 },
+                    { header: 'ชื่อพนักงาน', key: 'fullName', width: 25 },
+                    { header: 'วันที่เข้า', key: 'clockInDate', width: 15 },
+                    { header: 'เวลาเข้า', key: 'clockInTime', width: 12 },
+                    { header: 'ละติจูด (เข้า)', key: 'clockInLat', width: 15 },
+                    { header: 'ลองจิจูด (เข้า)', key: 'clockInLng', width: 15 },
+                    { header: 'วันที่ออก', key: 'clockOutDate', width: 15 },
+                    { header: 'เวลาออก', key: 'clockOutTime', width: 12 },
+                    { header: 'ละติจูด (ออก)', key: 'clockOutLat', width: 15 },
+                    { header: 'ลองจิจูด (ออก)', key: 'clockOutLng', width: 15 },
+                    { header: 'สถานะ', key: 'status', width: 15 },
+                    { header: 'รวมชั่วโมง', key: 'totalHours', width: 12 },
+                    { header: 'ชั่วโมงล่วงเวลา', key: 'overtimeHours', width: 15 },
+                    { header: 'หมายเหตุ', key: 'notes', width: 30 },
+                    { header: 'กะงาน', key: 'shift', width: 20 },
+                    { header: 'สถานที่', key: 'location', width: 25 },
+                ];
+
+                // Style header row
+                worksheet.getRow(1).font = { bold: true };
+                worksheet.getRow(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE0E0E0' },
+                };
+
+                // Add data rows
+                const statusMap: Record<string, string> = {
+                    on_time: 'ตรงเวลา',
+                    late: 'สาย',
+                    completed: 'เสร็จสิ้น',
+                    early_leave: 'ออกก่อน',
+                    no_show: 'ไม่มา',
+                    pending: 'รอดำเนินการ',
+                };
+
+                for (const record of records) {
+                    worksheet.addRow({
+                        employeeCode: record.employee?.employeeCode || '-',
+                        fullName: record.employee?.fullName || '-',
+                        clockInDate: record.clockInTime
+                            ? new Date(record.clockInTime).toLocaleDateString('th-TH')
+                            : '-',
+                        clockInTime: record.clockInTime
+                            ? new Date(record.clockInTime).toLocaleTimeString('th-TH')
+                            : '-',
+                        clockInLat: record.clockInLatitude?.toFixed(6) || '-',
+                        clockInLng: record.clockInLongitude?.toFixed(6) || '-',
+                        clockOutDate: record.clockOutTime
+                            ? new Date(record.clockOutTime).toLocaleDateString('th-TH')
+                            : '-',
+                        clockOutTime: record.clockOutTime
+                            ? new Date(record.clockOutTime).toLocaleTimeString('th-TH')
+                            : '-',
+                        clockOutLat: record.clockOutLatitude?.toFixed(6) || '-',
+                        clockOutLng: record.clockOutLongitude?.toFixed(6) || '-',
+                        status: statusMap[record.status] || record.status,
+                        totalHours: record.totalHours?.toString() || '-',
+                        overtimeHours: record.overtimeHours?.toString() || '-',
+                        notes: record.notes || '-',
+                        shift: record.shift
+                            ? `${record.shift.startTime}-${record.shift.endTime}`
+                            : '-',
+                        location: record.shift?.location || '-',
+                    });
+                }
+
+                // Set response headers
+                res.setHeader(
+                    'Content-Type',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                );
+                res.setHeader(
+                    'Content-Disposition',
+                    `attachment; filename="attendance_${new Date().toISOString().split('T')[0]}.xlsx"`
+                );
+
+                // Write to response
+                await workbook.xlsx.write(res);
+                return res.end();
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /attendance/bulk - Bulk update attendance records
+    async bulkUpdate(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.companyId || !req.user?.userId) {
+                throw new UnauthorizedError('Company ID or User ID not found');
+            }
+
+            const data = bulkUpdateAttendanceSchema.parse(req.body);
+            const result = await attendanceService.bulkUpdate(
+                req.user.companyId,
+                req.user.userId,
+                data
+            );
+
+            return res.json(
+                success(
+                    { updated: result.updated },
+                    result.message,
+                    result.messageTh
+                )
             );
         } catch (error) {
             next(error);

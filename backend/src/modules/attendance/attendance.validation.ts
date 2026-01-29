@@ -100,7 +100,10 @@ export const listAttendanceQuerySchema = z.object({
         .regex(dateRegex, 'Invalid date format (YYYY-MM-DD)')
         .optional(),
     employeeId: z.string().uuid('Invalid employee ID').optional(),
+    siteId: z.string().uuid('Invalid site ID').optional(),
+    zoneId: z.string().uuid('Invalid zone ID').optional(),
     status: attendanceStatusEnum.optional(),
+    maxAccuracy: z.coerce.number().min(0).max(1000).optional(), // Max GPS accuracy in meters
 });
 
 export const myAttendanceQuerySchema = z.object({
@@ -118,6 +121,37 @@ export const attendanceReportQuerySchema = z.object({
     date: z.string().regex(dateRegex, 'Invalid date format (YYYY-MM-DD)'),
 });
 
+export const exportAttendanceQuerySchema = z.object({
+    format: z.enum(['csv', 'excel'], {
+        errorMap: () => ({ message: 'Format must be either "csv" or "excel"' }),
+    }),
+    startDate: z
+        .string()
+        .regex(dateRegex, 'Invalid date format (YYYY-MM-DD)')
+        .optional(),
+    endDate: z
+        .string()
+        .regex(dateRegex, 'Invalid date format (YYYY-MM-DD)')
+        .optional(),
+    employeeId: z.string().uuid('Invalid employee ID').optional(),
+    siteId: z.string().uuid('Invalid site ID').optional(),
+    status: attendanceStatusEnum.optional(),
+});
+
+export const bulkUpdateAttendanceSchema = z.object({
+    ids: z
+        .array(z.string().uuid('Invalid attendance ID'))
+        .min(1, 'At least one attendance ID is required')
+        .max(100, 'Cannot update more than 100 records at once'),
+    action: z.enum(['approve', 'update_status', 'delete'], {
+        errorMap: () => ({ message: 'Action must be "approve", "update_status", or "delete"' }),
+    }),
+    // For update_status action
+    status: attendanceStatusEnum.optional(),
+    // Reason for bulk action
+    reason: z.string().min(1, 'Reason is required').max(500),
+});
+
 // ============================================================================
 // TYPE INFERENCE HELPERS
 // ============================================================================
@@ -130,3 +164,5 @@ export type ListAttendanceQueryInput = z.infer<typeof listAttendanceQuerySchema>
 export type MyAttendanceQueryInput = z.infer<typeof myAttendanceQuerySchema>;
 export type TodayAttendanceQueryInput = z.infer<typeof todayAttendanceQuerySchema>;
 export type AttendanceReportQueryInput = z.infer<typeof attendanceReportQuerySchema>;
+export type ExportAttendanceQueryInput = z.infer<typeof exportAttendanceQuerySchema>;
+export type BulkUpdateAttendanceInput = z.infer<typeof bulkUpdateAttendanceSchema>;

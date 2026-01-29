@@ -23,7 +23,27 @@ import sitesService, { type Site } from '../../services/sites.service';
 import useGeolocation from '../../hooks/useGeolocation';
 import GpsErrorModal from '../../components/common/GpsErrorModal';
 import { TimeDebugger } from '../../components/common';
+import type { ApiError } from '../../services/api';
 import QrScanner from 'qr-scanner';
+
+// Helper to extract Thai error message from API errors
+function getThaiErrorMessage(err: unknown, fallback: string): string {
+    // Check if it's an ApiError with message_th
+    if (err && typeof err === 'object') {
+        const apiErr = err as ApiError;
+        if (apiErr.message_th) {
+            return apiErr.message_th;
+        }
+        if (apiErr.message) {
+            return apiErr.message;
+        }
+    }
+    // Fallback for standard Error objects
+    if (err instanceof Error) {
+        return err.message;
+    }
+    return fallback;
+}
 
 export default function LiffClockPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +118,8 @@ export default function LiffClockPage() {
             const data = await getTodayAttendance();
             setTodayData(data);
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to load attendance status';
+            // Use Thai error message if available from API
+            const errorMessage = getThaiErrorMessage(err, 'ไม่สามารถโหลดสถานะการลงเวลาได้');
             setError(errorMessage);
         } finally {
             setIsLoading(false);
@@ -205,10 +226,15 @@ export default function LiffClockPage() {
             // Refresh status
             await fetchTodayStatus();
         } catch (err: unknown) {
-            if (err && typeof err === 'object' && 'code' in err) {
+            // Check if it's a geolocation error (has 'code' property AND is a GeolocationPositionError)
+            const isGeoError = err && typeof err === 'object' && 'code' in err &&
+                (err as { code: number }).code >= 1 && (err as { code: number }).code <= 3;
+
+            if (isGeoError) {
                 setShowGpsErrorModal(true);
             } else {
-                const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาเข้าได้';
+                // Use Thai error message if available from API
+                const errorMessage = getThaiErrorMessage(err, 'ไม่สามารถลงเวลาเข้าได้');
                 setError(errorMessage);
                 setPendingAction(null);
             }
@@ -263,12 +289,16 @@ export default function LiffClockPage() {
             // Refresh status
             await fetchTodayStatus();
         } catch (err: unknown) {
-            // Check if it's a geolocation error (has 'code' property from our hook)
-            if (err && typeof err === 'object' && 'code' in err) {
+            // Check if it's a geolocation error (has 'code' property AND is a GeolocationPositionError)
+            const isGeoError = err && typeof err === 'object' && 'code' in err &&
+                (err as { code: number }).code >= 1 && (err as { code: number }).code <= 3;
+
+            if (isGeoError) {
                 // Show the GPS error modal
                 setShowGpsErrorModal(true);
             } else {
-                const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาเข้าได้';
+                // Use Thai error message if available from API
+                const errorMessage = getThaiErrorMessage(err, 'ไม่สามารถลงเวลาเข้าได้');
                 setError(errorMessage);
                 setPendingAction(null);
             }
@@ -303,12 +333,16 @@ export default function LiffClockPage() {
             // Refresh status
             await fetchTodayStatus();
         } catch (err: unknown) {
-            // Check if it's a geolocation error (has 'code' property from our hook)
-            if (err && typeof err === 'object' && 'code' in err) {
+            // Check if it's a geolocation error (has 'code' property AND is a GeolocationPositionError)
+            const isGeoError = err && typeof err === 'object' && 'code' in err &&
+                (err as { code: number }).code >= 1 && (err as { code: number }).code <= 3;
+
+            if (isGeoError) {
                 // Show the GPS error modal
                 setShowGpsErrorModal(true);
             } else {
-                const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถลงเวลาออกได้';
+                // Use Thai error message if available from API
+                const errorMessage = getThaiErrorMessage(err, 'ไม่สามารถลงเวลาออกได้');
                 setError(errorMessage);
                 setPendingAction(null);
             }

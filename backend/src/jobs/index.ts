@@ -7,3 +7,4 @@ export {
     sendAttendanceAlert,
     sendAnnouncement,
 } from './lineNotifications.js';
+export { detectNoShows, detectMissedClockOuts } from './noShowDetection.js';

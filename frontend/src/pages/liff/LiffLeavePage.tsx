@@ -14,6 +14,7 @@ import leaveService, {
     type MyLeaveDataResponse,
 } from '../../services/leave.service';
 import type { LeaveType } from '../../types/leave.types';
+import FileUpload from '../../components/forms/FileUpload';
 
 export default function LiffLeavePage() {
     const [showForm, setShowForm] = useState(false);
@@ -33,6 +34,8 @@ export default function LiffLeavePage() {
         endDate: '',
         reason: '',
     });
+    const [documentFile, setDocumentFile] = useState<File[]>([]);
+    const [uploading, setUploading] = useState(false);
 
     // Load data
     const loadData = useCallback(async () => {
@@ -68,6 +71,12 @@ export default function LiffLeavePage() {
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // Check if selected leave type requires document
+    const requiresDocument = () => {
+        const selectedType = leaveTypes.find(t => t.id === formData.leaveTypeId);
+        return selectedType?.requiresDocument || false;
+    };
+
     // Handle form submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,20 +86,41 @@ export default function LiffLeavePage() {
             return;
         }
 
+        // Check if document is required but not uploaded
+        if (requiresDocument() && documentFile.length === 0) {
+            setError('ต้องแนบเอกสารสำหรับการลาประเภทนี้');
+            return;
+        }
+
         try {
             setSubmitting(true);
             setError(null);
 
-            await leaveService.createLeaveRequest({
+            // Create leave request first
+            const createdRequest = await leaveService.createLeaveRequest({
                 leaveTypeId: formData.leaveTypeId,
                 startDate: formData.startDate,
                 endDate: formData.endDate,
                 reason: formData.reason || undefined,
             });
 
+            // Upload document if provided
+            if (documentFile.length > 0 && createdRequest.id) {
+                try {
+                    setUploading(true);
+                    await leaveService.uploadLeaveDocument(createdRequest.id, documentFile[0]);
+                } catch (uploadErr) {
+                    console.error('Error uploading document:', uploadErr);
+                    setError('คำขอลาถูกสร้างแล้ว แต่การอัพโหลดเอกสารล้มเหลว กรุณาลองใหม่อีกครั้ง');
+                } finally {
+                    setUploading(false);
+                }
+            }
+
             setSuccess('ส่งคำขอลาสำเร็จ');
             setShowForm(false);
             setFormData({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
+            setDocumentFile([]);
 
             // Reload data
             await loadData();
@@ -340,10 +370,11 @@ export default function LiffLeavePage() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
+                                <label htmlFor="leaveTypeId" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
                                     ประเภทการลา <span className="text-error-500">*</span>
                                 </label>
                                 <select
+                                    id="leaveTypeId"
                                     className="input-base"
                                     value={formData.leaveTypeId}
                                     onChange={(e) => setFormData({ ...formData, leaveTypeId: e.target.value })}
@@ -361,10 +392,11 @@ export default function LiffLeavePage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
+                                    <label htmlFor="startDate" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
                                         วันที่เริ่ม <span className="text-error-500">*</span>
                                     </label>
                                     <input
+                                        id="startDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.startDate}
@@ -374,10 +406,11 @@ export default function LiffLeavePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
+                                    <label htmlFor="endDate" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
                                         วันที่สิ้นสุด <span className="text-error-500">*</span>
                                     </label>
                                     <input
+                                        id="endDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.endDate}
@@ -397,10 +430,11 @@ export default function LiffLeavePage() {
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
+                                <label htmlFor="reason" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
                                     เหตุผล
                                 </label>
                                 <textarea
+                                    id="reason"
                                     className="input-base"
                                     rows={3}
                                     placeholder="ระบุเหตุผลการลา..."
@@ -409,15 +443,34 @@ export default function LiffLeavePage() {
                                 />
                             </div>
 
+                            {/* Document upload */}
+                            <FileUpload
+                                label="แนบเอกสาร"
+                                accept="application/pdf,image/jpeg,image/png"
+                                maxSize={5 * 1024 * 1024} // 5MB
+                                files={documentFile}
+                                onChange={setDocumentFile}
+                                required={requiresDocument()}
+                                showPreview={true}
+                                size="md"
+                                helperText={
+                                    requiresDocument()
+                                        ? 'ต้องแนบเอกสาร (PDF, JPG, PNG) ขนาดไม่เกิน 5MB'
+                                        : 'แนบเอกสารประกอบ (PDF, JPG, PNG) ขนาดไม่เกิน 5MB (ถ้ามี)'
+                                }
+                                dropzoneText="ลากไฟล์มาวางที่นี่ หรือ"
+                                browseText="เลือกไฟล์"
+                            />
+
                             <button
                                 type="submit"
                                 className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={submitting}
+                                disabled={submitting || uploading}
                             >
-                                {submitting ? (
+                                {submitting || uploading ? (
                                     <span className="flex items-center justify-center gap-2">
                                         <Loader2 size={20} className="animate-spin" />
-                                        กำลังส่ง...
+                                        {uploading ? 'กำลังอัพโหลดเอกสาร...' : 'กำลังส่ง...'}
                                     </span>
                                 ) : (
                                     'ส่งคำขอ'
