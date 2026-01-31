@@ -21,6 +21,7 @@ import {
     leaveTypesRouter as leaveTypeRoutes,
     leaveRequestsRouter as leaveRequestRoutes,
     leaveBalancesRouter as leaveBalanceRoutes,
+    leaveTemplatesRouter as leaveTemplateRoutes,
     leaveRouter as leaveRoutes,
 } from './modules/leave/index.js';
 import { notificationRoutes } from './modules/notifications/index.js';
@@ -141,6 +142,7 @@ apiRouter.use('/attendance', attendanceRoutes);
 apiRouter.use('/leave-types', leaveTypeRoutes);
 apiRouter.use('/leave-requests', leaveRequestRoutes);
 apiRouter.use('/leave-balances', leaveBalanceRoutes);
+apiRouter.use('/leave-templates', leaveTemplateRoutes);
 apiRouter.use('/leave', leaveRoutes);
 
 

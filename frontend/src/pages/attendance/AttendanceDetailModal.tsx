@@ -6,6 +6,7 @@ import {
     type AttendanceLogWithDetails,
     type AdjustAttendanceRequest
 } from '../../services/attendance.service';
+import { formatThaiDateTime } from '../../utils/date.utils';
 
 interface AttendanceDetailModalProps {
     attendance: AttendanceLogWithDetails;
@@ -31,17 +32,11 @@ export default function AttendanceDetailModal({
         adjustmentReason: '',
     });
 
-    // Format time for display
-    const formatDateTime = (timeStr: string | null | undefined): string => {
+    // Format time for display (using Thai Buddhist Era full format)
+    const formatDateTimeDisplay = (timeStr: string | null | undefined): string => {
         if (!timeStr) return '-';
-        const date = new Date(timeStr);
-        return date.toLocaleString('th-TH', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        // Use full format: "29 มกราคม 2569 08:00 น."
+        return formatThaiDateTime(timeStr, false);
     };
 
     // Format datetime for datetime-local input (local time)
@@ -141,24 +136,38 @@ export default function AttendanceDetailModal({
                 {isEditing ? (
                     // Edit Form
                     <div className="space-y-4">
-                        <Input
-                            type="datetime-local"
-                            label="เวลาเข้า"
-                            value={formatDateTimeForInput(editData.clockInTime)}
-                            onChange={(e) => setEditData(prev => ({
-                                ...prev,
-                                clockInTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-                            }))}
-                        />
-                        <Input
-                            type="datetime-local"
-                            label="เวลาออก"
-                            value={formatDateTimeForInput(editData.clockOutTime)}
-                            onChange={(e) => setEditData(prev => ({
-                                ...prev,
-                                clockOutTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-                            }))}
-                        />
+                        <div>
+                            <Input
+                                type="datetime-local"
+                                label="เวลาเข้า"
+                                value={formatDateTimeForInput(editData.clockInTime)}
+                                onChange={(e) => setEditData(prev => ({
+                                    ...prev,
+                                    clockInTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                                }))}
+                            />
+                            {editData.clockInTime && (
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                    ตรงกับ: {formatThaiDateTime(editData.clockInTime, false)}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <Input
+                                type="datetime-local"
+                                label="เวลาออก"
+                                value={formatDateTimeForInput(editData.clockOutTime)}
+                                onChange={(e) => setEditData(prev => ({
+                                    ...prev,
+                                    clockOutTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                                }))}
+                            />
+                            {editData.clockOutTime && (
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                                    ตรงกับ: {formatThaiDateTime(editData.clockOutTime, false)}
+                                </p>
+                            )}
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
                                 สถานะ
@@ -211,13 +220,13 @@ export default function AttendanceDetailModal({
                             <div className="bg-success-50 rounded-xl p-4">
                                 <p className="text-sm text-success-700">เวลาเข้า</p>
                                 <p className="text-lg font-semibold text-success-800">
-                                    {formatDateTime(attendance.clockInTime)}
+                                    {formatDateTimeDisplay(attendance.clockInTime)}
                                 </p>
                             </div>
                             <div className="bg-error-50 rounded-xl p-4">
                                 <p className="text-sm text-error-700">เวลาออก</p>
                                 <p className="text-lg font-semibold text-error-800">
-                                    {formatDateTime(attendance.clockOutTime)}
+                                    {formatDateTimeDisplay(attendance.clockOutTime)}
                                 </p>
                             </div>
                         </div>

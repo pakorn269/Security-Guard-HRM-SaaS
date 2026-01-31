@@ -5,6 +5,16 @@ import type {
     LeaveBalance,
     LeaveRequestPayload,
     LeaveRequestStatus,
+    ReplacementConflict,
+    AvailableReplacement,
+    ApproveWithReplacements,
+    ConflictResolutionResult,
+    BalanceAdjustment,
+    AdjustBalanceRequest,
+    LeaveRequestTemplate,
+    CreateTemplateRequest,
+    UpdateTemplateRequest,
+    TemplateDraft,
 } from '../types/leave.types';
 
 // ============================================================================
@@ -331,5 +341,234 @@ export default {
     },
     deleteLeaveDocument: async (requestId: string): Promise<void> => {
         await api.delete(`/leave-requests/${requestId}/document`);
+    },
+
+    // ========================================================================
+    // REPLACEMENT GUARD WORKFLOW
+    // ========================================================================
+
+    /**
+     * Get shift conflicts for a leave request
+     * @param requestId Leave request ID
+     * @returns Array of conflicting shifts
+     */
+    getLeaveRequestConflicts: async (requestId: string): Promise<ReplacementConflict[]> => {
+        const response = await api.get<ApiResponse<ReplacementConflict[]>>(
+            `/leave-requests/${requestId}/conflicts`
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Get available replacement guards for a shift
+     * @param shiftId Shift ID
+     * @returns Array of available replacement employees
+     */
+    getAvailableReplacements: async (shiftId: string): Promise<AvailableReplacement[]> => {
+        const response = await api.get<ApiResponse<AvailableReplacement[]>>(
+            `/shifts/${shiftId}/available-replacements`
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Approve leave request with replacement assignments
+     * @param requestId Leave request ID
+     * @param data Approval data with replacements
+     * @returns Approved leave request and replacement result
+     */
+    approveWithReplacements: async (
+        requestId: string,
+        data: ApproveWithReplacements
+    ): Promise<{
+        leaveRequest: LeaveRequestWithDetails;
+        replacementResult?: ConflictResolutionResult;
+    }> => {
+        const response = await api.post<
+            ApiResponse<{
+                leaveRequest: LeaveRequestWithDetails;
+                replacementResult?: ConflictResolutionResult;
+            }>
+        >(`/leave-requests/${requestId}/approve-with-replacements`, data);
+        return response.data.data;
+    },
+
+    // ========================================================================
+    // EXPORT
+    // ========================================================================
+
+    /**
+     * Export leave calendar as iCal file
+     * @param filters Export filters (startDate, endDate, teamId, employeeId, status)
+     * @returns Triggers file download
+     */
+    exportICalendar: async (filters: {
+        startDate?: string;
+        endDate?: string;
+        teamId?: string;
+        employeeId?: string;
+        status?: string;
+    } = {}): Promise<void> => {
+        const params = new URLSearchParams();
+
+        if (filters.startDate) params.append('startDate', filters.startDate);
+        if (filters.endDate) params.append('endDate', filters.endDate);
+        if (filters.teamId) params.append('teamId', filters.teamId);
+        if (filters.employeeId) params.append('employeeId', filters.employeeId);
+        if (filters.status) params.append('status', filters.status);
+
+        const response = await api.get('/leave/export/ical', {
+            params,
+            responseType: 'blob',
+        });
+
+        // Create blob and download
+        const blob = new Blob([response.data], { type: 'text/calendar' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        // Generate filename
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename =
+            filters.startDate && filters.endDate
+                ? `leave-calendar_${filters.startDate}-to-${filters.endDate}.ics`
+                : `leave-calendar_${timestamp}.ics`;
+
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    },
+
+    // ========================================================================
+    // BALANCE ADJUSTMENTS
+    // ========================================================================
+
+    /**
+     * Adjust a leave balance with audit trail
+     * @param balanceId Balance ID
+     * @param data Adjustment data
+     * @returns Adjustment record with details
+     */
+    adjustLeaveBalance: async (
+        balanceId: string,
+        data: AdjustBalanceRequest
+    ): Promise<BalanceAdjustment> => {
+        const response = await api.post<ApiResponse<BalanceAdjustment>>(
+            `/leave-balances/${balanceId}/adjust`,
+            data
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Get adjustment history for a balance
+     * @param balanceId Balance ID
+     * @returns Array of adjustments
+     */
+    getBalanceAdjustments: async (balanceId: string): Promise<BalanceAdjustment[]> => {
+        const response = await api.get<ApiResponse<BalanceAdjustment[]>>(
+            `/leave-balances/${balanceId}/adjustments`
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Get adjustment history for an employee
+     * @param employeeId Employee ID
+     * @param year Optional year filter
+     * @returns Array of adjustments
+     */
+    getEmployeeAdjustments: async (
+        employeeId: string,
+        year?: number
+    ): Promise<BalanceAdjustment[]> => {
+        const response = await api.get<ApiResponse<BalanceAdjustment[]>>(
+            `/employees/${employeeId}/adjustments`,
+            { params: year ? { year } : undefined }
+        );
+        return response.data.data;
+    },
+
+    // ========================================================================
+    // LEAVE REQUEST TEMPLATES
+    // ========================================================================
+
+    /**
+     * List all leave request templates
+     * @param includeInactive Include inactive templates (managers only)
+     * @returns Array of templates
+     */
+    listTemplates: async (includeInactive = false): Promise<LeaveRequestTemplate[]> => {
+        const response = await api.get<ApiResponse<LeaveRequestTemplate[]>>('/leave-templates', {
+            params: includeInactive ? { includeInactive: true } : undefined,
+        });
+        return response.data.data;
+    },
+
+    /**
+     * Get a single template by ID
+     * @param templateId Template ID
+     * @returns Template details
+     */
+    getTemplate: async (templateId: string): Promise<LeaveRequestTemplate> => {
+        const response = await api.get<ApiResponse<LeaveRequestTemplate>>(
+            `/leave-templates/${templateId}`
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Create a new leave request template
+     * @param data Template data
+     * @returns Created template
+     */
+    createTemplate: async (data: CreateTemplateRequest): Promise<LeaveRequestTemplate> => {
+        const response = await api.post<ApiResponse<LeaveRequestTemplate>>(
+            '/leave-templates',
+            data
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Update a leave request template
+     * @param templateId Template ID
+     * @param data Updated template data
+     * @returns Updated template
+     */
+    updateTemplate: async (
+        templateId: string,
+        data: UpdateTemplateRequest
+    ): Promise<LeaveRequestTemplate> => {
+        const response = await api.put<ApiResponse<LeaveRequestTemplate>>(
+            `/leave-templates/${templateId}`,
+            data
+        );
+        return response.data.data;
+    },
+
+    /**
+     * Delete a leave request template
+     * @param templateId Template ID
+     */
+    deleteTemplate: async (templateId: string): Promise<void> => {
+        await api.delete(`/leave-templates/${templateId}`);
+    },
+
+    /**
+     * Apply a template to get pre-filled draft data
+     * @param templateId Template ID
+     * @param startDate Optional start date (YYYY-MM-DD)
+     * @returns Pre-filled draft data
+     */
+    applyTemplate: async (templateId: string, startDate?: string): Promise<TemplateDraft> => {
+        const response = await api.post<ApiResponse<TemplateDraft>>(
+            `/leave-templates/${templateId}/apply`,
+            startDate ? { startDate } : {}
+        );
+        return response.data.data;
     },
 };

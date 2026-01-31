@@ -50,7 +50,7 @@ const createMockQueryBuilder = (returnData: unknown = null, error: unknown = nul
         lte: vi.fn().mockReturnThis(),
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        range: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({ data: returnData, error, count: Array.isArray(returnData) ? returnData.length : 0 }),
         limit: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: returnData, error }),
@@ -1093,6 +1093,7 @@ describe('LeaveService', () => {
                 company_id: 'company-1',
                 name: 'Annual Leave',
                 max_days_per_year: 15,
+                is_active: true,
             };
 
             const mockBalance = {
@@ -1202,31 +1203,53 @@ describe('LeaveService', () => {
             const mockBalances = [
                 {
                     id: 'balance-2025',
+                    company_id: 'company-1',
+                    employee_id: 'employee-1',
+                    leave_type_id: 'leave-type-1',
                     year: 2025,
                     entitled_days: 15,
                     used_days: 10,
                     pending_days: 0,
+                    created_at: '2025-01-01T00:00:00Z',
+                    updated_at: '2025-01-01T00:00:00Z',
+                    leave_types: { id: 'leave-type-1', name: 'Annual', name_th: 'ลาพักร้อน', is_paid: true },
+                    employees: { id: 'employee-1', full_name: 'John Doe', employee_code: 'EMP001', user_id: 'user-1' },
                 },
                 {
                     id: 'balance-2026',
+                    company_id: 'company-1',
+                    employee_id: 'employee-1',
+                    leave_type_id: 'leave-type-1',
                     year: 2026,
                     entitled_days: 15,
                     used_days: 5,
                     pending_days: 2,
+                    created_at: '2026-01-01T00:00:00Z',
+                    updated_at: '2026-01-01T00:00:00Z',
+                    leave_types: { id: 'leave-type-1', name: 'Annual', name_th: 'ลาพักร้อน', is_paid: true },
+                    employees: { id: 'employee-1', full_name: 'John Doe', employee_code: 'EMP001', user_id: 'user-1' },
                 },
                 {
                     id: 'balance-2027',
+                    company_id: 'company-1',
+                    employee_id: 'employee-1',
+                    leave_type_id: 'leave-type-1',
                     year: 2027,
                     entitled_days: 15,
                     used_days: 0,
                     pending_days: 0,
+                    created_at: '2027-01-01T00:00:00Z',
+                    updated_at: '2027-01-01T00:00:00Z',
+                    leave_types: { id: 'leave-type-1', name: 'Annual', name_th: 'ลาพักร้อน', is_paid: true },
+                    employees: { id: 'employee-1', full_name: 'John Doe', employee_code: 'EMP001', user_id: 'user-1' },
                 },
             ];
 
             vi.mocked(supabaseAdmin.from).mockReturnValue({
                 select: vi.fn().mockReturnThis(),
                 eq: vi.fn().mockReturnThis(),
-                order: vi.fn().mockResolvedValue({ data: mockBalances, error: null }),
+                range: vi.fn().mockReturnThis(),
+                order: vi.fn().mockResolvedValue({ data: mockBalances, error: null, count: mockBalances.length }),
             } as any);
 
             const balances = await leaveService.listBalances('company-1', {});
@@ -1252,22 +1275,36 @@ describe('LeaveService', () => {
 
             vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
                 if (table === 'employees') {
+                    const eqMock = vi.fn().mockReturnThis();
+                    // Second .eq() call should resolve to data (awaitable)
+                    eqMock.mockReturnValueOnce({
+                        eq: vi.fn().mockResolvedValue({ data: mockEmployees, error: null }),
+                    });
                     return {
                         select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: mockEmployees, error: null }),
+                        eq: eqMock,
                     };
                 }
                 if (table === 'leave_types') {
+                    const eqMock = vi.fn().mockReturnThis();
+                    eqMock.mockReturnValueOnce({
+                        eq: vi.fn().mockResolvedValue({ data: mockLeaveTypes, error: null }),
+                    });
                     return {
                         select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: mockLeaveTypes, error: null }),
+                        eq: eqMock,
                     };
                 }
                 if (table === 'leave_balances') {
+                    const eqMock = vi.fn().mockReturnThis();
+                    eqMock.mockReturnValueOnce({
+                        eq: vi.fn().mockReturnThis(),
+                        in: vi.fn().mockResolvedValue({ data: existingBalances, error: null }),
+                    });
                     return {
                         select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: existingBalances, error: null }),
-                        insert: vi.fn().mockResolvedValue({ data: [], error: null }),
+                        eq: eqMock,
+                        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
                     };
                 }
                 return createMockQueryBuilder({});
@@ -1508,8 +1545,8 @@ describe('LeaveService', () => {
                 end_date: '2026-02-01',
                 total_days: 1,
                 status: 'pending',
-                employees: { id: 'employee-1', full_name: 'John Doe' },
-                leave_types: { id: 'leave-type-1', name: 'Annual Leave' },
+                employees: { id: 'employee-1', full_name: 'John Doe', employee_code: 'EMP001', user_id: 'user-1' },
+                leave_types: { id: 'leave-type-1', name: 'Annual Leave', name_th: null, is_paid: true, max_days_per_year: 15 },
             };
 
             const mockBalance = {
@@ -1535,6 +1572,9 @@ describe('LeaveService', () => {
 
 
             await leaveService.approveLeaveRequest('request-1', 'company-1', 'manager-1');
+
+            // Wait for async notification to complete (fire-and-forget pattern)
+            await new Promise(resolve => setTimeout(resolve, 50));
 
             // Verify notification service called
             const { NotificationService } = await import('../notifications/notifications.service.js');
@@ -1567,11 +1607,7 @@ describe('LeaveService', () => {
                     return createMockQueryBuilder(mockRequest) as any;
                 }
                 if (table === 'leave_balances') {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: [mockBalance], error: null }),
-                        update: vi.fn().mockReturnThis(),
-                    };
+                    return createMockQueryBuilder(mockBalance);
                 }
                 if (table === 'users') {
                     return createMockQueryBuilder({ id: 'user-1' }) as any;
@@ -1582,6 +1618,9 @@ describe('LeaveService', () => {
 
 
             await leaveService.rejectLeaveRequest('request-1', 'company-1', 'manager-1', { reviewNotes: 'Insufficient notice' });
+
+            // Wait for async notification to complete (fire-and-forget pattern)
+            await new Promise(resolve => setTimeout(resolve, 10));
 
             // Verify notification service called
             const { NotificationService } = await import('../notifications/notifications.service.js');
@@ -1682,16 +1721,16 @@ describe('LeaveService', () => {
                     };
                 }
                 if (table === 'leave_requests') {
+                    const mockBuilder = createMockQueryBuilder({
+                        id: 'request-2',
+                        status: 'pending',
+                        total_days: 2,
+                    });
                     return {
+                        ...mockBuilder,
                         insert: vi.fn().mockReturnThis(),
-                        select: vi.fn().mockResolvedValue({
-                            data: [{
-                                id: 'request-2',
-                                status: 'pending',
-                                total_days: 2,
-                            }],
-                            error: null
-                        }),
+                        select: vi.fn().mockReturnThis(), // select returns builder
+                        // single is already in mockBuilder returning the data
                     };
                 }
                 return createMockQueryBuilder({});
@@ -1735,13 +1774,11 @@ describe('LeaveService', () => {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
                         single: vi.fn().mockResolvedValue({ data: mockRequest, error: null }),
+                        update: vi.fn().mockReturnThis(),
                     };
                 }
                 if (table === 'leave_balances') {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: [mockBalance], error: null }),
-                    };
+                    return createMockQueryBuilder(mockBalance);
                 }
                 return createMockQueryBuilder({});
             }) as any);
@@ -1805,32 +1842,35 @@ describe('LeaveService', () => {
             expect(request2).toBeDefined();
         });
 
-        it('should reject deleting leave type with existing requests', async () => {
+        it('should soft delete leave type with existing requests', async () => {
             // Mock that leave type has existing requests
+            const updateSpy = vi.fn().mockReturnThis();
+
             vi.mocked(supabaseAdmin.from).mockImplementation(((table: string) => {
                 if (table === 'leave_types') {
-                    return createMockQueryBuilder({
-                        id: 'leave-type-1',
-                        company_id: 'company-1',
-                    });
+                    return {
+                        update: updateSpy,
+                        eq: vi.fn().mockReturnThis(),
+                        // Make it looking like a query builder
+                        select: vi.fn().mockReturnThis(),
+                        delete: vi.fn().mockReturnThis(),
+                    };
                 }
                 if (table === 'leave_requests') {
-                    // Return existing requests for this leave type
+                    // Return existing requests for this leave type via count
+                    const mockResponse = { count: 1, error: null };
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
-                        limit: vi.fn().mockResolvedValue({
-                            data: [{ id: 'request-1' }],
-                            error: null
-                        }),
+                        then: (resolve: any) => Promise.resolve(mockResponse).then(resolve)
                     };
                 }
                 return createMockQueryBuilder({});
             }) as any);
 
-            await expect(
-                leaveService.deleteLeaveType('leave-type-1', 'company-1')
-            ).rejects.toThrow(BadRequestError);
+            await leaveService.deleteLeaveType('leave-type-1', 'company-1');
+
+            expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ is_active: false }));
         });
 
         it('should handle balance adjustment when entitlement changes', async () => {
@@ -1857,7 +1897,16 @@ describe('LeaveService', () => {
                     };
                 }
                 if (table === 'leave_balances') {
-                    return createMockQueryBuilder(mockBalance);
+                    const mockBuilder = createMockQueryBuilder(mockBalance);
+                    const builder = {
+                        ...mockBuilder,
+                        update: vi.fn().mockImplementation((updates) => {
+                            const updatedData = { ...mockBalance, ...updates };
+                            (builder as any).single = vi.fn().mockResolvedValue({ data: updatedData, error: null });
+                            return builder;
+                        })
+                    };
+                    return builder;
                 }
                 return createMockQueryBuilder({});
             }) as any);

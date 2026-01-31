@@ -18,6 +18,7 @@ import {
   Trash2,
   Check,
   Edit3,
+  Share2,
 } from 'lucide-react';
 import { Button, Card, Input, Badge, Avatar } from '../../components/common';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -38,6 +39,9 @@ import {
 import { employeeService, type EmployeeWithUser } from '../../services/employee.service';
 import { sitesService, type Site } from '../../services/sites.service';
 import AttendanceDetailModal from './AttendanceDetailModal';
+import { useUrlFilters, copyFiltersToClipboard } from '../../hooks/useUrlFilters';
+import { formatThaiDuration } from '../../utils/dateFormat';
+import { formatThaiDate, formatThaiDateTime } from '../../utils/date.utils';
 
 /**
  * Attendance Page - Redesigned (Part 5.5)
@@ -85,7 +89,10 @@ function LocationAccuracy({ accuracy }: { accuracy?: number }) {
 }
 
 export default function AttendancePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
+  const isThaiLanguage = currentLanguage === 'th';
+
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceLogWithDetails[]>([]);
   const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
@@ -97,6 +104,7 @@ export default function AttendancePage() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   // Bulk operations
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -105,13 +113,32 @@ export default function AttendancePage() {
   const [bulkReason, setBulkReason] = useState('');
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // Filters
-  const [filters, setFilters] = useState<ListAttendanceQuery>({
-    page: 1,
-    pageSize: 20,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+  // URL-based filters with SessionStorage persistence
+  const {
+    filters,
+    setFilter,
+    setFilters: updateFilters,
+    resetFilters,
+    isInitialized,
+  } = useUrlFilters<ListAttendanceQuery>({
+    defaults: {
+      page: 1,
+      pageSize: 20,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      employeeId: undefined,
+      siteId: undefined,
+      status: undefined,
+      maxAccuracy: undefined,
+    },
+    storageKey: 'attendanceFilters', // Unique key for SessionStorage
+    parser: {
+      page: (v) => parseInt(v, 10),
+      pageSize: (v) => parseInt(v, 10),
+      maxAccuracy: (v) => parseInt(v, 10),
+    },
   });
+
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -121,6 +148,8 @@ export default function AttendancePage() {
 
   // Fetch data
   const fetchData = useCallback(async () => {
+    if (!isInitialized) return; // Wait for URL filters to initialize
+
     setIsLoading(true);
     setError(null);
 
@@ -143,7 +172,7 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, isInitialized]);
 
   // Fetch employees for filter
   const fetchEmployees = useCallback(async () => {
@@ -177,25 +206,46 @@ export default function AttendancePage() {
     fetchSites();
   }, [fetchSites]);
 
-  // Format time
-  const formatTime = (timeStr: string | null | undefined): string => {
-    if (!timeStr) return '-';
-    const date = new Date(timeStr);
-    return date.toLocaleTimeString('th-TH', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
-  // Format date
-  const formatDate = (dateStr: string | null | undefined): string => {
+
+  // Format date (use Thai Buddhist Era if Thai language)
+  const formatDateDisplay = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '-';
+    if (isThaiLanguage) {
+      return formatThaiDate(dateStr, true); // short format: "29 ม.ค. 69"
+    }
     const date = new Date(dateStr);
-    return date.toLocaleDateString('th-TH', {
+    return date.toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  // Format date-time (use Thai Buddhist Era if Thai language)
+  const formatDateTimeDisplay = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '-';
+    if (isThaiLanguage) {
+      return formatThaiDateTime(dateStr, true); // short format with time: "29 ม.ค. 69 08:00 น."
+    }
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
+  // Format duration
+  const formatDuration = (hours: number | null | undefined): string => {
+    if (!hours) return '-';
+    if (isThaiLanguage) {
+      return formatThaiDuration(hours);
+    }
+    return `${hours} hrs`;
   };
 
   // Handle row click
@@ -205,12 +255,22 @@ export default function AttendancePage() {
   };
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof ListAttendanceQuery, value: string | undefined) => {
-    setFilters((prev) => ({
-      ...prev,
+  const handleFilterChange = (key: keyof ListAttendanceQuery, value: string | number | undefined) => {
+    updateFilters({
       [key]: value || undefined,
       page: 1,
-    }));
+    } as Partial<ListAttendanceQuery>);
+  };
+
+  // Handle share filters
+  const handleShareFilters = async () => {
+    try {
+      await copyFiltersToClipboard(filters);
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+    }
   };
 
   // Handle export
@@ -289,7 +349,7 @@ export default function AttendancePage() {
 
   // Handle page change
   const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
+    setFilter('page', page);
   };
 
   // Status options for filter
@@ -325,7 +385,7 @@ export default function AttendancePage() {
       id: 'date',
       header: t('attendance.date', 'วันที่'),
       cell: (record) => (
-        <span className="text-sm text-neutral-600 dark:text-neutral-300">{formatDate(record.clockInTime)}</span>
+        <span className="text-sm text-neutral-600 dark:text-neutral-300">{formatDateDisplay(record.clockInTime)}</span>
       ),
       hideOnMobile: true,
     },
@@ -335,7 +395,7 @@ export default function AttendancePage() {
       cell: (record) => (
         <div className="space-y-1">
           <span className="font-mono text-sm font-medium text-neutral-800 dark:text-neutral-100">
-            {formatTime(record.clockInTime)}
+            {formatDateTimeDisplay(record.clockInTime)}
           </span>
           <LocationAccuracy accuracy={record.clockInAccuracy} />
         </div>
@@ -348,7 +408,7 @@ export default function AttendancePage() {
       cell: (record) => (
         <div className="space-y-1">
           <span className="font-mono text-sm font-medium text-neutral-800 dark:text-neutral-100">
-            {formatTime(record.clockOutTime)}
+            {formatDateTimeDisplay(record.clockOutTime)}
           </span>
           {record.clockOutTime && <LocationAccuracy accuracy={record.clockOutAccuracy} />}
         </div>
@@ -359,7 +419,7 @@ export default function AttendancePage() {
       header: t('attendance.hours', 'ชั่วโมง'),
       cell: (record) => (
         <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-          {record.totalHours ? `${record.totalHours} ${t('attendance.hrs', 'ชม.')}` : '-'}
+          {formatDuration(record.totalHours)}
         </span>
       ),
       hideOnMobile: true,
@@ -414,6 +474,15 @@ export default function AttendancePage() {
                 </Tab>
               </TabList>
             </Tabs>
+            <Button
+              variant={shareSuccess ? 'secondary' : 'outline'}
+              size="sm"
+              leftIcon={<Share2 size={16} />}
+              onClick={handleShareFilters}
+              title={t('common.shareFilters', 'แชร์ลิงก์พร้อมตัวกรอง')}
+            >
+              {shareSuccess && t('common.copied', 'คัดลอกแล้ว!')}
+            </Button>
             <Menu
               trigger={
                 <Button
@@ -742,14 +811,7 @@ export default function AttendancePage() {
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => {
-                      setFilters({
-                        page: 1,
-                        pageSize: 20,
-                        startDate: new Date().toISOString().split('T')[0],
-                        endDate: new Date().toISOString().split('T')[0],
-                      });
-                    }}
+                    onClick={resetFilters}
                     leftIcon={<XCircle size={16} />}
                   >
                     {t('common.clearFilters', 'ล้างตัวกรอง')}

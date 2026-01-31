@@ -2,10 +2,12 @@
 
 export { leaveController } from './leave.controller.js';
 export { leaveService } from './leave.service.js';
+export { templateService } from './template.service.js';
 export {
     leaveTypesRouter,
     leaveRequestsRouter,
     leaveBalancesRouter,
+    leaveTemplatesRouter,
     leaveRouter,
 } from './leave.routes.js';
 

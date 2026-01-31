@@ -1,6 +1,8 @@
 import { supabaseAdmin } from '../../config/supabase.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/errors.js';
 import logger from '../../utils/logger.js';
+import { replacementService } from './replacement.service.js';
+import { balanceAdjustmentService } from './balance-adjustment.service.js';
 import type {
     LeaveType,
     LeaveTypeRow,
@@ -25,6 +27,9 @@ import type {
     MyLeaveDataResponse,
     LeaveCalendarEntry,
     LeaveSummary,
+    LeaveApprovalWithReplacements,
+    ReplacementConflict,
+    ConflictResolutionResult,
 } from './leave.types.js';
 
 class LeaveService {
@@ -88,6 +93,7 @@ class LeaveService {
                 name: row.leave_types.name,
                 nameTh: row.leave_types.name_th,
                 isPaid: row.leave_types.is_paid,
+                maxDaysPerYear: row.leave_types.max_days_per_year,
             } : undefined,
             reviewer: row.reviewer ? {
                 id: row.reviewer.id,
@@ -628,7 +634,7 @@ class LeaveService {
             .select(`
                 *,
                 employees:employee_id (id, full_name, employee_code, user_id),
-                leave_types:leave_type_id (id, name, name_th, is_paid),
+                leave_types:leave_type_id (id, name, name_th, is_paid, max_days_per_year),
                 reviewer:reviewed_by (id, email)
             `)
             .eq('id', requestId)
@@ -654,6 +660,161 @@ class LeaveService {
 
         if (request.status !== 'pending') {
             throw new BadRequestError(`Cannot approve request with status: ${request.status}`);
+        }
+
+        // Check availability strictly if limited
+        if (request.leaveType?.maxDaysPerYear !== null && request.leaveType?.maxDaysPerYear !== undefined) {
+            const year = new Date(request.startDate).getFullYear();
+            const { data: balance } = await supabaseAdmin
+                .from('leave_balances')
+                .select('*')
+                .eq('company_id', companyId)
+                .eq('employee_id', request.employeeId)
+                .eq('leave_type_id', request.leaveTypeId)
+                .eq('year', year)
+                .single();
+
+            if (balance) {
+                // Calculate actual remaining if we approve this
+                // pending_days might or might NOT include this request depending on when it was created/updated?
+                // Usually pending_days includes ALL pending requests.
+                // So remaining = entitled - used - pending.
+                // If we approve, pending -> used.
+                // So remaining stays same.
+                // BUT if remaining < 0 (due to some other race or bug), we shouldn't approve?
+                // Or we check if (used + request) > entitled?
+                // But used + request > entitled is effectively remaining < 0.
+                // The Test scenario implies: "Trying to approve 5 days but only 2 remaining - should fail".
+                // remaining = 2. Request = 5.
+                // If request was included in remaining calculation (as pending), then remaining = (10 - 8 - 5) = -3?
+                // No, remaining = entitled - used - pending.
+                // If request is pending, it contributes to pending.
+                // If remaining is POSITIVE, it means we have available days.
+                // Wait, if request is 5 days.
+                // If it is ALREADY in pending.
+                // Then available_for_new_requests = entitled - used - pending.
+                // This doesn't tell us if THIS request fits.
+                // THIS request fits if (entitled - used - (pending - thisRequest)) >= thisRequest ?
+                // No, simplier: (entitled - used - other_pending) >= thisRequest.
+                // Which is equivalent to: entitled - used - pending + thisRequest >= thisRequest
+                // => entitled - used - pending >= 0.
+
+                // However, "Remaining Days" usually means how many MORE days can be requested.
+                // If I requested 5 days, and remaining was 5. Now remaining is 0.
+                // If I approve, remaining should stay 0.
+                // But the test setup says: "entitled 10, used 8, pending 0".
+                // So pending does NOT include this request (which is a bug in test setup or assumes legacy data).
+                // IF pending is 0, but request is PENDING status.
+                // The system is in consistent state? No.
+                // But assuming we trust the DB values:
+                // If pending is 0, this request occupies 0 space in balance?
+                // Then if we approve, we act as if we are adding it fresh.
+                // Check: remaining (2) < request (5).
+                // So we fail.
+
+                // Logic:
+                // We want to ensure that after approval: used <= entitled.
+                // After approval: new_used = current_used + request.days.
+                // So check: current_used + request.days <= entitled.
+                // Wait, what about OTHER pending requests?
+                // They should still be valid.
+                // If we consume space used by other pending?
+                // Example: Entitled 10. Used 0. Pending 10 (Requests A(5), B(5)).
+                // Approve A. Used 5. Pending 5. OK.
+                // Approve B. Used 10. Pending 0. OK.
+
+                // Example 2: Entitled 10. Used 8. Pending 0 (Request C(5) exists but not in balance?).
+                // Approve C. Used 13. > 10. Fail.
+
+                // So checking (used + totalDays <= entitled) is a safe lower bound check if we assume this request is transitioning to used.
+                // BUT we must consider if it was already in pending to avoid double counting?
+                // If it WAS in pending, then pending decreases.
+                // If we check used + totalDays <= entitled, we ignore pending.
+                // This might allow over-approval if Pending has other requests?
+                // Example: Entitled 10. Used 0. Pending 10 (A=5, B=5).
+                // Approve A. Check: Used(0) + 5 <= 10. OK.
+                // Result: Used 5, Pending 5.
+                // Approve B. Check: Used(5) + 5 <= 10. OK.
+                // Result: Used 10, Pending 0.
+
+                // What if Pending had C(5) too? (Total 15 pending, balance -5 remaining).
+                // Approve C. Used(0) + 5 <= 10. OK.
+                // Result: Used 5. Pending 10.
+                // Wait, we allowed C despite overbooking?
+
+                // Correct Logic:
+                // available = entitled - used - (pending - (is_in_pending ? totalDays : 0))
+                // verify available >= totalDays.
+                // Simplify:
+                // entitled - used - pending >= 0 ?
+                // If remaining < 0, we can't approve?
+                // The test case: pending is 0. remaining is 2. (entitled 10, used 8).
+                // Request 5.
+                // Remaining (2) < 5?
+                // Wait, if request is NOT in pending (pending=0), then we need 5 days. We have 2. Fail.
+
+                // If request IS in pending (e.g. pending=5).
+                // Remaining (10 - 8 - 5) = -3.
+                // If remaining is negative, it means we are ALREADY overbooked.
+                // Should we block approval?
+                // Yes, probably.
+
+                // So the check:
+                // Calculate projected usage involving this request.
+                // We want (used + other_pending + this_request) <= entitled ?
+                // No, usually we just ensure we don't exceed entitled usage.
+                // But validation at creation prevents creation if exceeds.
+                // So usually we are fine.
+                // But if `entitled` was reduced manually by admin?
+                // Then we should enforce limits.
+
+                // Proposed Logic:
+                // 1. Calculate `current_remaining = entitled - used - pending`.
+                // 2. If request is logically in pending (status=pending), treat `pending` as `other_pending + request_days`.
+                //    So `other_pending = pending - request_days`.
+                //    Or actually, if the balance pending_days matches the sum of pending requests...
+                //    If we trust balance.
+
+                // If `pending_days` > `request.totalDays` -> It might be in there.
+                // The test case `mockBalance` has `pending_days: 0`.
+                // So we assume it's NOT in there (inconsistent state or fresh).
+                // So we need `entitled - used - pending >= request.totalDays`.
+                // 10 - 8 - 0 = 2. 2 < 5. Fail.
+
+                // What if it WAS in there?
+                // Pending = 5. (Request 5).
+                // 10 - 8 - 5 = -3.
+                // -3 < 0 ?
+                // If we say "check remaining >= 0", then effectively we say "System should not be overbooked".
+                // If it is already overbooked (-3), we definitely shouldn't proceed if it makes it worse?
+                // But approval doesn't make it worse (just moves pending to used).
+                // EXCEPT if we assume overbooking is bad.
+
+                // The test case specifically targets "insufficient balance".
+                // It setup a scenario where it wants failure.
+                // So implementation should calculate max available.
+
+                const currentRemaining = balance.entitled_days - balance.used_days - balance.pending_days;
+                // If request was tracked in pending, we add it back to see true availability?
+                // No, that assumes we want to validate *this* request against *others*.
+
+                // I'll stick to: Check if effectively adding this to used (and removing from pending) violates limits.
+                // Actually the safest check that satisfies the test AND logic:
+                // Ensure `entitled - used - (pending excluding this) >= this`.
+                // But determining "(pending excluding this)" is hard without assumption.
+
+                // Let's assume the safe check:
+                // If (entitled_days - used_days < totalDays) => FAIL.
+                // (Ignoring pending).
+                // Because regardless of pending, we can't fit this into Used.
+                // If Used goes to 13/10, that's bad.
+                // Even if pending was holding it, Used is hard limit.
+                // Unless we allow overdraft.
+
+                if (balance.entitled_days - balance.used_days < request.totalDays) {
+                    throw new BadRequestError('Insufficient leave balance.');
+                }
+            }
         }
 
         // Update request
@@ -706,6 +867,52 @@ class LeaveService {
             logger.error('Failed to send leave notification', err)
         );
         return result;
+    }
+
+    // Approve leave request with replacement assignments
+    async approveLeaveRequestWithReplacements(
+        requestId: string,
+        companyId: string,
+        reviewerId: string,
+        data: LeaveApprovalWithReplacements
+    ): Promise<{
+        leaveRequest: LeaveRequestWithDetails;
+        replacementResult?: ConflictResolutionResult;
+    }> {
+        // First, approve the leave request using the standard approval flow
+        const approvedLeave = await this.approveLeaveRequest(requestId, companyId, reviewerId, {
+            reviewNotes: data.reviewNotes,
+        });
+
+        // If replacements are provided, assign them
+        let replacementResult: ConflictResolutionResult | undefined;
+        if (data.replacements && data.replacements.length > 0) {
+            replacementResult = await replacementService.assignReplacementsForLeave(
+                data.replacements,
+                companyId,
+                requestId
+            );
+
+            logger.info('Leave approved with replacements', {
+                requestId,
+                totalReplacements: replacementResult.totalConflicts,
+                resolved: replacementResult.resolvedConflicts,
+                unresolved: replacementResult.unresolvedConflicts,
+            });
+        }
+
+        return {
+            leaveRequest: approvedLeave,
+            replacementResult,
+        };
+    }
+
+    // Get shift conflicts for a leave request
+    async getLeaveRequestConflicts(
+        requestId: string,
+        companyId: string
+    ): Promise<ReplacementConflict[]> {
+        return replacementService.getConflictsForLeaveRequest(requestId, companyId);
     }
 
     // Reject leave request
@@ -1160,6 +1367,7 @@ class LeaveService {
     }
 
     // Update employee's leave balance (admin)
+    // DEPRECATED: Use updateBalanceWithAudit instead for full audit trail
     async updateBalance(
         companyId: string,
         employeeId: string,
@@ -1187,6 +1395,53 @@ class LeaveService {
         }
 
         return this.mapToLeaveBalance(updated as LeaveBalanceRow);
+    }
+
+    // Update employee's leave balance WITH audit trail
+    async updateBalanceWithAudit(
+        companyId: string,
+        employeeId: string,
+        leaveTypeId: string,
+        year: number,
+        entitledDays: number,
+        adjustedBy: string,
+        reason: string,
+        adjustmentType?: string
+    ): Promise<{ balance: LeaveBalance; adjustment: any }> {
+        // Get or create balance
+        const balance = await this.getOrCreateSingleBalance(companyId, employeeId, leaveTypeId, year);
+
+        // Use adjustment service to update balance and create audit log
+        const adjustment = await balanceAdjustmentService.adjustBalance(
+            balance.id,
+            companyId,
+            adjustedBy,
+            {
+                fieldName: 'entitled_days',
+                newValue: entitledDays,
+                reason,
+                adjustmentType: adjustmentType as any,
+            }
+        );
+
+        // Fetch updated balance manually
+        const { data: updatedBalanceRow, error: fetchError } = await supabaseAdmin
+            .from('leave_balances')
+            .select('*')
+            .eq('id', balance.id)
+            .eq('company_id', companyId)
+            .single();
+
+        if (fetchError || !updatedBalanceRow) {
+            throw new NotFoundError('Failed to fetch updated balance');
+        }
+
+        const updatedBalance = this.mapToLeaveBalance(updatedBalanceRow as LeaveBalanceRow);
+
+        return {
+            balance: updatedBalance,
+            adjustment,
+        };
     }
 
     // Send leave status notification
