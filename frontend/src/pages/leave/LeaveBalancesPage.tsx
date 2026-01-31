@@ -1,14 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Edit, History } from 'lucide-react';
 import leaveService from '../../services/leave.service';
-import type { LeaveBalance, LeaveType } from '../../types/leave.types';
+import { useAuth } from '../../context/AuthContext';
+import BalanceAdjustmentModal from '../../components/leave/BalanceAdjustmentModal';
+import AdjustmentHistoryModal from '../../components/leave/AdjustmentHistoryModal';
+import type { LeaveBalance, LeaveType, AdjustBalanceRequest } from '../../types/leave.types';
 
 export default function LeaveBalancesPage() {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [balances, setBalances] = useState<LeaveBalance[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [total, setTotal] = useState(0);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // Modal states
+    const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false);
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [selectedBalance, setSelectedBalance] = useState<LeaveBalance | null>(null);
+
+    // Check if user is manager/admin
+    const isManager = user?.role === 'manager' || user?.role === 'company_admin' || user?.role === 'super_admin';
 
     // Filters
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
@@ -74,6 +87,33 @@ export default function LeaveBalancesPage() {
 
     const totalPages = Math.ceil(total / pageSize);
 
+    const handleOpenAdjustment = (balance: LeaveBalance) => {
+        setSelectedBalance(balance);
+        setAdjustmentModalOpen(true);
+    };
+
+    const handleOpenHistory = (balance: LeaveBalance) => {
+        setSelectedBalance(balance);
+        setHistoryModalOpen(true);
+    };
+
+    const handleAdjustBalance = async (data: AdjustBalanceRequest) => {
+        if (!selectedBalance) return;
+
+        try {
+            await leaveService.adjustLeaveBalance(selectedBalance.id, data);
+            await loadData(); // Reload data to show updated balance
+            alert('ปรับยอดวันลาเรียบร้อยแล้ว');
+        } catch (err) {
+            console.error('Error adjusting balance:', err);
+            throw err; // Let modal handle error display
+        }
+    };
+
+    const handleLoadHistory = async (balanceId: string) => {
+        return await leaveService.getBalanceAdjustments(balanceId);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -130,12 +170,13 @@ export default function LeaveBalancesPage() {
                                 <th className="text-center w-24">ใช้ไป</th>
                                 <th className="text-center w-24">รออนุมัติ</th>
                                 <th className="text-center w-24">คงเหลือ</th>
+                                {isManager && <th className="text-center w-32">การจัดการ</th>}
                             </tr>
                         </thead>
                         <tbody>
                             {loading && balances.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12">
+                                    <td colSpan={isManager ? 7 : 6} className="text-center py-12">
                                         <div className="spinner w-8 h-8 mx-auto mb-2"></div>
                                         <p className="text-surface-500">กำลังโหลด...</p>
                                     </td>
@@ -179,11 +220,31 @@ export default function LeaveBalancesPage() {
                                                 {b.remainingDays}
                                             </span>
                                         </td>
+                                        {isManager && (
+                                            <td className="text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => handleOpenAdjustment(b)}
+                                                        className="p-1.5 text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                                                        title="ปรับยอดวันลา"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleOpenHistory(b)}
+                                                        className="p-1.5 text-surface-600 hover:bg-surface-100 rounded transition-colors"
+                                                        title="ดูประวัติการปรับยอด"
+                                                    >
+                                                        <History className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-surface-500">
+                                    <td colSpan={isManager ? 7 : 6} className="text-center py-12 text-surface-500">
                                         <div className="text-4xl mb-2">📭</div>
                                         ไม่พบข้อมูลวันลาสำหรับเงื่อนไขที่เลือก
                                     </td>
@@ -221,6 +282,32 @@ export default function LeaveBalancesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Balance Adjustment Modal */}
+            {selectedBalance && (
+                <BalanceAdjustmentModal
+                    isOpen={adjustmentModalOpen}
+                    onClose={() => {
+                        setAdjustmentModalOpen(false);
+                        setSelectedBalance(null);
+                    }}
+                    balance={selectedBalance}
+                    onSubmit={handleAdjustBalance}
+                />
+            )}
+
+            {/* Adjustment History Modal */}
+            {selectedBalance && (
+                <AdjustmentHistoryModal
+                    isOpen={historyModalOpen}
+                    onClose={() => {
+                        setHistoryModalOpen(false);
+                        setSelectedBalance(null);
+                    }}
+                    balance={selectedBalance}
+                    onLoadHistory={handleLoadHistory}
+                />
+            )}
         </div>
     );
 }

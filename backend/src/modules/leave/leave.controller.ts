@@ -1,5 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { leaveService } from './leave.service.js';
+import { replacementService } from './replacement.service.js';
+import { leaveExportService } from './leave.export.js';
+import { balanceAdjustmentService } from './balance-adjustment.service.js';
+import { templateService } from './template.service.js';
+import { analyticsService } from './analytics.service.js';
 import {
     createLeaveTypeSchema,
     updateLeaveTypeSchema,
@@ -13,6 +18,15 @@ import {
     listLeaveBalancesQuerySchema,
     updateLeaveBalanceSchema,
     initializeBalancesSchema,
+    approveLeaveWithReplacementsSchema,
+    assignReplacementsSchema,
+    adjustBalanceSchema,
+    listAdjustmentsQuerySchema,
+    bulkAdjustSchema,
+    createTemplateSchema,
+    updateTemplateSchema,
+    applyTemplateSchema,
+    listTemplatesQuerySchema,
 } from './leave.validation.js';
 import { success } from '../../utils/response.js';
 import { BadRequestError, UnauthorizedError, ForbiddenError } from '../../utils/errors.js';
@@ -341,6 +355,98 @@ class LeaveController {
         }
     }
 
+    // GET /leave-requests/:id/conflicts - Get shift conflicts for leave request
+    async getLeaveRequestConflicts(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const id = req.params.id as string;
+            const conflicts = await leaveService.getLeaveRequestConflicts(id, companyId);
+
+            return res.json(
+                success(conflicts, 'Shift conflicts retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /shifts/:id/available-replacements - Get available replacement guards for a shift
+    async getAvailableReplacements(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const shiftId = req.params.id as string;
+            const replacements = await replacementService.getAvailableReplacements(shiftId, companyId);
+
+            return res.json(
+                success(replacements, 'Available replacements retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /leave-requests/:id/approve-with-replacements - Approve leave with replacement assignments
+    async approveLeaveWithReplacements(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+            if (!userId) {
+                throw new UnauthorizedError('User ID not found');
+            }
+
+            const id = req.params.id as string;
+            const data = approveLeaveWithReplacementsSchema.parse(req.body);
+            const result = await leaveService.approveLeaveRequestWithReplacements(
+                id,
+                companyId,
+                userId,
+                data
+            );
+
+            return res.json(
+                success(result, 'Leave request approved with replacements successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /leave-requests/:id/assign-replacements - Bulk assign replacements for leave request
+    async assignReplacementsForLeave(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const id = req.params.id as string;
+            const data = assignReplacementsSchema.parse(req.body);
+            const result = await replacementService.assignReplacementsForLeave(
+                data.replacements,
+                companyId,
+                id
+            );
+
+            return res.json(
+                success(result, 'Replacements assigned successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // GET /leave/calendar - Get leave calendar
     async getLeaveCalendar(req: Request, res: Response, next: NextFunction) {
         try {
@@ -619,6 +725,474 @@ class LeaveController {
 
             return res.json(
                 success(null, 'Document deleted successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ========================================================================
+    // EXPORT ENDPOINTS
+    // ========================================================================
+
+    // GET /leave/export/ical - Export leave calendar as iCal (.ics) file
+    async exportICalendar(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            // Parse query filters
+            const filters: any = {};
+
+            if (req.query.startDate) {
+                filters.startDate = req.query.startDate as string;
+            }
+
+            if (req.query.endDate) {
+                filters.endDate = req.query.endDate as string;
+            }
+
+            if (req.query.teamId) {
+                filters.teamId = req.query.teamId as string;
+            }
+
+            if (req.query.employeeId) {
+                filters.employeeId = req.query.employeeId as string;
+            }
+
+            if (req.query.status) {
+                filters.status = req.query.status as string;
+            }
+
+            // Generate iCal file
+            const icalBuffer = await leaveExportService.generateICalBuffer(companyId, filters);
+            const filename = leaveExportService.generateFilename(filters);
+
+            // Set headers for file download
+            res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', icalBuffer.length.toString());
+
+            // Send buffer
+            return res.send(icalBuffer);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ========================================================================
+    // BALANCE ADJUSTMENT ENDPOINTS
+    // ========================================================================
+
+    // POST /leave-balances/:id/adjust - Adjust leave balance with audit trail
+    async adjustBalance(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const balanceId = req.params.id as string;
+            const data = adjustBalanceSchema.parse(req.body);
+
+            // Perform adjustment with audit trail
+            const adjustment = await balanceAdjustmentService.adjustBalance(
+                balanceId,
+                companyId,
+                userId,
+                data
+            );
+
+            return res.json(
+                success(adjustment, 'Balance adjusted successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave-balances/:id/adjustments - Get adjustment history for a balance
+    async getBalanceAdjustments(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const balanceId = req.params.id as string;
+
+            const adjustments = await balanceAdjustmentService.getAdjustmentHistory(
+                balanceId,
+                companyId
+            );
+
+            return res.json(
+                success(adjustments, 'Adjustment history retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave-balances/adjustments - List all adjustments with filters
+    async listAdjustments(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const query = listAdjustmentsQuerySchema.parse(req.query);
+
+            const result = await balanceAdjustmentService.listAdjustments(companyId, query);
+
+            return res.json(
+                success(result, 'Adjustments retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /employees/:id/adjustments - Get adjustment history for an employee
+    async getEmployeeAdjustments(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const employeeId = req.params.id as string;
+            const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+
+            const adjustments = await balanceAdjustmentService.getEmployeeAdjustments(
+                employeeId,
+                companyId,
+                year
+            );
+
+            return res.json(
+                success(adjustments, 'Employee adjustment history retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /leave-balances/bulk-adjust - Bulk adjust balances
+    async bulkAdjustBalances(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const data = bulkAdjustSchema.parse(req.body);
+
+            const result = await balanceAdjustmentService.bulkAdjust(
+                companyId,
+                userId,
+                data.adjustments
+            );
+
+            return res.json(
+                success(result, 'Bulk adjustment completed')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ========================================================================
+    // LEAVE REQUEST TEMPLATE ENDPOINTS
+    // ========================================================================
+
+    // GET /leave-templates - List all templates
+    async listTemplates(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const query = listTemplatesQuerySchema.parse(req.query);
+
+            const templates = await templateService.listTemplates(companyId, query);
+
+            return res.json(
+                success(templates, 'Templates retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave-templates/:id - Get a single template
+    async getTemplate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const templateId = req.params.id as string;
+
+            const template = await templateService.getTemplateById(templateId, companyId);
+
+            return res.json(
+                success(template, 'Template retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /leave-templates - Create a new template
+    async createTemplate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            const userId = req.user?.userId;
+
+            if (!companyId || !userId) {
+                throw new UnauthorizedError('User information not found');
+            }
+
+            const data = createTemplateSchema.parse(req.body);
+
+            const template = await templateService.createTemplate(companyId, userId, data);
+
+            return res.json(
+                success(template, 'Template created successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // PUT /leave-templates/:id - Update a template
+    async updateTemplate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const templateId = req.params.id as string;
+            const data = updateTemplateSchema.parse(req.body);
+
+            const template = await templateService.updateTemplate(templateId, companyId, data);
+
+            return res.json(
+                success(template, 'Template updated successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // DELETE /leave-templates/:id - Delete a template
+    async deleteTemplate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const templateId = req.params.id as string;
+
+            await templateService.deleteTemplate(templateId, companyId);
+
+            return res.json(
+                success(null, 'Template deleted successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // POST /leave-templates/:id/apply - Apply a template to get draft data
+    async applyTemplate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const templateId = req.params.id as string;
+            const data = applyTemplateSchema.parse(req.body);
+
+            const draft = await templateService.applyTemplate(
+                templateId,
+                companyId,
+                data.startDate
+            );
+
+            return res.json(
+                success(draft, 'Template applied successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ========================================================================
+    // ANALYTICS & REPORTING ENDPOINTS
+    // ========================================================================
+
+    // GET /leave/reports/kpi - Get KPI summary
+    async getKPISummary(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+            const summary = await analyticsService.getKPISummary(companyId, year);
+
+            return res.json(
+                success(summary, 'KPI summary retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave/reports/utilization - Get employee utilization report
+    async getUtilizationReport(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const year = parseInt(req.query.year as string) || new Date().getFullYear();
+            const departmentId = req.query.departmentId as string | undefined;
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+            const report = await analyticsService.getUtilizationReport(companyId, year, {
+                departmentId,
+                limit,
+            });
+
+            return res.json(
+                success(report, 'Utilization report retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave/reports/trending - Get trending data
+    async getTrendingReport(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const startDate = req.query.startDate as string;
+            const endDate = req.query.endDate as string;
+            const granularity = (req.query.granularity as 'daily' | 'monthly') || 'daily';
+
+            if (!startDate || !endDate) {
+                throw new BadRequestError('startDate and endDate are required');
+            }
+
+            const report = await analyticsService.getTrendingReport(companyId, {
+                startDate,
+                endDate,
+                granularity,
+            });
+
+            return res.json(
+                success(report, 'Trending report retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave/reports/type-distribution - Get leave type distribution
+    async getTypeDistribution(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+            const report = await analyticsService.getTypeDistribution(companyId, year);
+
+            return res.json(
+                success(report, 'Type distribution retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave/reports/approval-metrics - Get approval metrics
+    async getApprovalMetrics(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const startDate = req.query.startDate as string;
+            const endDate = req.query.endDate as string;
+
+            if (!startDate || !endDate) {
+                throw new BadRequestError('startDate and endDate are required');
+            }
+
+            const metrics = await analyticsService.getApprovalMetrics(companyId, {
+                startDate,
+                endDate,
+            });
+
+            return res.json(
+                success(metrics, 'Approval metrics retrieved successfully')
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // GET /leave/reports/heatmap - Get heatmap data
+    async getHeatmapData(req: Request, res: Response, next: NextFunction) {
+        try {
+            const companyId = req.user?.companyId;
+            if (!companyId) {
+                throw new UnauthorizedError('Company ID not found');
+            }
+
+            const startDate = req.query.startDate as string;
+            const endDate = req.query.endDate as string;
+
+            if (!startDate || !endDate) {
+                throw new BadRequestError('startDate and endDate are required');
+            }
+
+            const heatmap = await analyticsService.getHeatmapData(companyId, {
+                startDate,
+                endDate,
+            });
+
+            return res.json(
+                success(heatmap, 'Heatmap data retrieved successfully')
             );
         } catch (error) {
             next(error);

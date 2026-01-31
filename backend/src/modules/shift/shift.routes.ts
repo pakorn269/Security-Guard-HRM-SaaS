@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { shiftController } from './shift.controller.js';
+import { leaveController } from '../leave/leave.controller.js';
 import { authMiddleware, requireManager } from '../../middleware/auth.middleware.js';
 
 const router = Router();
@@ -54,5 +55,8 @@ router.delete('/:id', requireManager, shiftController.delete);
 // Substitution
 router.post('/:id/offer-replacement', requireManager, shiftController.offerReplacement);
 router.post('/:id/claim', shiftController.claim);
+
+// Leave replacement workflow - Get available replacements for a shift
+router.get('/:id/available-replacements', requireManager, leaveController.getAvailableReplacements);
 
 export default router;

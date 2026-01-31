@@ -35,6 +35,8 @@ interface FileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
     dropzoneText?: string;
     /** Custom browse button text */
     browseText?: string;
+    /** Enable camera capture on mobile */
+    capture?: boolean | 'user' | 'environment';
     /** Change handler */
     onChange?: (files: File[]) => void;
     /** Current files (controlled) */
@@ -76,6 +78,7 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
             showPreview = true,
             dropzoneText = 'Drag and drop files here, or',
             browseText = 'browse',
+            capture,
             onChange,
             files: controlledFiles,
             className = '',
@@ -208,6 +211,7 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
                         id={inputId}
                         multiple={multiple}
                         accept={accept}
+                        capture={capture}
                         disabled={disabled}
                         onChange={handleInputChange}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"

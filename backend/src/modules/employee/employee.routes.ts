@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { employeeController } from './employee.controller.js';
-import { authMiddleware } from '../../middleware/auth.middleware.js';
+import { authMiddleware, requireManager } from '../../middleware/auth.middleware.js';
+import { leaveController } from '../leave/leave.controller.js';
 
 const router = Router();
 
@@ -31,5 +32,8 @@ router.get('/:id/certifications', employeeController.getCertifications);
 router.post('/:id/certifications', employeeController.createCertification);
 router.put('/:employeeId/certifications/:certId', employeeController.updateCertification);
 router.delete('/:employeeId/certifications/:certId', employeeController.deleteCertification);
+
+// Leave balance adjustments (managers only)
+router.get('/:id/adjustments', requireManager, leaveController.getEmployeeAdjustments);
 
 export default router;

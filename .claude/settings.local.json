@@ -27,7 +27,9 @@
       "Bash(npm test:*)",
       "Bash(npm run lint:*)",
       "Bash(npx tsx:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(awk:*)"
     ]
   }
 }

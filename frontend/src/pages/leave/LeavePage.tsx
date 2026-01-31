@@ -24,6 +24,8 @@ import { PageHeader } from '../../components/layout';
 import { Stat } from '../../components/data-display';
 import { Tabs, TabList, Tab, Menu, MenuItem } from '../../components/navigation';
 import { DataTable, Pagination, type ColumnDef } from '../../components/data-display';
+import ShiftConflictAlert from '../../components/leave/ShiftConflictAlert';
+import ReplacementModal from '../../components/leave/ReplacementModal';
 import leaveService, {
   type LeaveRequestWithDetails,
   type LeaveSummary,
@@ -72,6 +74,9 @@ function ApprovalModal({
   const [error, setError] = useState<string | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [loadingDocument, setLoadingDocument] = useState(false);
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [loadingConflicts, setLoadingConflicts] = useState(false);
+  const [showReplacementModal, setShowReplacementModal] = useState(false);
 
   // Load document URL if document exists
   useEffect(() => {
@@ -91,6 +96,27 @@ function ApprovalModal({
     loadDocumentUrl();
   }, [request.id, request.documentUrl]);
 
+  // Load conflicts when approving
+  const loadConflicts = async () => {
+    try {
+      setLoadingConflicts(true);
+      const data = await leaveService.getLeaveRequestConflicts(request.id);
+      setConflicts(data || []);
+    } catch (err) {
+      console.error('Error loading conflicts:', err);
+      setConflicts([]);
+    } finally {
+      setLoadingConflicts(false);
+    }
+  };
+
+  // Check for conflicts when user selects approve
+  useEffect(() => {
+    if (action === 'approve' && conflicts.length === 0 && !loadingConflicts) {
+      loadConflicts();
+    }
+  }, [action]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!action) return;
@@ -105,6 +131,13 @@ function ApprovalModal({
       setError(null);
 
       if (action === 'approve') {
+        // If there are conflicts, show replacement modal
+        if (conflicts.length > 0) {
+          setShowReplacementModal(true);
+          setSubmitting(false);
+          return;
+        }
+        // No conflicts, proceed with normal approval
         await onApprove(request.id, notes || undefined);
       } else {
         await onReject(request.id, notes);
@@ -115,6 +148,21 @@ function ApprovalModal({
       setError(err instanceof Error ? err.message : t('common.error', 'เกิดข้อผิดพลาด'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApproveWithReplacements = async (replacements: any[], reviewNotes?: string) => {
+    try {
+      await leaveService.approveWithReplacements(request.id, {
+        reviewNotes: reviewNotes || notes,
+        replacements,
+      });
+      setShowReplacementModal(false);
+      onClose();
+      // Trigger data reload in parent
+      await onApprove(request.id, reviewNotes || notes);
+    } catch (err) {
+      throw err; // Let ReplacementModal handle the error
     }
   };
 
@@ -252,6 +300,22 @@ function ApprovalModal({
                     required={action === 'reject'}
                   />
                 </div>
+
+                {/* Shift Conflicts Alert (shown when approving) */}
+                {action === 'approve' && loadingConflicts && (
+                  <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                    <span>Checking for shift conflicts...</span>
+                  </div>
+                )}
+                {action === 'approve' && !loadingConflicts && conflicts.length > 0 && (
+                  <ShiftConflictAlert
+                    conflicts={conflicts}
+                    onAssignReplacements={() => setShowReplacementModal(true)}
+                    showAssignButton={true}
+                  />
+                )}
+
                 <div className="flex gap-3">
                   <Button
                     type="button"
@@ -293,6 +357,17 @@ function ApprovalModal({
           </div>
         )}
       </div>
+
+      {/* Replacement Modal */}
+      {showReplacementModal && (
+        <ReplacementModal
+          isOpen={showReplacementModal}
+          onClose={() => setShowReplacementModal(false)}
+          conflicts={conflicts}
+          onSubmit={handleApproveWithReplacements}
+          leaveRequestId={request.id}
+        />
+      )}
     </Modal>
   );
 }

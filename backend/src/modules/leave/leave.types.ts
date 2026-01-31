@@ -55,6 +55,7 @@ export interface LeaveRequestRowWithDetails extends LeaveRequestRow {
         name: string;
         name_th: string | null;
         is_paid: boolean;
+        max_days_per_year: number | null;
     };
     reviewer?: {
         id: string;
@@ -155,6 +156,7 @@ export interface LeaveRequestWithDetails extends LeaveRequest {
         name: string;
         nameTh: string | null;
         isPaid: boolean;
+        maxDaysPerYear: number | null;
     };
     reviewer?: {
         id: string;
@@ -317,4 +319,280 @@ export interface LeaveSummary {
     approvedThisMonth: number;
     employeesOnLeaveToday: number;
     upcomingLeaves: number;
+}
+
+// ============================================================================
+// REPLACEMENT GUARD WORKFLOW TYPES
+// ============================================================================
+
+// Shift conflict information
+export interface ReplacementConflict {
+    shiftId: string;
+    date: string;
+    siteId: string;
+    siteName: string;
+    siteZone: string | null;
+    startTime: string;
+    endTime: string;
+    requiresReplacement: boolean;
+    originalEmployeeId: string;
+    originalEmployeeName: string;
+    status: string;
+}
+
+// Available replacement employee
+export interface AvailableReplacement {
+    id: string;
+    fullName: string;
+    employeeCode: string;
+    position: string | null;
+    shiftCount: number; // Number of shifts in selected period
+}
+
+// Single replacement assignment
+export interface ReplacementAssignment {
+    shiftId: string;
+    replacementEmployeeId: string;
+    reason?: string;
+}
+
+// Leave approval with replacements
+export interface LeaveApprovalWithReplacements extends ApproveLeaveRequest {
+    replacements?: ReplacementAssignment[];
+}
+
+// Shift with replacement details
+export interface ShiftWithReplacement {
+    id: string;
+    companyId: string;
+    employeeId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    siteId: string;
+    status: string;
+    replacedByEmployeeId: string | null;
+    isReplacement: boolean;
+    originalEmployeeId: string | null;
+    replacementReason: string | null;
+    // Joined data
+    employee?: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+    };
+    replacementEmployee?: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+    };
+    originalEmployee?: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+    };
+    site?: {
+        id: string;
+        name: string;
+        zone: string | null;
+    };
+}
+
+// Conflict resolution result
+export interface ConflictResolutionResult {
+    leaveRequestId: string;
+    totalConflicts: number;
+    resolvedConflicts: number;
+    unresolvedConflicts: number;
+    assignedReplacements: ReplacementAssignment[];
+}
+
+// ============================================================================
+// BALANCE ADJUSTMENT TYPES
+// ============================================================================
+
+export type AdjustmentFieldName = 'entitled_days' | 'used_days' | 'pending_days';
+export type AdjustmentType = 'pro_rated' | 'correction' | 'special_allowance' | 'carry_forward' | 'manual';
+
+// Database row type for leave_balance_adjustments
+export interface LeaveBalanceAdjustmentRow {
+    id: string;
+    company_id: string;
+    balance_id: string;
+    employee_id: string;
+    leave_type_id: string;
+    year: number;
+    adjusted_by: string;
+    field_name: AdjustmentFieldName;
+    previous_value: number;
+    new_value: number;
+    adjustment_amount: number; // Generated column
+    reason: string;
+    adjustment_type: AdjustmentType | null;
+    created_at: string;
+}
+
+// Balance adjustment with user details
+export interface LeaveBalanceAdjustmentWithDetails extends LeaveBalanceAdjustmentRow {
+    adjuster?: {
+        id: string;
+        email: string;
+    };
+    employee?: {
+        id: string;
+        full_name: string;
+        employee_code: string;
+    };
+    leave_type?: {
+        id: string;
+        name: string;
+        name_th: string | null;
+    };
+}
+
+// API response type for balance adjustments
+export interface BalanceAdjustment {
+    id: string;
+    companyId: string;
+    balanceId: string;
+    employeeId: string;
+    leaveTypeId: string;
+    year: number;
+    adjustedBy: string;
+    fieldName: AdjustmentFieldName;
+    previousValue: number;
+    newValue: number;
+    adjustmentAmount: number;
+    reason: string;
+    adjustmentType: AdjustmentType | null;
+    createdAt: string;
+}
+
+// Balance adjustment with details
+export interface BalanceAdjustmentWithDetails extends BalanceAdjustment {
+    adjuster?: {
+        id: string;
+        email: string;
+    };
+    employee?: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+    };
+    leaveType?: {
+        id: string;
+        name: string;
+        nameTh: string | null;
+    };
+}
+
+// Request types
+export interface AdjustBalanceRequest {
+    fieldName: AdjustmentFieldName;
+    newValue: number;
+    reason: string;
+    adjustmentType?: AdjustmentType;
+}
+
+export interface BulkAdjustmentItem {
+    balanceId: string;
+    fieldName: AdjustmentFieldName;
+    newValue: number;
+    reason: string;
+    adjustmentType?: AdjustmentType;
+}
+
+// ============================================================================
+// LEAVE REQUEST TEMPLATE TYPES
+// ============================================================================
+
+// Database row type for leave_request_templates
+export interface LeaveRequestTemplateRow {
+    id: string;
+    company_id: string;
+    name: string;
+    name_th: string | null;
+    description: string | null;
+    leave_type_id: string;
+    default_days_count: number | null;
+    default_reason: string | null;
+    is_active: boolean;
+    sort_order: number;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Template with leave type details
+export interface LeaveRequestTemplateWithDetails extends LeaveRequestTemplateRow {
+    leave_type?: {
+        id: string;
+        name: string;
+        name_th: string | null;
+        is_paid: boolean;
+    };
+    creator?: {
+        id: string;
+        email: string;
+    };
+}
+
+// API response type for templates
+export interface LeaveRequestTemplate {
+    id: string;
+    companyId: string;
+    name: string;
+    nameTh: string | null;
+    description: string | null;
+    leaveTypeId: string;
+    defaultDaysCount: number | null;
+    defaultReason: string | null;
+    isActive: boolean;
+    sortOrder: number;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    leaveType?: {
+        id: string;
+        name: string;
+        nameTh: string | null;
+        isPaid: boolean;
+    };
+    creator?: {
+        id: string;
+        email: string;
+    };
+}
+
+// Create template request
+export interface CreateTemplateRequest {
+    name: string;
+    nameTh?: string;
+    description?: string;
+    leaveTypeId: string;
+    defaultDaysCount?: number;
+    defaultReason?: string;
+    isActive?: boolean;
+    sortOrder?: number;
+}
+
+// Update template request
+export interface UpdateTemplateRequest {
+    name?: string;
+    nameTh?: string | null;
+    description?: string | null;
+    leaveTypeId?: string;
+    defaultDaysCount?: number | null;
+    defaultReason?: string | null;
+    isActive?: boolean;
+    sortOrder?: number;
+}
+
+// Template draft result (for applyTemplate)
+export interface TemplateDraft {
+    leaveTypeId: string;
+    startDate: string | null;
+    endDate: string | null;
+    totalDays: number | null;
+    reason: string | null;
 }

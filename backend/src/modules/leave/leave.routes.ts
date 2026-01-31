@@ -78,6 +78,15 @@ leaveRequestsRouter.post('/:id/approve', requireManager, leaveController.approve
 // Reject leave request (managers and above)
 leaveRequestsRouter.post('/:id/reject', requireManager, leaveController.rejectLeaveRequest);
 
+// Get shift conflicts for leave request (managers and above)
+leaveRequestsRouter.get('/:id/conflicts', requireManager, leaveController.getLeaveRequestConflicts);
+
+// Approve leave request with replacements (managers and above)
+leaveRequestsRouter.post('/:id/approve-with-replacements', requireManager, leaveController.approveLeaveWithReplacements);
+
+// Assign replacements for leave request (managers and above)
+leaveRequestsRouter.post('/:id/assign-replacements', requireManager, leaveController.assignReplacementsForLeave);
+
 // ============================================================================
 // LEAVE BALANCES ROUTER
 // ============================================================================
@@ -93,11 +102,54 @@ leaveBalancesRouter.get('/', requireManager, leaveController.listBalances);
 // Get my leave balances
 leaveBalancesRouter.get('/my', leaveController.getMyBalances);
 
+// List all adjustments (managers and above)
+leaveBalancesRouter.get('/adjustments', requireManager, leaveController.listAdjustments);
+
+// Bulk adjust balances (managers and above)
+leaveBalancesRouter.post('/bulk-adjust', requireManager, leaveController.bulkAdjustBalances);
+
 // Update employee's leave balance (managers and above)
 leaveBalancesRouter.put('/:employeeId/:leaveTypeId', requireManager, leaveController.updateBalance);
 
 // Initialize balances for year (managers and above)
 leaveBalancesRouter.post('/initialize', requireManager, leaveController.initializeBalances);
+
+// --------------------------------
+// Balance adjustment routes
+// --------------------------------
+
+// Adjust a specific balance with audit trail (managers and above)
+leaveBalancesRouter.post('/:id/adjust', requireManager, leaveController.adjustBalance);
+
+// Get adjustment history for a balance (managers and above)
+leaveBalancesRouter.get('/:id/adjustments', requireManager, leaveController.getBalanceAdjustments);
+
+// ============================================================================
+// LEAVE REQUEST TEMPLATES ROUTER
+// ============================================================================
+
+const leaveTemplatesRouter = Router();
+
+// All routes require authentication
+leaveTemplatesRouter.use(authMiddleware);
+
+// List all templates (all authenticated users can view active templates)
+leaveTemplatesRouter.get('/', leaveController.listTemplates);
+
+// Get a single template
+leaveTemplatesRouter.get('/:id', leaveController.getTemplate);
+
+// Create a new template (managers and above)
+leaveTemplatesRouter.post('/', requireManager, leaveController.createTemplate);
+
+// Update a template (managers and above)
+leaveTemplatesRouter.put('/:id', requireManager, leaveController.updateTemplate);
+
+// Delete a template (managers and above)
+leaveTemplatesRouter.delete('/:id', requireManager, leaveController.deleteTemplate);
+
+// Apply a template to get draft data (all authenticated users)
+leaveTemplatesRouter.post('/:id/apply', leaveController.applyTemplate);
 
 // ============================================================================
 // LEAVE MANAGEMENT ROUTER (combined endpoints)
@@ -116,6 +168,20 @@ leaveRouter.get('/calendar', requireManager, leaveController.getLeaveCalendar);
 leaveRouter.get('/summary', requireManager, leaveController.getLeaveSummary);
 leaveRouter.get('/pending-count', requireManager, leaveController.getPendingCount);
 
+// Export routes
+leaveRouter.get('/export/ical', requireManager, leaveController.exportICalendar);
+
+// ================================
+// Analytics & Reporting Routes
+// ================================
+
+leaveRouter.get('/reports/kpi', requireManager, leaveController.getKPISummary);
+leaveRouter.get('/reports/utilization', requireManager, leaveController.getUtilizationReport);
+leaveRouter.get('/reports/trending', requireManager, leaveController.getTrendingReport);
+leaveRouter.get('/reports/type-distribution', requireManager, leaveController.getTypeDistribution);
+leaveRouter.get('/reports/approval-metrics', requireManager, leaveController.getApprovalMetrics);
+leaveRouter.get('/reports/heatmap', requireManager, leaveController.getHeatmapData);
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -124,6 +190,7 @@ export {
     leaveTypesRouter,
     leaveRequestsRouter,
     leaveBalancesRouter,
+    leaveTemplatesRouter,
     leaveRouter,
 };
 
