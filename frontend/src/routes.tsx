@@ -24,12 +24,15 @@ const AttendancePage = lazy(() => import('./pages/attendance/AttendancePage'));
 const LeavePage = lazy(() => import('./pages/leave/LeavePage'));
 const LeaveBalancesPage = lazy(() => import('./pages/leave/LeaveBalancesPage'));
 const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'));
+const LeaveTemplatesPage = lazy(() => import('./pages/leave/LeaveTemplatesPage'));
+const LeaveReportsPage = lazy(() => import('./pages/leave/LeaveReportsPage'));
 
 // Sprint 6: Reports & Settings pages
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const SitesPage = lazy(() => import('./pages/sites/SitesPage'));
 const SiteDetailPage = lazy(() => import('./pages/sites/SiteDetailPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const NotificationPreferencesPage = lazy(() => import('./pages/settings/NotificationPreferencesPage'));
 
 // Layouts
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
@@ -140,6 +143,14 @@ const routes: RouteObject[] = [
                 path: 'leave-types',
                 element: withSuspense(LeaveTypesPage),
             },
+            {
+                path: 'leave-templates',
+                element: withSuspense(LeaveTemplatesPage),
+            },
+            {
+                path: 'leave-reports',
+                element: withSuspense(LeaveReportsPage),
+            },
             // Sprint 6: Reports & Settings
             {
                 path: 'reports',
@@ -156,6 +167,10 @@ const routes: RouteObject[] = [
             {
                 path: 'settings/:tab?',
                 element: withSuspense(SettingsPage),
+            },
+            {
+                path: 'notifications',
+                element: withSuspense(NotificationPreferencesPage),
             },
         ],
     },

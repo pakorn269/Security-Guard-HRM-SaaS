@@ -37,7 +37,16 @@ class LeaveController {
     // LEAVE TYPE ENDPOINTS
     // ========================================================================
 
-    // GET /leave-types - List all leave types
+    /**
+     * List all leave types
+     * @route GET /api/v1/leave-types
+     * @group Leave Types - Manage leave types
+     * @security bearerAuth
+     * @param {object} req.query - Query parameters
+     * @param {boolean} req.query.includeInactive - Include inactive types
+     * @returns {object} 200 - Array of leave types
+     * @returns {Error} 401 - Unauthorized
+     */
     async listLeaveTypes(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;
@@ -56,7 +65,15 @@ class LeaveController {
         }
     }
 
-    // GET /leave-types/:id - Get leave type by ID
+    /**
+     * Get leave type by ID
+     * @route GET /api/v1/leave-types/{id}
+     * @group Leave Types - Manage leave types
+     * @security bearerAuth
+     * @param {string} req.params.id.required - Leave type ID
+     * @returns {object} 200 - Leave type details
+     * @returns {Error} 404 - Leave type not found
+     */
     async getLeaveTypeById(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;
@@ -75,7 +92,17 @@ class LeaveController {
         }
     }
 
-    // POST /leave-types - Create leave type
+    /**
+     * Create a new leave type
+     * @route POST /api/v1/leave-types
+     * @group Leave Types - Manage leave types
+     * @security bearerAuth
+     * @requires manager - Manager role or above
+     * @param {object} req.body.required - Leave type data
+     * @returns {object} 201 - Created leave type
+     * @returns {Error} 400 - Invalid request data
+     * @returns {Error} 403 - Insufficient permissions
+     */
     async createLeaveType(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;
@@ -94,7 +121,17 @@ class LeaveController {
         }
     }
 
-    // PUT /leave-types/:id - Update leave type
+    /**
+     * Update a leave type
+     * @route PUT /api/v1/leave-types/{id}
+     * @group Leave Types - Manage leave types
+     * @security bearerAuth
+     * @requires manager - Manager role or above
+     * @param {string} req.params.id.required - Leave type ID
+     * @param {object} req.body.required - Updated leave type data
+     * @returns {object} 200 - Updated leave type
+     * @returns {Error} 404 - Leave type not found
+     */
     async updateLeaveType(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;
@@ -114,7 +151,16 @@ class LeaveController {
         }
     }
 
-    // DELETE /leave-types/:id - Delete leave type
+    /**
+     * Delete a leave type (soft delete)
+     * @route DELETE /api/v1/leave-types/{id}
+     * @group Leave Types - Manage leave types
+     * @security bearerAuth
+     * @requires manager - Manager role or above
+     * @param {string} req.params.id.required - Leave type ID
+     * @returns {object} 200 - Success message
+     * @returns {Error} 404 - Leave type not found
+     */
     async deleteLeaveType(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;
@@ -137,7 +183,15 @@ class LeaveController {
     // LEAVE REQUEST ENDPOINTS (GUARD - for LIFF)
     // ========================================================================
 
-    // GET /leave-requests/my - Get my leave requests
+    /**
+     * Get my leave requests
+     * @route GET /api/v1/leave-requests/my
+     * @group Leave Requests - Submit and manage leave requests
+     * @security bearerAuth
+     * @param {number} req.query.year - Filter by year (optional)
+     * @returns {object} 200 - Array of my leave requests
+     * @returns {Error} 400 - Employee not linked to user account
+     */
     async getMyLeaveRequests(req: Request, res: Response, next: NextFunction) {
         try {
             const companyId = req.user?.companyId;

@@ -4,10 +4,13 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import * as Sentry from '@sentry/node';
+import swaggerUi from 'swagger-ui-express';
 
 import { env } from './config/env.js';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware.js';
+import { performanceMiddleware, performanceStatsMiddleware } from './middleware/performance.middleware.js';
 import logger from './utils/logger.js';
+import { openApiSpec } from './docs/openapi.js';
 
 // Route imports
 import healthRoutes from './modules/health/health.routes.js';
@@ -35,8 +38,19 @@ const app: Application = express();
 // Trust proxy for Vercel/Heroku/etc.
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware - with CSP exemption for Swagger UI
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+            },
+        },
+    })
+);
 
 // CORS configuration
 app.use(
@@ -77,6 +91,10 @@ app.use(urlencoded({ extended: true, limit: '10mb' }));
 // Compression
 app.use(compression());
 
+// Performance monitoring middleware
+app.use(performanceMiddleware);
+app.use(performanceStatsMiddleware);
+
 // Request logging middleware
 app.use((req, res, next) => {
     const start = Date.now();
@@ -86,6 +104,34 @@ app.use((req, res, next) => {
     });
     next();
 });
+
+// ============================================================================
+// API DOCUMENTATION (Swagger UI)
+// ============================================================================
+
+// Swagger UI options
+const swaggerUiOptions = {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Security Guard HRM API Documentation',
+    swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        filter: true,
+        tryItOutEnabled: true,
+    },
+};
+
+// Serve Swagger UI at /api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+
+// Serve OpenAPI spec JSON at /api-docs.json
+app.get('/api-docs.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(openApiSpec);
+});
+
+console.log('[App] API Documentation available at /api-docs');
 
 // Basic health check endpoint
 app.get('/health', (_req, res) => {
@@ -161,7 +207,10 @@ apiRouter.get('/', (_req, res) => {
     res.json({
         message: 'Security Guard HRM API',
         version: env.API_VERSION,
-        documentation: '/api/v1/docs',
+        documentation: {
+            interactive: '/api-docs',
+            openApiSpec: '/api-docs.json',
+        },
         endpoints: {
             auth: {
                 register: 'POST /api/v1/auth/register',
@@ -176,6 +225,9 @@ apiRouter.get('/', (_req, res) => {
                 current: 'GET /api/v1/companies/current',
                 getById: 'GET /api/v1/companies/:id',
                 settings: 'GET/PUT /api/v1/companies/:id/settings',
+            },
+            leave: {
+                documentation: '/api-docs#/Leave%20Types',
             },
             health: '/api/v1/health/db',
             tables: '/api/v1/health/tables',
