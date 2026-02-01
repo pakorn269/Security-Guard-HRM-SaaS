@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คำขอลาถูกปฏิเสธ</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #ef4444; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              {{#if logoUrl}}
+              <img src="{{logoUrl}}" alt="{{companyName}}" style="max-width: 150px; height: auto;">
+              {{else}}
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">{{companyName}}</h1>
+              {{/if}}
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background-color: #fee2e2; border-radius: 50%; padding: 20px; margin-bottom: 20px;">
+                  <span style="font-size: 48px;">❌</span>
+                </div>
+                <h2 style="color: #111827; margin: 0 0 10px; font-size: 24px;">คำขอลาถูกปฏิเสธ</h2>
+                <p style="color: #6b7280; margin: 0; font-size: 16px;">เราเสียใจที่ต้องแจ้งให้คุณทราบ</p>
+              </div>
+
+              <!-- Request Details Card -->
+              <table role="presentation" style="width: 100%; background-color: #fef2f2; border-radius: 6px; border-left: 4px solid #ef4444; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" style="width: 100%;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">ประเภทการลา:</td>
+                        <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">{{leaveType}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">วันที่เริ่มต้น:</td>
+                        <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">{{formatDate startDate}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">วันที่สิ้นสุด:</td>
+                        <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">{{formatDate endDate}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">จำนวนวัน:</td>
+                        <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">{{totalDays}} วัน</td>
+                      </tr>
+                      {{#if approverName}}
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">ผู้พิจารณา:</td>
+                        <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">{{approverName}}</td>
+                      </tr>
+                      {{/if}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {{#if rejectionReason}}
+              <div style="background-color: #fffbeb; border-radius: 6px; padding: 15px; margin: 20px 0; border: 1px solid #fbbf24;">
+                <p style="color: #92400e; margin: 0; font-size: 14px;"><strong>📝 เหตุผลในการปฏิเสธ:</strong></p>
+                <p style="color: #78350f; margin: 10px 0 0; line-height: 1.6;">{{rejectionReason}}</p>
+              </div>
+              {{/if}}
+
+              <!-- CTA Button -->
+              <table role="presentation" style="margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{dashboardUrl}}/leave/my-requests" style="display: inline-block; background-color: #6b7280; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      ดูคำขอลาของฉัน
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="background-color: #f0f9ff; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                <p style="color: #075985; margin: 0; font-size: 14px; line-height: 1.6;">
+                  💡 <strong>ขั้นตอนถัดไป:</strong> คุณสามารถติดต่อผู้จัดการเพื่อสอบถามรายละเอียดเพิ่มเติม หรือส่งคำขอลาใหม่ในวันที่อื่น
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">
+                © {{currentYear}} {{companyName}}. All rights reserved.
+              </p>
+              <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0;">
+                อีเมลนี้ถูกส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

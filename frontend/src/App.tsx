@@ -3,7 +3,7 @@ import { router } from './routes';
 import { ThemeProvider } from './components/theme';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
-import './i18n';
+import './i18n/i18n.config';
 
 function App() {
   return (

@@ -29,7 +29,10 @@
       "Bash(npx tsx:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(npm run check:i18n:*)",
+      "Bash(npm run generate:openapi:*)",
+      "Bash(python -m json.tool:*)"
     ]
   }
 }

@@ -4,6 +4,7 @@ import logger from '../utils/logger.js';
 import { checkLicenses } from './licenseChecker.js';
 import { sendShiftReminders } from './lineNotifications.js';
 import { detectNoShows, detectMissedClockOuts } from './noShowDetection.js';
+import { sendDailyLeaveReminders } from './leave-reminders.job.js';
 
 export const initScheduler = () => {
     logger.info('Initializing Job Scheduler...');
@@ -80,10 +81,25 @@ export const initScheduler = () => {
         }
     });
 
+    // Schedule Leave Reminders
+    // Run every day at 08:00 AM (0 8 * * *)
+    cron.schedule('0 8 * * *', async () => {
+        try {
+            logger.info('Running scheduled job: Leave Reminders');
+            await sendDailyLeaveReminders();
+            logger.info('Leave Reminders job completed');
+        } catch (error) {
+            logger.error('Error running Leave Reminders job', error);
+        }
+    }, {
+        timezone: 'Asia/Bangkok',
+    });
+
     logger.info('Job Scheduler initialized successfully');
     logger.info('Scheduled jobs:');
     logger.info('  - Shift Reminders: Every hour (0 * * * *)');
     logger.info('  - No-Show Detection: Every 30 minutes (*/30 * * * *)');
     logger.info('  - Missed Clock-Out Detection: Every hour at :15 (15 * * * *)');
     logger.info('  - License Compliance Check: Daily at midnight (0 0 * * *)');
+    logger.info('  - Leave Reminders: Daily at 08:00 AM Bangkok time (0 8 * * *)');
 };

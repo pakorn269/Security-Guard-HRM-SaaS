@@ -3,6 +3,9 @@ import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/erro
 import logger from '../../utils/logger.js';
 import { replacementService } from './replacement.service.js';
 import { balanceAdjustmentService } from './balance-adjustment.service.js';
+import { emailService } from '../../services/email.service.js';
+import emailConfig from '../../config/email.config.js';
+import { cacheService, CACHE_KEYS, CACHE_TTL } from '../../services/cache.service.js';
 import type {
     LeaveType,
     LeaveTypeRow,
@@ -227,25 +230,35 @@ class LeaveService {
         companyId: string,
         query: ListLeaveTypesQuery = {}
     ): Promise<LeaveType[]> {
-        let queryBuilder = supabaseAdmin
-            .from('leave_types')
-            .select('*')
-            .eq('company_id', companyId)
-            .order('sort_order', { ascending: true })
-            .order('name', { ascending: true });
+        // Generate cache key based on query parameters
+        const cacheKey = `${CACHE_KEYS.LEAVE_TYPES(companyId)}:${query.includeInactive ? 'all' : 'active'}`;
 
-        if (!query.includeInactive) {
-            queryBuilder = queryBuilder.eq('is_active', true);
-        }
+        // Try to get from cache
+        return cacheService.getOrSet(
+            cacheKey,
+            async () => {
+                let queryBuilder = supabaseAdmin
+                    .from('leave_types')
+                    .select('*')
+                    .eq('company_id', companyId)
+                    .order('sort_order', { ascending: true })
+                    .order('name', { ascending: true });
 
-        const { data, error } = await queryBuilder;
+                if (!query.includeInactive) {
+                    queryBuilder = queryBuilder.eq('is_active', true);
+                }
 
-        if (error) {
-            logger.error('Error listing leave types:', error);
-            throw error;
-        }
+                const { data, error } = await queryBuilder;
 
-        return (data as LeaveTypeRow[]).map(this.mapToLeaveType);
+                if (error) {
+                    logger.error('Error listing leave types:', error);
+                    throw error;
+                }
+
+                return (data as LeaveTypeRow[]).map(this.mapToLeaveType);
+            },
+            CACHE_TTL.LEAVE_TYPES
+        );
     }
 
     // Get leave type by ID
@@ -253,18 +266,26 @@ class LeaveService {
         leaveTypeId: string,
         companyId: string
     ): Promise<LeaveType> {
-        const { data, error } = await supabaseAdmin
-            .from('leave_types')
-            .select('*')
-            .eq('id', leaveTypeId)
-            .eq('company_id', companyId)
-            .single();
+        const cacheKey = CACHE_KEYS.LEAVE_TYPE(companyId, leaveTypeId);
 
-        if (error || !data) {
-            throw new NotFoundError('Leave type not found');
-        }
+        return cacheService.getOrSet(
+            cacheKey,
+            async () => {
+                const { data, error } = await supabaseAdmin
+                    .from('leave_types')
+                    .select('*')
+                    .eq('id', leaveTypeId)
+                    .eq('company_id', companyId)
+                    .single();
 
-        return this.mapToLeaveType(data as LeaveTypeRow);
+                if (error || !data) {
+                    throw new NotFoundError('Leave type not found');
+                }
+
+                return this.mapToLeaveType(data as LeaveTypeRow);
+            },
+            CACHE_TTL.LEAVE_TYPES
+        );
     }
 
     // Create leave type
@@ -293,6 +314,9 @@ class LeaveService {
             logger.error('Error creating leave type:', error);
             throw error;
         }
+
+        // Invalidate cache
+        cacheService.invalidateLeaveTypes(companyId);
 
         return this.mapToLeaveType(created as LeaveTypeRow);
     }
@@ -327,6 +351,9 @@ class LeaveService {
         if (error || !updated) {
             throw new NotFoundError('Leave type not found');
         }
+
+        // Invalidate cache
+        cacheService.invalidateLeaveTypes(companyId);
 
         return this.mapToLeaveType(updated as LeaveTypeRow);
     }
@@ -366,6 +393,9 @@ class LeaveService {
                 throw error;
             }
         }
+
+        // Invalidate cache
+        cacheService.invalidateLeaveTypes(companyId);
     }
 
     // ========================================================================
@@ -575,7 +605,19 @@ class LeaveService {
             }
         }
 
-        return this.mapToLeaveRequestWithDetails(created as LeaveRequestRowWithDetails);
+        const result = this.mapToLeaveRequestWithDetails(created as LeaveRequestRowWithDetails);
+
+        // Send notification to managers for new pending requests
+        if (status === 'pending') {
+            this.sendNewLeaveRequestNotification(companyId, result).catch(err =>
+                logger.error('Failed to send new leave request notification', err)
+            );
+        }
+
+        // Invalidate balance cache for this employee/year
+        cacheService.invalidateLeaveBalances(companyId, year, employeeId);
+
+        return result;
     }
 
     // List leave requests
@@ -866,6 +908,10 @@ class LeaveService {
         this.sendLeaveStatusNotification(companyId, result, 'approved').catch(err =>
             logger.error('Failed to send leave notification', err)
         );
+
+        // Invalidate balance cache
+        cacheService.invalidateLeaveBalances(companyId, year, request.employeeId);
+
         return result;
     }
 
@@ -977,6 +1023,10 @@ class LeaveService {
         this.sendLeaveStatusNotification(companyId, result, 'rejected').catch(err =>
             logger.error('Failed to send leave notification', err)
         );
+
+        // Invalidate balance cache
+        cacheService.invalidateLeaveBalances(companyId, year, request.employeeId);
+
         return result;
     }
 
@@ -1451,10 +1501,10 @@ class LeaveService {
         status: 'approved' | 'rejected'
     ) {
         try {
-            // Get user for employee
+            // Get user for employee with email and preferences
             const { data: user, error } = await supabaseAdmin
                 .from('users')
-                .select('id')
+                .select('id, email, email_notifications')
                 .eq('employee_id', request.employeeId)
                 .single();
 
@@ -1495,8 +1545,84 @@ class LeaveService {
             // Send LINE notification using the dedicated LINE notification job
             const { sendLeaveNotification } = await import('../../jobs/lineNotifications.js');
             await sendLeaveNotification(companyId, request.id, status);
+
+            // Send email notification if user has email and preferences allow
+            const emailPrefs = (user.email_notifications as { approval?: boolean }) || {};
+            if (user.email && emailPrefs.approval !== false) {
+                // Get reviewer name
+                const { data: reviewer } = request.reviewedBy
+                    ? await supabaseAdmin
+                          .from('users')
+                          .select('full_name')
+                          .eq('id', request.reviewedBy)
+                          .single()
+                    : { data: null };
+
+                const emailData = {
+                    employeeName: request.employee?.fullName || 'Employee',
+                    leaveType: request.leaveType?.nameTh || request.leaveType?.name || 'Leave',
+                    startDate: request.startDate,
+                    endDate: request.endDate,
+                    totalDays: request.totalDays,
+                    reason: request.reason || '',
+                    approverName: reviewer?.full_name,
+                    rejectionReason: request.reviewNotes || '',
+                    dashboardUrl: emailConfig.templates.baseUrl,
+                    companyName: emailConfig.branding.companyName,
+                };
+
+                if (isApproved) {
+                    await emailService.sendLeaveRequestApproved(user.email, emailData);
+                } else {
+                    await emailService.sendLeaveRequestRejected(user.email, emailData);
+                }
+            }
         } catch (error) {
             logger.error('Error sending leave notification', error);
+        }
+    }
+
+    /**
+     * Send notification to managers when a new leave request is created
+     */
+    private async sendNewLeaveRequestNotification(
+        companyId: string,
+        request: LeaveRequestWithDetails
+    ) {
+        try {
+            // Get all managers/admins in the company who can approve leave
+            const { data: managers, error } = await supabaseAdmin
+                .from('users')
+                .select('id, email, email_notifications, role')
+                .eq('company_id', companyId)
+                .in('role', ['company_admin', 'manager'])
+                .eq('is_active', true);
+
+            if (error || !managers || managers.length === 0) {
+                logger.warn('No managers found to notify for leave request', { companyId });
+                return;
+            }
+
+            // Send email to managers with email notification preference enabled
+            for (const manager of managers) {
+                const emailPrefs = (manager.email_notifications as { request?: boolean }) || {};
+                if (manager.email && emailPrefs.request !== false) {
+                    const emailData = {
+                        employeeName: request.employee?.fullName || 'Employee',
+                        leaveType: request.leaveType?.nameTh || request.leaveType?.name || 'Leave',
+                        startDate: request.startDate,
+                        endDate: request.endDate,
+                        totalDays: request.totalDays,
+                        reason: request.reason || '',
+                        dashboardUrl: emailConfig.templates.baseUrl,
+                        companyName: emailConfig.branding.companyName,
+                    };
+
+                    await emailService.sendLeaveRequestSubmitted(manager.email, emailData);
+                }
+            }
+        } catch (error) {
+            logger.error('Error sending new leave request notification to managers', error);
         }
     }
 

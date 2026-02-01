@@ -50,18 +50,6 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
     const [showFilters, setShowFilters] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
-    // Tooltip state
-    const [tooltip, setTooltip] = useState<{
-        show: boolean;
-        x: number;
-        y: number;
-        employees: LeaveCalendarEntry['employees'];
-    }>({
-        show: false,
-        x: 0,
-        y: 0,
-        employees: [],
-    });
 
     // Calculate view range based on mode
     const { startDate, endDate } = useMemo(() => {
@@ -296,95 +284,112 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
         return LEAVE_TYPE_COLORS.default;
     };
 
-    // Handle tooltip
-    const handleMouseEnter = (e: React.MouseEvent, employees: LeaveCalendarEntry['employees']) => {
-        if (employees.length === 0) return;
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        setTooltip({
-            show: true,
-            x: rect.left + rect.width / 2,
-            y: rect.top - 10,
-            employees,
-        });
-    };
-
-    const handleMouseLeave = () => {
-        setTooltip({ show: false, x: 0, y: 0, employees: [] });
-    };
 
     // Render month view
     const renderMonthView = () => (
-        <div className="grid grid-cols-7 gap-1">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {/* Week day headers */}
-            {weekDays.map((day, i) => (
-                <div
-                    key={day}
-                    className={`text-center text-sm font-medium py-2 ${i === 0 ? 'text-error-500' : i === 6 ? 'text-primary-500' : 'text-surface-600'
-                        }`}
-                >
-                    {day}
-                </div>
-            ))}
+            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+                {weekDays.map((day, i) => (
+                    <div
+                        key={day}
+                        className={`py-4 text-center text-xs font-bold uppercase tracking-wider ${i === 0 || i === 6 ? 'text-rose-500/80' : 'text-slate-500'
+                            }`}
+                    >
+                        {day}
+                    </div>
+                ))}
+            </div>
 
             {/* Calendar days */}
-            {calendarGrid.map((week, weekIndex) =>
-                week.map((day, dayIndex) => {
-                    const employeesOnLeave = leaveMap[day.dateStr] || [];
-                    const hasLeave = employeesOnLeave.length > 0;
-                    const isSelected = selectedDay === day.dateStr;
+            <div className="grid grid-cols-7 bg-slate-200 gap-px">
+                {calendarGrid.map((week, weekIndex) =>
+                    week.map((day, dayIndex) => {
+                        const employeesOnLeave = leaveMap[day.dateStr] || [];
+                        const hasLeave = employeesOnLeave.length > 0;
+                        const isSelected = selectedDay === day.dateStr;
+                        const isWeekend = dayIndex === 0 || dayIndex === 6;
 
-                    return (
-                        <button
-                            key={`${weekIndex}-${dayIndex}`}
-                            onClick={() => setSelectedDay(isSelected ? null : day.dateStr)}
-                            onMouseEnter={(e) => handleMouseEnter(e, employeesOnLeave)}
-                            onMouseLeave={handleMouseLeave}
-                            className={`
-                                relative aspect-square p-1 rounded-lg transition-all
-                                ${!day.isCurrentMonth ? 'opacity-30' : ''}
-                                ${day.isToday ? 'ring-2 ring-primary-500' : ''}
-                                ${isSelected ? 'bg-primary-100 ring-2 ring-primary-400' : 'hover:bg-surface-100'}
-                                ${dayIndex === 0 ? 'text-error-500' : dayIndex === 6 ? 'text-primary-500' : 'text-surface-800'}
-                            `}
-                        >
-                            <span
-                                className={`text-sm font-medium ${day.isToday ? 'text-primary-600' : ''}`}
+                        return (
+                            <div
+                                key={`${weekIndex}-${dayIndex}`}
+                                onClick={() => setSelectedDay(isSelected ? null : day.dateStr)}
+                                className={`
+                                    relative min-h-[120px] p-2 transition-all cursor-pointer bg-white group hover:bg-slate-50/80
+                                    ${!day.isCurrentMonth ? 'bg-slate-50/50 text-slate-400' : ''}
+                                    ${isWeekend && day.isCurrentMonth ? 'bg-slate-50/30' : ''}
+                                    ${isSelected ? 'ring-2 ring-inset ring-blue-500 z-10 bg-blue-50/10' : ''}
+                                `}
                             >
-                                {day.date.getDate()}
-                            </span>
+                                {/* Date Number */}
+                                <div className="flex justify-between items-start mb-1">
+                                    <span
+                                        className={`
+                                            flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold transition-all
+                                            ${day.isToday
+                                                ? 'bg-blue-600 text-white shadow-md scale-105'
+                                                : day.isCurrentMonth
+                                                    ? 'text-slate-700 group-hover:bg-white group-hover:shadow-sm'
+                                                    : 'text-slate-400'
+                                            }
+                                        `}
+                                    >
+                                        {day.date.getDate()}
+                                    </span>
+                                </div>
 
-                            {/* Leave indicators */}
-                            {hasLeave && (
-                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                                    {employeesOnLeave.length <= 3 ? (
-                                        employeesOnLeave.map((_, i) => (
+                                {/* Events Stack */}
+                                <div className="space-y-1">
+                                    {/* Mobile/Small screens: Dots */}
+                                    <div className="flex flex-wrap gap-1 lg:hidden">
+                                        {hasLeave &&
+                                            employeesOnLeave.slice(0, 4).map((emp, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`w-2 h-2 rounded-full ${getLeaveTypeColor(emp.leaveType.name)
+                                                        .split(' ')[0] || 'bg-blue-500'
+                                                        }`}
+                                                />
+                                            ))}
+                                        {employeesOnLeave.length > 4 && (
+                                            <div className="w-2 h-2 rounded-full bg-slate-300" />
+                                        )}
+                                    </div>
+
+                                    {/* Large screens: Chips */}
+                                    <div className="hidden lg:block space-y-1">
+                                        {employeesOnLeave.slice(0, 3).map((employee, i) => (
                                             <div
                                                 key={i}
-                                                className="w-1.5 h-1.5 rounded-full bg-primary-500"
-                                            />
-                                        ))
-                                    ) : (
-                                        <>
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                                            <span className="text-[8px] text-primary-600">
-                                                +{employeesOnLeave.length - 2}
-                                            </span>
-                                        </>
-                                    )}
+                                                className={`
+                                                    text-[10px] px-2 py-1 rounded-md truncate font-medium shadow-sm border border-transparent
+                                                    ${getLeaveTypeColor(employee.leaveType.name)}
+                                                    hover:opacity-80 transition-opacity
+                                                `}
+                                                title={`${employee.fullName} (${employee.leaveType.nameTh || employee.leaveType.name})`}
+                                            >
+                                                {employee.fullName}
+                                            </div>
+                                        ))}
+                                        {employeesOnLeave.length > 3 && (
+                                            <div className="text-[10px] px-1.5 py-0.5 text-slate-500 font-semibold pl-1">
+                                                +{employeesOnLeave.length - 3} รายการ
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            )}
-                        </button>
-                    );
-                })
-            )}
+                            </div>
+                        );
+                    })
+                )}
+            </div>
         </div>
     );
 
     // Render week view
     const renderWeekView = () => (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {weekViewDays.map((day) => {
                 const employeesOnLeave = leaveMap[day.dateStr] || [];
                 const hasLeave = employeesOnLeave.length > 0;
@@ -392,49 +397,68 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                 return (
                     <div
                         key={day.dateStr}
-                        className={`border rounded-lg p-4 ${day.isToday ? 'border-primary-500 bg-primary-50' : 'border-surface-200'
+                        className={`border rounded-xl p-5 transition-all ${day.isToday
+                            ? 'border-blue-200 bg-blue-50/30'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
                             }`}
                     >
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <h4 className="font-semibold text-surface-800">
-                                    {day.date.toLocaleDateString('th-TH', {
-                                        weekday: 'long',
-                                        day: 'numeric',
-                                        month: 'long',
-                                    })}
-                                </h4>
-                                {day.isToday && (
-                                    <span className="text-xs text-primary-600 font-medium">วันนี้</span>
-                                )}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className={`
+                                    w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold
+                                    ${day.isToday ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}
+                                `}
+                                >
+                                    {day.date.getDate()}
+                                </div>
+                                <div>
+                                    <h4
+                                        className={`font-semibold ${day.isToday ? 'text-blue-900' : 'text-slate-800'}`}
+                                    >
+                                        {day.date.toLocaleDateString('th-TH', {
+                                            weekday: 'long',
+                                        })}
+                                    </h4>
+                                    <p
+                                        className={`text-xs ${day.isToday ? 'text-blue-600' : 'text-slate-500'}`}
+                                    >
+                                        {day.date.toLocaleDateString('th-TH', {
+                                            month: 'long',
+                                            year: 'numeric',
+                                        })}
+                                    </p>
+                                </div>
                             </div>
-                            <span className="text-sm text-surface-500">
-                                {employeesOnLeave.length} คน
-                            </span>
+                            {hasLeave && (
+                                <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md">
+                                    ลา {employeesOnLeave.length} คน
+                                </span>
+                            )}
                         </div>
 
                         {hasLeave ? (
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {employeesOnLeave.map((employee) => (
                                     <div
                                         key={employee.id}
-                                        className="flex items-center justify-between p-2 bg-white rounded-lg border border-surface-200"
+                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100 shadow-sm"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs font-bold border border-slate-200">
                                                 {employee.fullName.charAt(0)}
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-surface-800">
+                                            <div className="overflow-hidden">
+                                                <p className="text-sm font-medium text-slate-800 truncate">
                                                     {employee.fullName}
                                                 </p>
-                                                <p className="text-xs text-surface-500">
+                                                <p className="text-xs text-slate-500">
                                                     {employee.employeeCode}
                                                 </p>
                                             </div>
                                         </div>
                                         <span
-                                            className={`px-2 py-1 rounded-full text-xs font-medium border ${getLeaveTypeColor(employee.leaveType.name)}`}
+                                            className={`px-2 py-1 rounded-md text-[10px] font-semibold border ${getLeaveTypeColor(employee.leaveType.name)}`}
                                         >
                                             {employee.leaveType.nameTh || employee.leaveType.name}
                                         </span>
@@ -442,7 +466,9 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-surface-500">ไม่มีพนักงานลาในวันนี้</p>
+                            <div className="text-center py-4 border-2 border-dashed border-slate-100 rounded-lg">
+                                <p className="text-sm text-slate-400">ไม่มีพนักงานลาในวันนี้</p>
+                            </div>
                         )}
                     </div>
                 );
@@ -456,43 +482,49 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
         const employeesOnLeave = leaveMap[dateStr] || [];
 
         return (
-            <div className="space-y-4">
-                <div className="bg-surface-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-surface-800 mb-1">
-                        {currentDate.toLocaleDateString('th-TH', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                        })}
-                    </h3>
-                    <p className="text-sm text-surface-600">
-                        มีพนักงานลา {employeesOnLeave.length} คน
-                    </p>
+            <div className="space-y-4 max-w-3xl mx-auto">
+                <div className="bg-blue-50/50 rounded-xl p-6 border border-blue-100 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-1">
+                            {currentDate.toLocaleDateString('th-TH', {
+                                weekday: 'long',
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                            })}
+                        </h3>
+                        <p className="text-slate-500">
+                            สรุปข้อมูลการลาประจำวัน
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-3xl font-bold text-blue-600">{employeesOnLeave.length}</span>
+                        <span className="text-slate-500 ml-2">คน</span>
+                    </div>
                 </div>
 
                 {employeesOnLeave.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {employeesOnLeave.map((employee) => (
                             <div
                                 key={employee.id}
-                                className="flex items-center justify-between p-4 bg-white rounded-lg border border-surface-200 shadow-sm"
+                                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-lg font-bold border border-slate-200">
                                         {employee.fullName.charAt(0)}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-surface-800">
+                                        <p className="font-semibold text-slate-800 text-lg">
                                             {employee.fullName}
                                         </p>
-                                        <p className="text-sm text-surface-500">
+                                        <p className="text-sm text-slate-500 font-medium">
                                             {employee.employeeCode}
                                         </p>
                                     </div>
                                 </div>
                                 <span
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border ${getLeaveTypeColor(employee.leaveType.name)}`}
+                                    className={`px-3 py-1.5 rounded-md text-sm font-semibold border ${getLeaveTypeColor(employee.leaveType.name)}`}
                                 >
                                     {employee.leaveType.nameTh || employee.leaveType.name}
                                 </span>
@@ -500,8 +532,12 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-12">
-                        <p className="text-surface-500">ไม่มีพนักงานลาในวันนี้</p>
+                    <div className="flex flex-col items-center justify-center py-16 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
+                            <Calendar size={32} />
+                        </div>
+                        <p className="text-slate-500 font-medium text-lg">ไม่มีพนักงานลาในวันนี้</p>
+                        <p className="text-slate-400 text-sm">ทุกคนมาทำงานปกติ</p>
                     </div>
                 )}
             </div>
@@ -509,128 +545,141 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-primary p-4 text-white">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden font-sans">
+            {/* Premium Header Toolbar */}
+            <div className="px-6 py-5 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                         <Calendar size={24} />
-                        <h2 className="text-xl font-bold">ปฏิทินการลา</h2>
-                        {onClose && (
-                            <button
-                                onClick={onClose}
-                                className="ml-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
                     </div>
-                    <div className="flex items-center gap-2">
-                        {/* View mode toggles */}
-                        <div className="flex bg-white/20 rounded-lg p-1">
-                            <button
-                                onClick={() => setViewMode('month')}
-                                className={`px-2 py-1 rounded transition-colors ${viewMode === 'month'
-                                    ? 'bg-white text-primary-600'
-                                    : 'hover:bg-white/20'
-                                    }`}
-                                title="มุมมองเดือน"
-                            >
-                                <Grid3x3 size={16} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('week')}
-                                className={`px-2 py-1 rounded transition-colors ${viewMode === 'week'
-                                    ? 'bg-white text-primary-600'
-                                    : 'hover:bg-white/20'
-                                    }`}
-                                title="มุมมองสัปดาห์"
-                            >
-                                <List size={16} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('day')}
-                                className={`px-2 py-1 rounded transition-colors ${viewMode === 'day'
-                                    ? 'bg-white text-primary-600'
-                                    : 'hover:bg-white/20'
-                                    }`}
-                                title="มุมมองวัน"
-                            >
-                                <Eye size={16} />
-                            </button>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800 tracking-tight">ปฏิทินการลา</h2>
+                        <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
+                            <span className="capitalize">{viewTitle}</span>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Export button */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                    {/* View Mode Switcher */}
+                    <div className="flex bg-slate-100 p-1 rounded-lg mr-2">
                         <button
-                            onClick={handleExport}
-                            disabled={exporting}
-                            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                            onClick={() => setViewMode('month')}
+                            className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-semibold ${viewMode === 'month'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                }`}
+                            title="มุมมองเดือน"
                         >
-                            {exporting ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <Download size={16} />
-                            )}
-                            ส่งออก iCal
+                            <Grid3x3 size={16} />
+                            <span className="hidden sm:inline">เดือน</span>
                         </button>
-
-                        {/* Filter button */}
                         <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors flex items-center gap-2"
+                            onClick={() => setViewMode('week')}
+                            className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-semibold ${viewMode === 'week'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                }`}
+                            title="มุมมองสัปดาห์"
                         >
-                            <Filter size={16} />
-                            ตัวกรอง
+                            <List size={16} />
+                            <span className="hidden sm:inline">สัปดาห์</span>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('day')}
+                            className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-semibold ${viewMode === 'day'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                }`}
+                            title="มุมมองวัน"
+                        >
+                            <Eye size={16} />
+                            <span className="hidden sm:inline">วัน</span>
                         </button>
                     </div>
+
+                    {/* Navigation */}
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg overflow-hidden mr-2">
+                        <button
+                            onClick={() => navigate('prev')}
+                            className="p-2 hover:bg-white text-slate-600 transition-colors border-r border-slate-200"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button
+                            onClick={() => navigate('today')}
+                            className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white transition-colors"
+                        >
+                            วันนี้
+                        </button>
+                        <button
+                            onClick={() => navigate('next')}
+                            className="p-2 hover:bg-white text-slate-600 transition-colors border-l border-slate-200"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+
+                    <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block"></div>
+
+                    {/* Actions */}
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`p-2 rounded-lg border transition-all text-sm font-medium flex items-center gap-2 ${showFilters
+                            ? 'bg-blue-50 border-blue-200 text-blue-700'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                        title="ตัวกรอง"
+                    >
+                        <Filter size={16} />
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800 transition-all text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                        title="ส่งออก iCal"
+                    >
+                        {exporting ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <Download size={16} />
+                        )}
+                    </button>
+
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="ml-2 p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Filters */}
             {showFilters && (
-                <div className="px-4 py-3 border-b border-surface-200 bg-surface-50">
-                    <div className="flex items-center gap-4">
-                        <label className="text-sm font-medium text-surface-700">
-                            ทีม/แผนก:
-                        </label>
-                        <select
-                            value={selectedTeamId}
-                            onChange={(e) => setSelectedTeamId(e.target.value)}
-                            className="px-3 py-1.5 border border-surface-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        >
-                            <option value="">ทั้งหมด</option>
-                            {/* TODO: Load teams from API */}
-                            <option value="team1">ทีม 1</option>
-                            <option value="team2">ทีม 2</option>
-                        </select>
+                <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-slate-700">
+                                ทีม/แผนก:
+                            </label>
+                            <select
+                                value={selectedTeamId}
+                                onChange={(e) => setSelectedTeamId(e.target.value)}
+                                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                            >
+                                <option value="">ทั้งหมด</option>
+                                {/* TODO: Load teams from API */}
+                                <option value="team1">ทีม 1</option>
+                                <option value="team2">ทีม 2</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Navigation */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
-                <button
-                    onClick={() => navigate('prev')}
-                    className="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
-                >
-                    <ChevronLeft size={20} />
-                </button>
-                <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-surface-800">{viewTitle}</h3>
-                    <button
-                        onClick={() => navigate('today')}
-                        className="px-3 py-1 bg-surface-100 hover:bg-surface-200 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        วันนี้
-                    </button>
-                </div>
-                <button
-                    onClick={() => navigate('next')}
-                    className="w-10 h-10 rounded-full hover:bg-surface-100 flex items-center justify-center transition-colors"
-                >
-                    <ChevronRight size={20} />
-                </button>
-            </div>
 
             {error && (
                 <div className="m-4 bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl flex items-center gap-2">
@@ -640,8 +689,9 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 size={32} className="text-primary-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+                    <Loader2 size={40} className="text-blue-500 animate-spin mb-3" />
+                    <p className="text-sm font-medium">กำลังโหลดข้อมูลปฏิทิน...</p>
                 </div>
             ) : (
                 <div className="p-4">
@@ -652,8 +702,9 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
 
                     {/* Selected day details (month view only) */}
                     {viewMode === 'month' && selectedDay && (
-                        <div className="mt-4 border-t border-surface-200 pt-4">
-                            <h4 className="font-semibold text-surface-800 mb-3">
+                        <div className="mt-6 border-t border-slate-200 pt-6 animate-in slide-in-from-top-2 duration-300">
+                            <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
                                 {new Date(selectedDay).toLocaleDateString('th-TH', {
                                     weekday: 'long',
                                     day: 'numeric',
@@ -663,29 +714,29 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                             </h4>
 
                             {selectedDayData.length === 0 ? (
-                                <p className="text-surface-500 text-sm">ไม่มีพนักงานลาในวันนี้</p>
+                                <p className="text-slate-500 text-sm pl-3.5">ไม่มีพนักงานลาในวันนี้</p>
                             ) : (
-                                <div className="space-y-2">
+                                <div className="space-y-3 pl-3.5">
                                     {selectedDayData.map((employee) => (
                                         <div
                                             key={employee.id}
-                                            className="flex items-center justify-between p-3 bg-surface-50 rounded-lg"
+                                            className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-600 font-bold border border-slate-200 shadow-sm">
                                                     {employee.fullName.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-surface-800">
+                                                    <p className="font-semibold text-slate-800">
                                                         {employee.fullName}
                                                     </p>
-                                                    <p className="text-sm text-surface-500">
+                                                    <p className="text-sm text-slate-500">
                                                         {employee.employeeCode}
                                                     </p>
                                                 </div>
                                             </div>
                                             <span
-                                                className={`px-3 py-1 rounded-full text-sm font-medium border ${getLeaveTypeColor(employee.leaveType.name)}`}
+                                                className={`px-3 py-1 rounded-md text-sm font-medium border ${getLeaveTypeColor(employee.leaveType.name)}`}
                                             >
                                                 {employee.leaveType.nameTh || employee.leaveType.name}
                                             </span>
@@ -696,25 +747,23 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                         </div>
                     )}
 
-                    {/* Legend */}
-                    <div className="mt-4 pt-4 border-t border-surface-200">
-                        <h5 className="text-sm font-semibold text-surface-700 mb-2">ประเภทการลา</h5>
-                        <div className="flex flex-wrap gap-3 text-sm">
+                    {/* Legend - Modern Badges */}
+                    <div className="mt-8 pt-4 border-t border-slate-100">
+                        <div className="flex flex-wrap items-center justify-end gap-3 text-xs">
+                            <span className="text-slate-500 font-medium mr-2">ประเภทการลา:</span>
                             {Object.entries(LEAVE_TYPE_COLORS)
                                 .filter(([key]) => key !== 'default')
                                 .map(([key, className]) => (
-                                    <div key={key} className="flex items-center gap-2">
-                                        <div
-                                            className={`w-4 h-4 rounded border ${className}`}
-                                        ></div>
-                                        <span className="text-surface-600 capitalize">
-                                            {key === 'annual' && 'ลาพักผ่อน'}
-                                            {key === 'sick' && 'ลาป่วย'}
-                                            {key === 'personal' && 'ลากิจ'}
-                                            {key === 'emergency' && 'ลาฉุกเฉิน'}
-                                            {key === 'maternity' && 'ลาคลอด'}
-                                            {key === 'paternity' && 'ลาบิดา'}
-                                        </span>
+                                    <div
+                                        key={key}
+                                        className={`px-2 py-1 rounded-md font-medium ${className}`}
+                                    >
+                                        {key === 'annual' && 'ลาพักผ่อน'}
+                                        {key === 'sick' && 'ลาป่วย'}
+                                        {key === 'personal' && 'ลากิจ'}
+                                        {key === 'emergency' && 'ลาฉุกเฉิน'}
+                                        {key === 'maternity' && 'ลาคลอด'}
+                                        {key === 'paternity' && 'ลาบิดา'}
                                     </div>
                                 ))}
                         </div>
@@ -722,33 +771,7 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                 </div>
             )}
 
-            {/* Tooltip */}
-            {tooltip.show && (
-                <div
-                    className="fixed z-50 bg-surface-800 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs pointer-events-none"
-                    style={{
-                        left: `${tooltip.x}px`,
-                        top: `${tooltip.y}px`,
-                        transform: 'translate(-50%, -100%)',
-                    }}
-                >
-                    <div className="font-semibold mb-1">
-                        {tooltip.employees.length} คนลา
-                    </div>
-                    <div className="space-y-0.5">
-                        {tooltip.employees.slice(0, 3).map((emp) => (
-                            <div key={emp.id} className="text-xs">
-                                • {emp.fullName} ({emp.leaveType.nameTh || emp.leaveType.name})
-                            </div>
-                        ))}
-                        {tooltip.employees.length > 3 && (
-                            <div className="text-xs text-surface-300">
-                                และอีก {tooltip.employees.length - 3} คน...
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }
