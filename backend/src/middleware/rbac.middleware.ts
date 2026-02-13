@@ -32,6 +32,8 @@ const GUARD_ALLOWED_PATHS = [
     /^\/api\/v\d+\/leave-balances$/,
     /^\/api\/v\d+\/leave-balances\/my$/, // GET my balances
     /^\/api\/v\d+\/leave-types$/,
+    /^\/api\/v\d+\/leave-templates$/, // Allow viewing templates
+    /^\/api\/v\d+\/leave-templates\/.*$/,
     /^\/api\/v\d+\/leave\/my$/, // GET my summary data
 
     // Companies (for settings/info)

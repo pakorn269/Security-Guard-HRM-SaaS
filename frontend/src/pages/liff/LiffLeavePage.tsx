@@ -12,6 +12,8 @@ import {
     WifiOff,
     TrendingDown,
     Camera,
+    Calendar,
+    FileText,
 } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import leaveService, {
@@ -25,8 +27,32 @@ import TemplateSelector from '../../components/leave/TemplateSelector';
 import offlineQueueService, { type OfflineQueueEvent } from '../../services/offline-queue.service';
 
 // ============================================================================
-// SWIPEABLE REQUEST CARD COMPONENT
+// SUB-COMPONENTS
 // ============================================================================
+
+function StatusBadge({ status }: { status: string }) {
+    const styles = {
+        pending: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+        approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+        rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+        cancelled: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+    };
+
+    const labels = {
+        pending: 'รออนุมัติ',
+        approved: 'อนุมัติ',
+        rejected: 'ไม่อนุมัติ',
+        cancelled: 'ยกเลิก',
+    };
+
+    const s = status as keyof typeof styles;
+
+    return (
+        <span className={`text-[10px] uppercase tracking-wide font-bold px-2.5 py-1 rounded-full ${styles[s] || styles.cancelled}`}>
+            {labels[s] || status}
+        </span>
+    );
+}
 
 interface SwipeableRequestCardProps {
     request: LeaveRequestWithDetails;
@@ -40,7 +66,6 @@ function SwipeableRequestCard({ request, onCancel, formatDate }: SwipeableReques
     const handlers = useSwipeable({
         onSwipedLeft: () => {
             setSwiped(true);
-            // Trigger haptic feedback
             if (window.navigator && 'vibrate' in window.navigator) {
                 window.navigator.vibrate(50);
             }
@@ -48,60 +73,234 @@ function SwipeableRequestCard({ request, onCancel, formatDate }: SwipeableReques
         onSwipedRight: () => setSwiped(false),
         trackMouse: false,
         trackTouch: true,
+        delta: 10,
     });
 
-    const handleCancelClick = () => {
-        // Trigger haptic feedback
-        if (window.navigator && 'vibrate' in window.navigator) {
-            window.navigator.vibrate([50, 100]);
-        }
-        onCancel(request.id);
-    };
-
     return (
-        <div className="relative overflow-hidden rounded-lg">
-            {/* Delete background */}
+        <div className="relative overflow-hidden">
+            {/* Delete Background */}
             <div
-                className={`absolute inset-0 bg-error-500 flex items-center justify-end px-6 transition-opacity ${
-                    swiped ? 'opacity-100' : 'opacity-0'
-                }`}
+                className={`absolute inset-0 bg-red-500 rounded-2xl flex items-center justify-end px-6 transition-opacity duration-300 ${swiped ? 'opacity-100' : 'opacity-0'
+                    }`}
             >
-                <X size={24} className="text-white" />
+                <div className="flex items-center gap-2 text-white font-bold">
+                    <span>ยกเลิก</span>
+                    <X size={20} />
+                </div>
             </div>
 
-            {/* Swipeable content */}
+            {/* Content Card */}
             <div
                 {...handlers}
-                className={`bg-white dark:bg-neutral-800 rounded-lg p-3 transition-transform duration-300 ${
-                    swiped ? '-translate-x-20' : 'translate-x-0'
-                }`}
+                className={`relative bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border-l-4 border-orange-400 overflow-hidden transition-transform duration-300 ${swiped ? '-translate-x-24' : 'translate-x-0'
+                    }`}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <p className="font-medium text-surface-800 dark:text-neutral-200">
-                            {request.leaveType?.nameTh || request.leaveType?.name}
-                        </p>
-                        <p className="text-sm text-surface-500">
-                            {formatDate(request.startDate)}
-                            {request.startDate !== request.endDate && ` - ${formatDate(request.endDate)}`}
-                            <span className="ml-2 font-medium">({request.totalDays} วัน)</span>
-                        </p>
+                <div className="flex items-center gap-3">
+                    {/* Date Badge */}
+                    <div className="flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-xl px-3 py-2 min-w-[56px]">
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
+                            {new Date(request.startDate).getDate()}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">
+                            {new Date(request.startDate).toLocaleDateString('th-TH', { month: 'short' })}
+                        </span>
                     </div>
-                    <button
-                        onClick={handleCancelClick}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            swiped
-                                ? 'bg-error-500 text-white'
-                                : 'text-error-600 hover:bg-error-50 dark:hover:bg-error-900/20'
-                        }`}
-                    >
-                        {swiped ? '✓ ยกเลิก' : 'ยกเลิก'}
-                    </button>
+
+                    {/* Details */}
+                    <div className="flex-1">
+                        <h3 className="font-bold text-slate-900 dark:text-white mb-1 leading-tight">
+                            {request.leaveType?.nameTh || request.leaveType?.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <Clock size={12} className="text-orange-500" />
+                            <span>{request.totalDays} วัน</span>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Confirm Cancel Overlay */}
+                {swiped && (
+                    <div className="absolute inset-0 flex items-center justify-end pr-28 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm" onClick={() => setSwiped(false)}>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCancel(request.id);
+                            }}
+                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg active:scale-95 transition-transform"
+                        >
+                            ยืนยัน
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
+
+const BalanceCard = ({ balance, index }: { balance: LeaveBalanceWithType; index: number }) => {
+    // Vibrant gradients
+    const gradients = [
+        'from-blue-500 to-indigo-600 shadow-blue-500/30',
+        'from-emerald-500 to-teal-600 shadow-emerald-500/30',
+        'from-violet-500 to-purple-600 shadow-violet-500/30',
+        'from-orange-400 to-red-500 shadow-orange-500/30',
+        'from-pink-500 to-rose-600 shadow-pink-500/30',
+    ];
+    const gradient = gradients[index % gradients.length];
+
+    const remaining = balance.remainingDays;
+    const total = balance.entitledDays;
+    const percentage = total > 0 ? (remaining / total) * 100 : 0;
+
+    return (
+        <div className={`min-w-[85%] h-48 snap-center rounded-3xl bg-gradient-to-br ${gradient} text-white shadow-xl p-6 relative overflow-hidden flex-shrink-0`}>
+            {/* Background decorations */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-2xl -ml-8 -mb-8" />
+
+            <div className="relative z-10 h-full flex flex-col justify-between">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white/90">
+                        <FileText size={16} />
+                        <span className="text-sm font-medium">{balance.leaveType?.nameTh || balance.leaveType?.name}</span>
+                    </div>
+
+                    {/* Circular Progress */}
+                    <div className="relative w-12 h-12">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                            <path
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                className="text-white/20"
+                            />
+                            <path
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeDasharray={`${percentage}, 100`}
+                                strokeLinecap="round"
+                                className="text-white"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">
+                            {Math.round(percentage)}%
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Number */}
+                <div className="flex items-baseline gap-2">
+                    <span className="text-6xl font-bold leading-none">{remaining}</span>
+                    <span className="text-lg font-medium opacity-90">/ {total} วัน</span>
+                </div>
+
+                {/* Progress Bar */}
+                <div>
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-white rounded-full transition-all duration-1000"
+                            style={{ width: `${percentage}%` }}
+                        />
+                    </div>
+                    {balance.pendingDays > 0 && (
+                        <div className="mt-2 flex items-center gap-1 text-xs">
+                            <Clock size={12} className="opacity-80" />
+                            <span className="opacity-90">รออนุมัติ {balance.pendingDays} วัน</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+interface TimelineHistoryProps {
+    requests: LeaveRequestWithDetails[];
+    formatDate: (date: string) => string;
+}
+
+const TimelineHistory = ({ requests, formatDate }: TimelineHistoryProps) => {
+    // Group by month
+    const grouped = useMemo(() => {
+        const groups: Record<string, LeaveRequestWithDetails[]> = {};
+        requests.forEach(req => {
+            const date = new Date(req.startDate);
+            const key = date.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(req);
+        });
+        return groups;
+    }, [requests]);
+
+    if (!requests || requests.length === 0) {
+        return (
+            <div className="text-center py-12 text-slate-400">
+                <p className="text-sm">ยังไม่มีประวัติการลา</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8">
+            {Object.entries(grouped).map(([month, items]) => (
+                <div key={month}>
+                    {/* Month Header */}
+                    <div className="sticky top-16 z-10 mb-4">
+                        <span className="inline-block bg-slate-800 dark:bg-slate-700 text-white px-4 py-1 rounded-full text-sm font-bold">
+                            {month}
+                        </span>
+                    </div>
+
+                    {/* Timeline Items */}
+                    <div className="relative border-l-2 border-dashed border-slate-300 dark:border-slate-600 ml-2 pl-6 space-y-4">
+                        {items.map((req) => (
+                            <div key={req.id} className="relative">
+                                {/* Status Dot */}
+                                <div
+                                    className={`absolute -left-[29px] top-4 w-4 h-4 rounded-full border-4 border-slate-50 dark:border-slate-900 ${req.status === 'approved' ? 'bg-green-500' :
+                                        req.status === 'pending' ? 'bg-orange-500' :
+                                            req.status === 'rejected' ? 'bg-red-500' : 'bg-slate-400'
+                                        }`}
+                                />
+
+                                {/* Card */}
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h4 className="font-bold text-slate-900 dark:text-white">
+                                            {req.leaveType?.nameTh || req.leaveType?.name}
+                                        </h4>
+                                        <StatusBadge status={req.status} />
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <Calendar size={12} />
+                                                <span>
+                                                    {formatDate(req.startDate)}
+                                                    {req.startDate !== req.endDate && ` - ${formatDate(req.endDate)}`}
+                                                </span>
+                                            </div>
+                                            {req.reason && (
+                                                <p className="text-xs italic line-clamp-1">"{req.reason}"</p>
+                                            )}
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg">
+                                            {req.totalDays} วัน
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -176,7 +375,7 @@ export default function LiffLeavePage() {
             } else if (event.type === 'queued' || event.type === 'synced') {
                 updatePendingCount();
             } else if (event.type === 'sync-complete') {
-                loadData(); // Reload data after sync
+                loadData();
                 updatePendingCount();
             }
         });
@@ -195,7 +394,7 @@ export default function LiffLeavePage() {
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // Balance prediction - calculate remaining days after this request
+    // Balance prediction
     const balancePrediction = useMemo(() => {
         if (!formData.leaveTypeId || !formData.startDate || !formData.endDate || !leaveData) {
             return null;
@@ -204,7 +403,6 @@ export default function LiffLeavePage() {
         const requestDays = calculateDays(formData.startDate, formData.endDate);
         const currentYear = new Date().getFullYear();
 
-        // Find the balance for the selected leave type
         const balance = leaveData.balances.find(
             (b) => b.leaveTypeId === formData.leaveTypeId && b.year === currentYear
         );
@@ -236,7 +434,6 @@ export default function LiffLeavePage() {
             return;
         }
 
-        // Check if document is required but not uploaded
         if (requiresDocument() && documentFile.length === 0) {
             setError('ต้องแนบเอกสารสำหรับการลาประเภทนี้');
             return;
@@ -246,7 +443,6 @@ export default function LiffLeavePage() {
             setSubmitting(true);
             setError(null);
 
-            // If offline, queue the request
             if (!isOnline) {
                 await offlineQueueService.queueRequest(
                     {
@@ -263,7 +459,6 @@ export default function LiffLeavePage() {
                 setFormData({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
                 setDocumentFile([]);
 
-                // Trigger haptic feedback if available
                 if (window.navigator && 'vibrate' in window.navigator) {
                     window.navigator.vibrate(50);
                 }
@@ -272,7 +467,6 @@ export default function LiffLeavePage() {
                 return;
             }
 
-            // Online - submit normally
             const createdRequest = await leaveService.createLeaveRequest({
                 leaveTypeId: formData.leaveTypeId,
                 startDate: formData.startDate,
@@ -280,14 +474,13 @@ export default function LiffLeavePage() {
                 reason: formData.reason || undefined,
             });
 
-            // Upload document if provided
             if (documentFile.length > 0 && createdRequest.id) {
                 try {
                     setUploading(true);
                     await leaveService.uploadLeaveDocument(createdRequest.id, documentFile[0]);
                 } catch (uploadErr) {
                     console.error('Error uploading document:', uploadErr);
-                    setError('คำขอลาถูกสร้างแล้ว แต่การอัพโหลดเอกสารล้มเหลว กรุณาลองใหม่อีกครั้ง');
+                    setError('คำขอลาถูกสร้างแล้ว แต่การอัพโหลดเอกสารล้มเหลว');
                 } finally {
                     setUploading(false);
                 }
@@ -298,14 +491,11 @@ export default function LiffLeavePage() {
             setFormData({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
             setDocumentFile([]);
 
-            // Trigger haptic feedback if available
             if (window.navigator && 'vibrate' in window.navigator) {
                 window.navigator.vibrate([50, 100, 50]);
             }
 
-            // Reload data
             await loadData();
-
             setTimeout(() => setSuccess(null), 3000);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถส่งคำขอลาได้';
@@ -336,13 +526,9 @@ export default function LiffLeavePage() {
             setApplyingTemplate(true);
             setError(null);
 
-            // Use current date as default start date if not set
             const startDate = formData.startDate || new Date().toISOString().split('T')[0];
-
-            // Apply template to get draft data
             const draft = await leaveService.applyTemplate(template.id, startDate);
 
-            // Update form with draft data
             setFormData({
                 leaveTypeId: draft.leaveTypeId,
                 startDate: draft.startDate || startDate,
@@ -370,236 +556,153 @@ export default function LiffLeavePage() {
         });
     };
 
-    // Get status display
-    const getStatusDisplay = (status: string) => {
-        switch (status) {
-            case 'pending':
-                return { text: 'รออนุมัติ', className: 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300' };
-            case 'approved':
-                return { text: 'อนุมัติ', className: 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300' };
-            case 'rejected':
-                return { text: 'ไม่อนุมัติ', className: 'bg-error-100 dark:bg-error-900/30 text-error-700 dark:text-error-300' };
-            case 'cancelled':
-                return { text: 'ยกเลิก', className: 'bg-surface-100 dark:bg-neutral-800 text-surface-600 dark:text-neutral-400' };
-            default:
-                return { text: status, className: 'bg-surface-100 dark:bg-neutral-800 text-surface-600 dark:text-neutral-400' };
-        }
-    };
-
-    // Get color class based on leave type index
-    const getBalanceColor = (index: number) => {
-        const colors = ['primary', 'error', 'accent', 'success', 'warning'];
-        return colors[index % colors.length];
-    };
-
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 size={48} className="text-primary-500 animate-spin" />
-                    <p className="text-surface-500">กำลังโหลด...</p>
+            <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+                <div className="flex flex-col items-center gap-3">
+                    <Loader2 size={40} className="text-blue-500 animate-spin" />
+                    <p className="text-slate-500">กำลังโหลด...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-4 space-y-6 animate-fade-in">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
             {/* Header */}
-            <div className="text-center py-2">
+            <div className="sticky top-0 z-30 bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700 px-4 py-3">
                 <div className="flex items-center justify-center gap-2">
-                    <Palmtree size={24} className="text-primary-500" />
-                    <h1 className="text-xl font-bold text-surface-800 dark:text-white">การลา</h1>
+                    <div className="bg-blue-500 text-white p-1.5 rounded-lg">
+                        <Palmtree size={18} fill="currentColor" />
+                    </div>
+                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">การลา</h1>
                 </div>
             </div>
 
-            {/* Offline Banner */}
-            {!isOnline && (
-                <div className="bg-surface-900 dark:bg-neutral-700 text-white px-4 py-3 rounded-xl animate-fade-in flex items-center gap-3">
-                    <WifiOff size={20} className="flex-shrink-0" />
-                    <div className="flex-1">
-                        <p className="font-medium">ไม่มีการเชื่อมต่ออินเทอร์เน็ต</p>
-                        <p className="text-sm text-surface-300">
-                            คำขอจะถูกบันทึกและส่งเมื่อมีอินเทอร์เน็ตอีกครั้ง
-                        </p>
+            <div className="space-y-6">
+                {/* Offline Banner */}
+                {!isOnline && (
+                    <div className="mx-4 mt-4 bg-slate-800 text-white px-4 py-3 rounded-xl flex items-center gap-3">
+                        <WifiOff size={20} className="text-red-400" />
+                        <div className="flex-1">
+                            <p className="font-bold text-sm">ไม่มีสัญญาณอินเทอร์เน็ต</p>
+                            <p className="text-xs opacity-80">ใช้งานโหมดออฟไลน์</p>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Pending Queue Count */}
-            {pendingQueueCount > 0 && (
-                <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 px-4 py-3 rounded-xl animate-fade-in flex items-center gap-3">
-                    <Wifi size={20} className="text-warning-600 flex-shrink-0" />
-                    <div className="flex-1">
-                        <p className="font-medium text-warning-800 dark:text-warning-200">
-                            มี {pendingQueueCount} คำขอรอส่ง
-                        </p>
-                        <p className="text-sm text-warning-700 dark:text-warning-300">
-                            จะส่งอัตโนมัติเมื่อมีอินเทอร์เน็ต
-                        </p>
+                {/* Pending Queue */}
+                {pendingQueueCount > 0 && (
+                    <div className="mx-4 bg-orange-500 text-white px-4 py-3 rounded-xl flex items-center gap-3">
+                        <Wifi size={20} />
+                        <div className="flex-1">
+                            <p className="font-bold text-sm">{pendingQueueCount} รายการรอการส่ง</p>
+                            <p className="text-xs opacity-90">จะอัปโหลดอัตโนมัติเมื่อออนไลน์</p>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Success message */}
-            {success && (
-                <div className="bg-success-50 border border-success-200 text-success-700 px-4 py-3 rounded-xl animate-fade-in flex items-center gap-2">
-                    <CheckCircle size={18} />
-                    {success}
-                </div>
-            )}
+                {/* Notifications */}
+                {success && (
+                    <div className="fixed top-20 left-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-down">
+                        <CheckCircle size={20} />
+                        <span className="font-medium text-sm">{success}</span>
+                    </div>
+                )}
+                {error && (
+                    <div className="fixed top-20 left-4 right-4 z-50 bg-red-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-down">
+                        <AlertTriangle size={20} />
+                        <span className="font-medium text-sm flex-1">{error}</span>
+                        <button onClick={() => setError(null)}><X size={18} /></button>
+                    </div>
+                )}
 
-            {/* Error message */}
-            {error && (
-                <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl animate-fade-in flex items-center gap-2">
-                    <AlertTriangle size={18} />
-                    {error}
-                    <button
-                        onClick={() => setError(null)}
-                        className="ml-auto text-error-500 hover:text-error-700"
-                    >
-                        <X size={16} />
-                    </button>
-                </div>
-            )}
+                {/* Balance Cards - Horizontal Scroll */}
+                <section>
+                    <div className="flex items-center justify-between px-4 mb-3">
+                        <h2 className="font-bold text-lg text-slate-900 dark:text-white">วันลาคงเหลือ</h2>
+                        <span className="text-xs text-slate-500 font-medium">ปี {new Date().getFullYear()}</span>
+                    </div>
 
-            {/* Leave balances */}
-            <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 shadow-sm">
-                <h2 className="font-semibold text-surface-800 dark:text-white mb-3">วันลาคงเหลือ</h2>
-                <div className="space-y-3">
-                    {leaveData?.balances.map((balance: LeaveBalanceWithType, index: number) => {
-                        const remaining = balance.remainingDays;
-                        const total = balance.entitledDays;
-                        const percentage = total > 0 ? (remaining / total) * 100 : 0;
-                        const color = getBalanceColor(index);
-
-                        return (
-                            <div key={balance.id}>
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="text-surface-600 dark:text-neutral-400">
-                                        {balance.leaveType?.nameTh || balance.leaveType?.name || 'ประเภทการลา'}
-                                    </span>
-                                    <span className="font-medium text-surface-800 dark:text-neutral-200">
-                                        {remaining}/{total} วัน
-                                        {balance.pendingDays > 0 && (
-                                            <span className="text-warning-600 dark:text-warning-400 text-xs ml-1">
-                                                (รอ {balance.pendingDays})
-                                            </span>
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="h-2 bg-surface-100 dark:bg-neutral-700 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full bg-${color}-500 rounded-full transition-all`}
-                                        style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {(!leaveData?.balances || leaveData.balances.length === 0) && (
-                        <p className="text-surface-500 dark:text-neutral-400 text-sm text-center py-2">
-                            ไม่มีข้อมูลวันลา
-                        </p>
+                    {(!leaveData?.balances || leaveData.balances.length === 0) ? (
+                        <div className="mx-4 bg-white dark:bg-slate-800 rounded-2xl p-8 text-center text-slate-400">
+                            <Palmtree size={32} className="mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">ไม่มีข้อมูลวันลา</p>
+                        </div>
+                    ) : (
+                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-4 py-2 scrollbar-hide">
+                            {leaveData.balances.map((balance, index) => (
+                                <BalanceCard key={balance.id} balance={balance} index={index} />
+                            ))}
+                        </div>
                     )}
-                </div>
-            </div>
+                </section>
 
-            {/* Request leave button */}
-            <button
-                onClick={() => setShowForm(true)}
-                className="w-full btn-primary py-3 text-lg flex items-center justify-center gap-2"
-            >
-                <Plus size={20} />
-                ขอลาใหม่
-            </button>
+                {/* Pending Requests */}
+                {leaveData?.pendingRequests && leaveData.pendingRequests.length > 0 && (
+                    <section className="px-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <h2 className="font-bold text-lg text-slate-900 dark:text-white">รออนุมัติ</h2>
+                            <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold px-2 py-0.5 rounded-full">
+                                {leaveData.pendingRequests.length}
+                            </span>
+                        </div>
+                        <div className="space-y-3">
+                            {leaveData.pendingRequests.map((request: LeaveRequestWithDetails) => (
+                                <SwipeableRequestCard
+                                    key={request.id}
+                                    request={request}
+                                    onCancel={handleCancel}
+                                    formatDate={formatDate}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
 
-            {/* Pending requests */}
-            {leaveData?.pendingRequests && leaveData.pendingRequests.length > 0 && (
-                <div className="bg-warning-50 dark:bg-warning-900/20 rounded-xl p-4 border border-warning-200 dark:border-warning-800">
-                    <h2 className="font-semibold text-warning-800 dark:text-warning-200 mb-3 flex items-center gap-2">
-                        <Clock size={18} />
-                        คำขอที่รออนุมัติ ({leaveData.pendingRequests.length})
-                    </h2>
-                    <p className="text-xs text-warning-700 dark:text-warning-300 mb-3">
-                        💡 เลื่อนซ้ายเพื่อยกเลิก
-                    </p>
-                    <div className="space-y-2">
-                        {leaveData.pendingRequests.map((request: LeaveRequestWithDetails) => (
-                            <SwipeableRequestCard
-                                key={request.id}
-                                request={request}
-                                onCancel={handleCancel}
-                                formatDate={formatDate}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Leave history */}
-            <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 shadow-sm">
-                <h2 className="font-semibold text-surface-800 dark:text-white mb-3">ประวัติการลา</h2>
-                <div className="space-y-3">
-                    {leaveData?.recentRequests.map((request: LeaveRequestWithDetails) => {
-                        const statusDisplay = getStatusDisplay(request.status);
-
-                        return (
-                            <div
-                                key={request.id}
-                                className="flex items-center justify-between p-3 rounded-lg bg-surface-50 dark:bg-neutral-700/50"
-                            >
-                                <div>
-                                    <p className="font-medium text-surface-800 dark:text-neutral-200">
-                                        {request.leaveType?.nameTh || request.leaveType?.name}
-                                    </p>
-                                    <p className="text-sm text-surface-500">
-                                        {formatDate(request.startDate)}
-                                        {request.startDate !== request.endDate && ` - ${formatDate(request.endDate)}`}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-medium text-surface-800 dark:text-neutral-200">{request.totalDays} วัน</p>
-                                    <span
-                                        className={`text-xs px-2 py-1 rounded-full ${statusDisplay.className}`}
-                                    >
-                                        {statusDisplay.text}
-                                    </span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {(!leaveData?.recentRequests || leaveData.recentRequests.length === 0) && (
-                        <p className="text-surface-500 dark:text-neutral-400 text-sm text-center py-4">
-                            ไม่มีประวัติการลา
-                        </p>
+                {/* History Timeline */}
+                <section className="px-4">
+                    <h2 className="font-bold text-lg text-slate-900 dark:text-white mb-4">ประวัติการลา</h2>
+                    {leaveData?.recentRequests && (
+                        <TimelineHistory requests={leaveData.recentRequests} formatDate={formatDate} />
                     )}
-                </div>
+                </section>
             </div>
 
-            {/* Leave request form modal */}
+            {/* Floating Action Button (FAB) */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+                <button
+                    onClick={() => setShowForm(true)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-3 rounded-full shadow-lg shadow-cyan-500/40 active:scale-95 transition-transform font-bold"
+                >
+                    <Plus size={24} strokeWidth={2.5} />
+                    <span>ขอลาใหม่</span>
+                </button>
+            </div>
+
+            {/* Form Modal */}
             {showForm && (
-                <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-fade-in">
-                    <div className="w-full bg-white dark:bg-neutral-800 rounded-t-3xl p-6 animate-slide-up max-h-[85vh] overflow-auto">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end z-50 animate-fade-in">
+                    <div className="w-full bg-white dark:bg-slate-800 rounded-t-3xl p-6 max-h-[85vh] overflow-auto">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-surface-800 dark:text-white">ขอลาใหม่</h2>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">ขอลาใหม่</h2>
                             <button
                                 onClick={() => {
                                     setShowForm(false);
                                     setFormData({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
                                 }}
-                                className="w-8 h-8 rounded-full bg-surface-100 dark:bg-neutral-700 flex items-center justify-center text-surface-600 dark:text-neutral-300"
+                                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center"
                             >
                                 <X size={16} />
                             </button>
                         </div>
 
-                        {/* Template Quick Fill Button */}
+                        {/* Template Button */}
                         <button
                             type="button"
                             onClick={() => setShowTemplateSelector(true)}
                             disabled={applyingTemplate}
-                            className="w-full mb-4 py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                            className="w-full mb-4 py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
                         >
                             {applyingTemplate ? (
                                 <>
@@ -616,11 +719,10 @@ export default function LiffLeavePage() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label htmlFor="leaveTypeId" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
-                                    ประเภทการลา <span className="text-error-500">*</span>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    ประเภทการลา <span className="text-red-500">*</span>
                                 </label>
                                 <select
-                                    id="leaveTypeId"
                                     className="input-base"
                                     value={formData.leaveTypeId}
                                     onChange={(e) => setFormData({ ...formData, leaveTypeId: e.target.value })}
@@ -638,11 +740,10 @@ export default function LiffLeavePage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="startDate" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
-                                        วันที่เริ่ม <span className="text-error-500">*</span>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        วันที่เริ่ม <span className="text-red-500">*</span>
                                     </label>
                                     <input
-                                        id="startDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.startDate}
@@ -652,11 +753,10 @@ export default function LiffLeavePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="endDate" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
-                                        วันที่สิ้นสุด <span className="text-error-500">*</span>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        วันที่สิ้นสุด <span className="text-red-500">*</span>
                                     </label>
                                     <input
-                                        id="endDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.endDate}
@@ -669,66 +769,30 @@ export default function LiffLeavePage() {
 
                             {formData.startDate && formData.endDate && (
                                 <div className="space-y-2">
-                                    <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3 text-center">
-                                        <span className="text-primary-700 dark:text-primary-300 font-medium">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-center">
+                                        <span className="text-blue-700 dark:text-blue-300 font-bold">
                                             จำนวนวันลา: {calculateDays(formData.startDate, formData.endDate)} วัน
                                         </span>
                                     </div>
 
-                                    {/* Balance Prediction */}
                                     {balancePrediction && (
                                         <div
-                                            className={`rounded-lg p-3 border ${
-                                                balancePrediction.remainingAfter < 0
-                                                    ? 'bg-error-50 dark:bg-error-900/20 border-error-200 dark:border-error-800'
+                                            className={`rounded-lg p-3 border text-sm ${balancePrediction.remainingAfter < 0
+                                                    ? 'bg-red-50 border-red-200 text-red-700'
                                                     : balancePrediction.remainingAfter <= 2
-                                                    ? 'bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-800'
-                                                    : 'bg-success-50 dark:bg-success-900/20 border-success-200 dark:border-success-800'
-                                            }`}
+                                                        ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                                        : 'bg-green-50 border-green-200 text-green-700'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
-                                                <TrendingDown
-                                                    size={16}
-                                                    className={
-                                                        balancePrediction.remainingAfter < 0
-                                                            ? 'text-error-600'
-                                                            : balancePrediction.remainingAfter <= 2
-                                                            ? 'text-warning-600'
-                                                            : 'text-success-600'
-                                                    }
-                                                />
-                                                <span
-                                                    className={`text-sm font-medium ${
-                                                        balancePrediction.remainingAfter < 0
-                                                            ? 'text-error-700 dark:text-error-300'
-                                                            : balancePrediction.remainingAfter <= 2
-                                                            ? 'text-warning-700 dark:text-warning-300'
-                                                            : 'text-success-700 dark:text-success-300'
-                                                    }`}
-                                                >
-                                                    {balancePrediction.leaveTypeName}
-                                                </span>
+                                                <TrendingDown size={14} />
+                                                <span className="font-bold">{balancePrediction.leaveTypeName}</span>
                                             </div>
-                                            <div
-                                                className={`text-xs ${
-                                                    balancePrediction.remainingAfter < 0
-                                                        ? 'text-error-600 dark:text-error-400'
-                                                        : balancePrediction.remainingAfter <= 2
-                                                        ? 'text-warning-600 dark:text-warning-400'
-                                                        : 'text-success-600 dark:text-success-400'
-                                                }`}
-                                            >
+                                            <div className="text-xs">
                                                 คงเหลือปัจจุบัน: {balancePrediction.currentRemaining} วัน
                                                 <br />
-                                                คงเหลือหลังลา:{' '}
-                                                <span className="font-bold">
-                                                    {balancePrediction.remainingAfter} วัน
-                                                </span>
-                                                {balancePrediction.remainingAfter < 0 && (
-                                                    <span className="ml-2 font-medium">
-                                                        ⚠️ เกินสิทธิ์!
-                                                    </span>
-                                                )}
+                                                คงเหลือหลังลา: <span className="font-bold">{balancePrediction.remainingAfter} วัน</span>
+                                                {balancePrediction.remainingAfter < 0 && <span className="ml-2">⚠️ เกินสิทธิ์!</span>}
                                             </div>
                                         </div>
                                     )}
@@ -736,11 +800,10 @@ export default function LiffLeavePage() {
                             )}
 
                             <div>
-                                <label htmlFor="reason" className="block text-sm font-medium text-surface-700 dark:text-neutral-300 mb-2">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                     เหตุผล
                                 </label>
                                 <textarea
-                                    id="reason"
                                     className="input-base"
                                     rows={3}
                                     placeholder="ระบุเหตุผลการลา..."
@@ -749,12 +812,11 @@ export default function LiffLeavePage() {
                                 />
                             </div>
 
-                            {/* Document upload with camera support */}
                             <div>
                                 <FileUpload
                                     label="แนบเอกสาร"
                                     accept="application/pdf,image/jpeg,image/png"
-                                    maxSize={5 * 1024 * 1024} // 5MB
+                                    maxSize={5 * 1024 * 1024}
                                     files={documentFile}
                                     onChange={setDocumentFile}
                                     required={requiresDocument()}
@@ -764,12 +826,12 @@ export default function LiffLeavePage() {
                                     helperText={
                                         requiresDocument()
                                             ? 'ต้องแนบเอกสาร (PDF, JPG, PNG) ขนาดไม่เกิน 5MB'
-                                            : 'แนบเอกสารประกอบ (PDF, JPG, PNG) ขนาดไม่เกิน 5MB (ถ้ามี)'
+                                            : 'แนบเอกสารประกอบ (ถ้ามี)'
                                     }
                                     dropzoneText="ลากไฟล์มาวางที่นี่ หรือ"
                                     browseText="เลือกไฟล์"
                                 />
-                                <div className="flex items-center gap-2 mt-2 text-xs text-surface-500">
+                                <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
                                     <Camera size={14} />
                                     <span>คลิกเพื่อถ่ายรูปหรือเลือกไฟล์</span>
                                 </div>
@@ -777,13 +839,13 @@ export default function LiffLeavePage() {
 
                             <button
                                 type="submit"
-                                className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full btn-primary py-3 disabled:opacity-50"
                                 disabled={submitting || uploading}
                             >
                                 {submitting || uploading ? (
                                     <span className="flex items-center justify-center gap-2">
                                         <Loader2 size={20} className="animate-spin" />
-                                        {uploading ? 'กำลังอัพโหลดเอกสาร...' : 'กำลังส่ง...'}
+                                        {uploading ? 'กำลังอัพโหลด...' : 'กำลังส่ง...'}
                                     </span>
                                 ) : (
                                     'ส่งคำขอ'
