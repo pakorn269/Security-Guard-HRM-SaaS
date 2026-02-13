@@ -60,7 +60,7 @@ interface SwipeableRequestCardProps {
     formatDate: (date: string) => string;
 }
 
-function SwipeableRequestCard({ request, onCancel, formatDate }: SwipeableRequestCardProps) {
+function SwipeableRequestCard({ request, onCancel }: SwipeableRequestCardProps) {
     const [swiped, setSwiped] = useState(false);
 
     const handlers = useSwipeable({
@@ -778,10 +778,10 @@ export default function LiffLeavePage() {
                                     {balancePrediction && (
                                         <div
                                             className={`rounded-lg p-3 border text-sm ${balancePrediction.remainingAfter < 0
-                                                    ? 'bg-red-50 border-red-200 text-red-700'
-                                                    : balancePrediction.remainingAfter <= 2
-                                                        ? 'bg-orange-50 border-orange-200 text-orange-700'
-                                                        : 'bg-green-50 border-green-200 text-green-700'
+                                                ? 'bg-red-50 border-red-200 text-red-700'
+                                                : balancePrediction.remainingAfter <= 2
+                                                    ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                                    : 'bg-green-50 border-green-200 text-green-700'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
