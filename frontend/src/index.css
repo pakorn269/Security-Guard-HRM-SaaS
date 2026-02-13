@@ -1252,6 +1252,23 @@ td[data-type="phone"],
   }
 }
 
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
@@ -1274,6 +1291,10 @@ td[data-type="phone"],
 
 .animate-shimmer {
   animation: shimmer 2s infinite linear;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Pull-to-refresh indicator styles */
