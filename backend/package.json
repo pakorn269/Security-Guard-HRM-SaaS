@@ -27,7 +27,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^7.3.0",
+    "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@line/bot-sdk": "^9.8.0",
     "@sentry/node": "^10.39.0",
     "@supabase/supabase-js": "^2.96.0",
