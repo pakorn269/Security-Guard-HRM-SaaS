@@ -29,7 +29,7 @@
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.4.3",
     "@line/bot-sdk": "^9.8.0",
-    "@sentry/node": "^10.42.0",
+    "@sentry/node": "^10.43.0",
     "@supabase/supabase-js": "^2.99.0",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.13.6",
