@@ -30,7 +30,7 @@
     "@asteasolutions/zod-to-openapi": "^8.4.3",
     "@line/bot-sdk": "^9.8.0",
     "@sentry/node": "^10.43.0",
-    "@supabase/supabase-js": "^2.99.1",
+    "@supabase/supabase-js": "^2.99.2",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.13.6",
     "bcryptjs": "^2.4.3",
@@ -47,7 +47,7 @@
     "multer": "^2.1.1",
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
-    "resend": "^6.9.3",
+    "resend": "^6.9.4",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.5",
     "zod": "^3.24.1"
