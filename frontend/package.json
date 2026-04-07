@@ -45,7 +45,7 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-hook-form": "^7.72.0",
+    "react-hook-form": "^7.72.1",
     "react-i18next": "^17.0.2",
     "react-router-dom": "^7.14.0",
     "react-swipeable": "^7.0.2",
@@ -82,7 +82,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.3",
+    "vite": "^8.0.5",
     "vitest": "^4.0.17"
   }
 }
