@@ -39,7 +39,7 @@
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.4.0",
+    "express-rate-limit": "^8.4.1",
     "handlebars": "^4.7.9",
     "helmet": "^8.0.0",
     "ical-generator": "^10.2.0",
