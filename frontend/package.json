@@ -32,11 +32,11 @@
     "@hookform/resolvers": "^5.2.2",
     "@line/liff": "^2.28.0",
     "@react-google-maps/api": "^2.20.8",
-    "@sentry/react": "^10.51.0",
+    "@sentry/react": "^10.52.0",
     "@tailwindcss/vite": "^4.2.4",
     "axios": "^1.16.0",
     "date-fns": "^4.1.0",
-    "i18next": "^26.0.9",
+    "i18next": "^26.0.10",
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^4.0.0",
     "idb": "^8.0.3",
@@ -46,7 +46,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.75.0",
-    "react-i18next": "^17.0.6",
+    "react-i18next": "^17.0.7",
     "react-router-dom": "^7.15.0",
     "react-swipeable": "^7.0.2",
     "recharts": "^3.8.1",
@@ -82,7 +82,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.10",
+    "vite": "^8.0.11",
     "vitest": "^4.0.17"
   }
 }
