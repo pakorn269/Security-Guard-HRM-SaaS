@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "optionalDependencies": {
-    "@esbuild/linux-x64": "0.28.0",
+    "@esbuild/linux-x64": "0.28.1",
     "@rollup/rollup-linux-x64-gnu": "4.61.1",
     "@rollup/rollup-linux-x64-musl": "4.61.1",
     "@tailwindcss/oxide-linux-x64-gnu": "4.3.0",
