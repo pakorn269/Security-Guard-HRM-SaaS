@@ -28,8 +28,8 @@
   "license": "ISC",
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.5.0",
-    "@line/bot-sdk": "^11.0.2",
-    "@sentry/node": "^10.62.0",
+    "@line/bot-sdk": "^11.1.0",
+    "@sentry/node": "^10.63.0",
     "@supabase/supabase-js": "^2.110.0",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.18.1",
