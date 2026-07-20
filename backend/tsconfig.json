@@ -16,25 +16,24 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": "./src",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ],
       "@config/*": [
-        "./config/*"
+        "./src/config/*"
       ],
       "@middleware/*": [
-        "./middleware/*"
+        "./src/middleware/*"
       ],
       "@modules/*": [
-        "./modules/*"
+        "./src/modules/*"
       ],
       "@types/*": [
-        "./types/*"
+        "./src/types/*"
       ],
       "@utils/*": [
-        "./utils/*"
+        "./src/utils/*"
       ]
     },
     "typeRoots": [
