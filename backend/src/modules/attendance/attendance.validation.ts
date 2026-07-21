@@ -122,9 +122,7 @@ export const attendanceReportQuerySchema = z.object({
 });
 
 export const exportAttendanceQuerySchema = z.object({
-    format: z.enum(['csv', 'excel'], {
-        errorMap: () => ({ message: 'Format must be either "csv" or "excel"' }),
-    }),
+    format: z.enum(['csv', 'excel']),
     startDate: z
         .string()
         .regex(dateRegex, 'Invalid date format (YYYY-MM-DD)')
@@ -143,9 +141,7 @@ export const bulkUpdateAttendanceSchema = z.object({
         .array(z.string().uuid('Invalid attendance ID'))
         .min(1, 'At least one attendance ID is required')
         .max(100, 'Cannot update more than 100 records at once'),
-    action: z.enum(['approve', 'update_status', 'delete'], {
-        errorMap: () => ({ message: 'Action must be "approve", "update_status", or "delete"' }),
-    }),
+    action: z.enum(['approve', 'update_status', 'delete']),
     // For update_status action
     status: attendanceStatusEnum.optional(),
     // Reason for bulk action

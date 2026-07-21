@@ -114,7 +114,6 @@ export default function LocationPicker({
 
     return (
         <div className="space-y-4">
-            {/* @ts-expect-error - @react-google-maps/api has type definition issues */}
             <LoadScript googleMapsApiKey={apiKey} libraries={GOOGLE_MAPS_LIBRARIES}>
                 <div className="relative">
                     {/* Search Box */}
@@ -124,7 +123,6 @@ export default function LocationPicker({
                                 size={18}
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 z-10"
                             />
-                            {/* @ts-expect-error - @react-google-maps/api has type definition issues */}
                             <Autocomplete
                                 onLoad={(autocomplete: google.maps.places.Autocomplete) => {
                                     autocompleteRef.current = autocomplete;
@@ -141,7 +139,6 @@ export default function LocationPicker({
                     </div>
 
                     {/* Google Map */}
-                    {/* @ts-expect-error - @react-google-maps/api has type definition issues */}
                     <GoogleMap
                         mapContainerStyle={MAP_CONTAINER_STYLE}
                         center={mapCenter}
@@ -156,7 +153,6 @@ export default function LocationPicker({
                     >
                         {/* Marker */}
                         {markerPosition && (
-                            // @ts-expect-error - @react-google-maps/api has type definition issues
                             <Marker
                                 position={markerPosition}
                                 draggable={true}
@@ -167,7 +163,6 @@ export default function LocationPicker({
 
                         {/* Geofence Circle */}
                         {markerPosition && radius > 0 && (
-                            // @ts-expect-error - @react-google-maps/api has type definition issues
                             <Circle
                                 center={markerPosition}
                                 radius={radius}

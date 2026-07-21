@@ -43,7 +43,7 @@ export default function BalanceAdjustmentModal({
     const getBalanceValue = (field: AdjustmentFieldName): number => {
         if (field === 'entitled_days') return balance.entitledDays;
         if (field === 'used_days') return balance.usedDays;
-        if (field === 'remaining_days') return balance.remainingDays;
+        if (field === 'pending_days') return balance.pendingDays;
         return 0;
     };
 
