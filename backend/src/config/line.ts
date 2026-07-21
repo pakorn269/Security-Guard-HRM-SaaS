@@ -1,14 +1,14 @@
-import { LineBotClient, ClientConfig, messagingApi } from '@line/bot-sdk';
+import { LineBotClient, messagingApi } from '@line/bot-sdk';
 import { env } from './env.js';
 
 // LINE Bot configuration
-const lineConfig: ClientConfig = {
+const lineConfig = {
     channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN || '',
     channelSecret: env.LINE_CHANNEL_SECRET || '',
 };
 
 // LINE Bot client for webhook verification
-export const lineClient = new LineBotClient(lineConfig);
+export const lineClient = LineBotClient.fromChannelAccessToken(lineConfig);
 
 // LINE Messaging API client for sending messages
 export const messagingApiClient = new messagingApi.MessagingApiClient({

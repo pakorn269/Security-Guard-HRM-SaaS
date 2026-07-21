@@ -407,7 +407,7 @@ export default function LeavePage() {
       setSummary(summaryRes);
       setRequests(requestsRes.requests);
       setTotalRequests(requestsRes.total);
-      setTotalPages(requestsRes.pagination?.totalPages || Math.ceil(requestsRes.total / (filters.pageSize || 20)));
+      setTotalPages(requestsRes.pagination?.pagination?.totalPages || Math.ceil(requestsRes.total / (filters.pageSize || 20)));
     } catch (err) {
       console.error('Error loading leave data:', err);
       setError(err instanceof Error ? err.message : t('leave.loadError', 'ไม่สามารถโหลดข้อมูลการลาได้'));

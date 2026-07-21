@@ -2,7 +2,6 @@
 import { supabaseAdmin as supabase } from '../../config/supabase.js';
 import { messagingApiClient } from '../../config/line.js';
 import { CreateNotificationParams, Notification, NotificationRow, NotificationType } from './notifications.types.js';
-import { FlexMessage } from '@line/bot-sdk';
 
 export class NotificationService {
     /**

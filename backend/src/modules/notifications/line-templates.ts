@@ -1,5 +1,5 @@
 
-import { FlexMessage, FlexBubble } from '@line/bot-sdk';
+import { messagingApi } from '@line/bot-sdk';
 
 /**
  * Template for shift schedule published notification
@@ -8,8 +8,8 @@ export const createShiftPublishedMessage = (
     startDate: string,
     endDate: string,
     totalShifts: number
-): FlexMessage => {
-    const bubble: FlexBubble = {
+): messagingApi.FlexMessage => {
+    const bubble: messagingApi.FlexBubble = {
         type: 'bubble',
         header: {
             type: 'box',
@@ -125,8 +125,8 @@ export const createShiftReminderMessage = (
     date: string,
     timeRange: string,
     location: string
-): FlexMessage => {
-    const bubble: FlexBubble = {
+): messagingApi.FlexMessage => {
+    const bubble: messagingApi.FlexBubble = {
         type: 'bubble',
         header: {
             type: 'box',
@@ -269,8 +269,8 @@ export const createShiftOfferMessage = (
     date: string,
     timeRange: string,
     shiftId: string
-): FlexMessage => {
-    const bubble: FlexBubble = {
+): messagingApi.FlexMessage => {
+    const bubble: messagingApi.FlexBubble = {
         type: 'bubble',
         header: {
             type: 'box',
