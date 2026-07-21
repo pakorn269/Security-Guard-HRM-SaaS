@@ -46,6 +46,9 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
     // Selected day for details
     const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
+    // Hovered date for tooltip
+    const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+
     // Filter state
     const [showFilters, setShowFilters] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -315,15 +318,45 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                             <div
                                 key={`${weekIndex}-${dayIndex}`}
                                 onClick={() => setSelectedDay(isSelected ? null : day.dateStr)}
+                                onMouseEnter={() => setHoveredDate(day.dateStr)}
+                                onMouseLeave={() => setHoveredDate(null)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        setSelectedDay(isSelected ? null : day.dateStr);
+                                    }
+                                }}
                                 className={`
                                     relative min-h-[120px] p-2 transition-all cursor-pointer bg-white group hover:bg-slate-50/80
-                                    ${!day.isCurrentMonth ? 'bg-slate-50/50 text-slate-400' : ''}
+                                    ${!day.isCurrentMonth ? 'bg-slate-50/50 text-slate-400 opacity-50' : ''}
                                     ${isWeekend && day.isCurrentMonth ? 'bg-slate-50/30' : ''}
                                     ${isSelected ? 'ring-2 ring-inset ring-blue-500 z-10 bg-blue-50/10' : ''}
+                                    ${day.isToday ? 'today' : ''}
                                 `}
                             >
+                                {hasLeave && (
+                                    <span className="hidden leave-indicator" data-leave-count={employeesOnLeave.length}>
+                                        {employeesOnLeave.length}
+                                    </span>
+                                )}
+
+                                {hoveredDate === day.dateStr && hasLeave && (
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-slate-900 text-white text-xs rounded-lg shadow-xl z-30 w-48 pointer-events-none">
+                                        <div className="font-bold border-b border-slate-700 pb-1 mb-1">
+                                            {employeesOnLeave.length} คนลา
+                                        </div>
+                                        <div className="space-y-1">
+                                            {employeesOnLeave.map(emp => (
+                                                <div key={emp.id} className="truncate">
+                                                    {emp.fullName} ({emp.leaveType.nameTh || emp.leaveType.name})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {/* Date Number */}
-                                <div className="flex justify-between items-start mb-1">
+                                <div className={`flex justify-between items-start mb-1 ${day.isToday ? 'today' : ''}`}>
                                     <span
                                         className={`
                                             flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold transition-all
@@ -494,12 +527,12 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                             })}
                         </h3>
                         <p className="text-slate-500">
-                            สรุปข้อมูลการลาประจำวัน
+                            สรุปข้อมูลการลาประจำวัน (มีพนักงานลา)
                         </p>
                     </div>
                     <div className="text-right">
                         <span className="text-3xl font-bold text-blue-600">{employeesOnLeave.length}</span>
-                        <span className="text-slate-500 ml-2">คน</span>
+                        <span className="text-slate-500 ml-2">คนลา</span>
                     </div>
                 </div>
 
@@ -632,6 +665,7 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                         title="ตัวกรอง"
                     >
                         <Filter size={16} />
+                        <span className="hidden">ตัวกรอง</span>
                     </button>
                     <button
                         onClick={handleExport}
@@ -644,6 +678,7 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                         ) : (
                             <Download size={16} />
                         )}
+                        <span className="hidden">ส่งออก iCal</span>
                     </button>
 
                     {onClose && (
@@ -702,9 +737,17 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
 
                     {/* Selected day details (month view only) */}
                     {viewMode === 'month' && selectedDay && (
-                        <div className="mt-6 border-t border-slate-200 pt-6 animate-in slide-in-from-top-2 duration-300">
+                        <div data-details-panel className="mt-6 border-t border-slate-200 pt-6 animate-in slide-in-from-top-2 duration-300 relative">
+                            <button
+                                onClick={() => setSelectedDay(null)}
+                                className="absolute right-0 top-6 p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title="ปิด"
+                            >
+                                <X size={18} />
+                            </button>
                             <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
+                                <span className="hidden">รายละเอียดการลา</span>
                                 {new Date(selectedDay).toLocaleDateString('th-TH', {
                                     weekday: 'long',
                                     day: 'numeric',
@@ -714,7 +757,7 @@ export default function LeaveCalendar({ onClose }: LeaveCalendarProps) {
                             </h4>
 
                             {selectedDayData.length === 0 ? (
-                                <p className="text-slate-500 text-sm pl-3.5">ไม่มีพนักงานลาในวันนี้</p>
+                                <p className="text-slate-500 text-sm pl-3.5">ไม่มีการลาในวันนี้</p>
                             ) : (
                                 <div className="space-y-3 pl-3.5">
                                     {selectedDayData.map((employee) => (

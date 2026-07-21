@@ -10,14 +10,19 @@ vi.mock('../../config/supabase.js', () => ({
     },
 }));
 
-vi.mock('../../utils/logger.js', () => ({
-    default: {
+vi.mock('../../utils/logger.js', () => {
+    const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
-    },
-}));
+        request: vi.fn(),
+    };
+    return {
+        logger: mockLogger,
+        default: mockLogger,
+    };
+});
 
 vi.mock('../../utils/errors.js', () => ({
     NotFoundError: class NotFoundError extends Error {

@@ -14,14 +14,19 @@ vi.mock('../../config/env.js', () => ({
     },
 }));
 
-vi.mock('../../utils/logger.js', () => ({
-    default: {
+vi.mock('../../utils/logger.js', () => {
+    const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
-    },
-}));
+        request: vi.fn(),
+    };
+    return {
+        default: mockLogger,
+        logger: mockLogger,
+    };
+});
 
 vi.mock('../notifications/notifications.service.js', () => ({
     NotificationService: {
@@ -103,6 +108,9 @@ describe('LeaveService Notification Integration', () => {
             console.error('Test failed with error:', e);
             throw e;
         }
+
+        // Wait for async notification to complete (fire-and-forget pattern)
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         if (vi.mocked(logger.error).mock.calls.length > 0) {
             console.log('Logger Error calls:', vi.mocked(logger.error).mock.calls);

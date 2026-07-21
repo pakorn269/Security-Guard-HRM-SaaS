@@ -85,7 +85,7 @@ function ApprovalModal({
         try {
           setLoadingDocument(true);
           const response = await leaveService.getLeaveDocumentUrl(request.id);
-          setDocumentUrl(response.url);
+          setDocumentUrl(response?.url || null);
         } catch (err) {
           console.error('Error loading document URL:', err);
         } finally {
@@ -237,7 +237,7 @@ function ApprovalModal({
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
                 >
                   <FileText size={18} />
-                  <span className="text-sm font-medium">{t('leave.viewDocument', 'ดูเอกสาร')}</span>
+                  {t('leave.viewDocument', 'ดูเอกสาร')}
                   <Download size={16} className="ml-1" />
                 </a>
               ) : (
@@ -281,7 +281,7 @@ function ApprovalModal({
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} noValidate className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                     {action === 'approve'
@@ -384,12 +384,12 @@ export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequestWithDetails[]>([]);
   const [totalRequests, setTotalRequests] = useState(0);
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequestWithDetails | null>(null);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Filters
   const [filters, setFilters] = useState<ListLeaveRequestsQuery>({
     page: 1,
     pageSize: 20,
-    status: 'pending' as LeaveRequestStatus,
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -407,9 +407,10 @@ export default function LeavePage() {
       setSummary(summaryRes);
       setRequests(requestsRes.requests);
       setTotalRequests(requestsRes.total);
+      setTotalPages(requestsRes.pagination?.totalPages || Math.ceil(requestsRes.total / (filters.pageSize || 20)));
     } catch (err) {
       console.error('Error loading leave data:', err);
-      setError(t('leave.loadError', 'ไม่สามารถโหลดข้อมูลการลาได้'));
+      setError(err instanceof Error ? err.message : t('leave.loadError', 'ไม่สามารถโหลดข้อมูลการลาได้'));
     } finally {
       setLoading(false);
     }
@@ -540,7 +541,7 @@ export default function LeavePage() {
     },
   ];
 
-  const totalPages = Math.ceil(totalRequests / (filters.pageSize || 20));
+
 
   return (
     <div className="space-y-4 sm:space-y-6">

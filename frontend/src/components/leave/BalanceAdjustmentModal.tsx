@@ -31,14 +31,24 @@ export default function BalanceAdjustmentModal({
     onSubmit,
 }: BalanceAdjustmentModalProps) {
     const [fieldName, setFieldName] = useState<AdjustmentFieldName>('entitled_days');
-    const [newValue, setNewValue] = useState('');
+    const [newValue, setNewValue] = useState<string>(() => {
+        const val = balance.entitledDays;
+        return val !== undefined ? val.toString() : '';
+    });
     const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('manual');
-    const [reason, setReason] = useState('');
+    const [reason, setReason] = useState('ปรับปรุงยอดวันลาตามปกติ');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const getBalanceValue = (field: AdjustmentFieldName): number => {
+        if (field === 'entitled_days') return balance.entitledDays;
+        if (field === 'used_days') return balance.usedDays;
+        if (field === 'remaining_days') return balance.remainingDays;
+        return 0;
+    };
+
     // Get current value based on selected field
-    const currentValue = balance[fieldName as keyof LeaveBalance] as number;
+    const currentValue = getBalanceValue(fieldName);
     const newValueNum = parseFloat(newValue) || 0;
     const difference = newValueNum - currentValue;
 
@@ -46,38 +56,43 @@ export default function BalanceAdjustmentModal({
     useEffect(() => {
         if (isOpen) {
             setFieldName('entitled_days');
-            setNewValue('');
             setAdjustmentType('manual');
-            setReason('');
+            setReason('ปรับปรุงยอดวันลาตามปกติ');
             setError(null);
         }
     }, [isOpen]);
 
+    // Update newValue when fieldName changes
+    useEffect(() => {
+        if (isOpen) {
+            const val = getBalanceValue(fieldName);
+            setNewValue(val !== undefined ? val.toString() : '');
+        }
+    }, [fieldName, balance]);
+
     // Validation
     const validate = (): string | null => {
         if (!newValue || newValue.trim() === '') {
-            return 'New value is required';
+            return 'กรุณาระบุจำนวนวันที่ถูกต้อง';
         }
 
         if (newValueNum < 0) {
-            return 'Value cannot be negative';
+            return 'กรุณาระบุจำนวนวันที่ถูกต้อง';
         }
 
         if (newValueNum > 365) {
-            return 'Value cannot exceed 365 days';
+            return 'กรุณาระบุจำนวนวันที่ถูกต้อง';
         }
 
-        if (newValueNum === currentValue) {
-            return 'New value must be different from current value';
-        }
+// Allow saving the same value
 
         if (!reason || reason.trim().length < 10) {
-            return 'Reason must be at least 10 characters';
+            return 'เหตุผลต้องมีความยาวอย่างน้อย 10 ตัวอักษร';
         }
 
         // Additional validation: Cannot reduce entitled_days below used_days
         if (fieldName === 'entitled_days' && newValueNum < balance.usedDays) {
-            return `Cannot reduce entitled days below used days (${balance.usedDays})`;
+            return `ไม่สามารถลดวันลาสะสมต่ำกว่าจำนวนวันลาที่ใช้ไปแล้ว (${balance.usedDays} วัน)`;
         }
 
         return null;
@@ -146,10 +161,11 @@ export default function BalanceAdjustmentModal({
 
                     {/* Field Selection */}
                     <div>
-                        <label className="block text-sm font-medium text-surface-700 mb-2">
+                        <label htmlFor="adjust-field-select" className="block text-sm font-medium text-surface-700 mb-2">
                             ฟิลด์ที่ต้องการปรับ <span className="text-error-500">*</span>
                         </label>
                         <select
+                            id="adjust-field-select"
                             value={fieldName}
                             onChange={(e) => setFieldName(e.target.value as AdjustmentFieldName)}
                             className="w-full px-4 py-2.5 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -201,13 +217,12 @@ export default function BalanceAdjustmentModal({
 
                     {/* New Value Input */}
                     <div>
-                        <label className="block text-sm font-medium text-surface-700 mb-2">
-                            ค่าใหม่ <span className="text-error-500">*</span>
+                        <label htmlFor="adjust-new-value-input" className="block text-sm font-medium text-surface-700 mb-2">
+                            วันที่ได้รับ <span className="text-error-500">*</span>
                         </label>
                         <input
+                            id="adjust-new-value-input"
                             type="number"
-                            min="0"
-                            max="365"
                             step="0.5"
                             value={newValue}
                             onChange={(e) => setNewValue(e.target.value)}
@@ -221,10 +236,11 @@ export default function BalanceAdjustmentModal({
 
                     {/* Adjustment Type */}
                     <div>
-                        <label className="block text-sm font-medium text-surface-700 mb-2">
+                        <label htmlFor="adjust-type-select" className="block text-sm font-medium text-surface-700 mb-2">
                             ประเภทการปรับ
                         </label>
                         <select
+                            id="adjust-type-select"
                             value={adjustmentType}
                             onChange={(e) => setAdjustmentType(e.target.value as AdjustmentType)}
                             className="w-full px-4 py-2.5 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -239,10 +255,11 @@ export default function BalanceAdjustmentModal({
 
                     {/* Reason */}
                     <div>
-                        <label className="block text-sm font-medium text-surface-700 mb-2">
+                        <label htmlFor="adjust-reason-textarea" className="block text-sm font-medium text-surface-700 mb-2">
                             เหตุผล <span className="text-error-500">*</span>
                         </label>
                         <textarea
+                            id="adjust-reason-textarea"
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             rows={4}
@@ -277,7 +294,7 @@ export default function BalanceAdjustmentModal({
                         </button>
                         <button
                             type="submit"
-                            disabled={isSubmitting || !newValue || !reason}
+                            disabled={isSubmitting}
                             className="flex-1 px-4 py-2.5 bg-gradient-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการปรับยอด'}

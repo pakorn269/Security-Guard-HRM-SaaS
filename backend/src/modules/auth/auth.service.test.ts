@@ -10,6 +10,30 @@ vi.mock('../../config/supabase.js', () => ({
     },
 }));
 
+vi.mock('./session.service.js', () => ({
+    sessionService: {
+        createSession: vi.fn().mockResolvedValue('test-session-id'),
+        detectDeviceType: vi.fn().mockReturnValue('web'),
+        validateRefreshToken: vi.fn().mockResolvedValue({
+            id: 'test-session-id',
+            user_id: 'user-123',
+            company_id: 'company-123',
+            refresh_token_hash: 'some-hash',
+            device_name: 'Test Device',
+            device_type: 'web',
+            expires_at: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
+            created_at: new Date().toISOString(),
+            last_activity_at: new Date().toISOString(),
+        }),
+        rotateRefreshToken: vi.fn().mockResolvedValue(undefined),
+        revokeSessionByToken: vi.fn().mockResolvedValue(true),
+        getUserSessions: vi.fn().mockResolvedValue([]),
+        revokeSession: vi.fn().mockResolvedValue(true),
+        revokeAllSessions: vi.fn().mockResolvedValue(0),
+        updateLastActivity: vi.fn().mockResolvedValue(undefined),
+    },
+}));
+
 vi.mock('../../config/env.js', () => ({
     env: {
         JWT_SECRET: 'test-secret-key-minimum-32-characters',
@@ -19,14 +43,19 @@ vi.mock('../../config/env.js', () => ({
     },
 }));
 
-vi.mock('../../utils/logger.js', () => ({
-    default: {
+vi.mock('../../utils/logger.js', () => {
+    const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
-    },
-}));
+        request: vi.fn(),
+    };
+    return {
+        logger: mockLogger,
+        default: mockLogger,
+    };
+});
 
 import { authService } from './auth.service.js';
 import { supabaseAdmin } from '../../config/supabase.js';

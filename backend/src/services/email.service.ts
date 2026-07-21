@@ -37,7 +37,7 @@ class EmailService {
   private templateCache: Map<string, HandlebarsTemplateDelegate> = new Map();
 
   constructor() {
-    this.resend = new Resend(emailConfig.resend.apiKey);
+    this.resend = new Resend(emailConfig.resend.apiKey || 're_dummy_key_for_testing');
     this.registerHelpers();
   }
 

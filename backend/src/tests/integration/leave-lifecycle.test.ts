@@ -1,25 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // 1. Mock dependencies BEFORE imports
-vi.mock('../../config/supabase', () => ({
+vi.mock('../../config/supabase.js', () => ({
     supabaseAdmin: {
         from: vi.fn(),
         rpc: vi.fn(),
     },
 }));
 
-vi.mock('../../config/env', () => ({
+vi.mock('../../config/env.js', () => ({
     env: {
         NODE_ENV: 'test',
     },
 }));
 
-vi.mock('../../utils/logger', () => {
+vi.mock('../../utils/logger.js', () => {
     const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
+        request: vi.fn(),
     };
     return {
         default: mockLogger,
@@ -27,7 +28,7 @@ vi.mock('../../utils/logger', () => {
     };
 });
 
-vi.mock('../../modules/leave/replacement.service', () => ({
+vi.mock('../../modules/leave/replacement.service.js', () => ({
     replacementService: {
         findConflictingShifts: vi.fn(),
         assignReplacement: vi.fn(),
@@ -35,13 +36,13 @@ vi.mock('../../modules/leave/replacement.service', () => ({
     },
 }));
 
-vi.mock('../../modules/leave/balance-adjustment.service', () => ({
+vi.mock('../../modules/leave/balance-adjustment.service.js', () => ({
     balanceAdjustmentService: {
         adjustBalance: vi.fn(),
     },
 }));
 
-vi.mock('../../services/email.service', () => ({
+vi.mock('../../services/email.service.js', () => ({
     emailService: {
         sendEmail: vi.fn(),
         sendLeaveStatusUpdate: vi.fn(),
@@ -49,10 +50,10 @@ vi.mock('../../services/email.service', () => ({
 }));
 
 // 2. Import service under test and mocks
-import { leaveService } from '../../modules/leave/leave.service';
-import { replacementService } from '../../modules/leave/replacement.service';
-import { emailService } from '../../services/email.service';
-import { supabaseAdmin } from '../../config/supabase';
+import { leaveService } from '../../modules/leave/leave.service.js';
+import { replacementService } from '../../modules/leave/replacement.service.js';
+import { emailService } from '../../services/email.service.js';
+import { supabaseAdmin } from '../../config/supabase.js';
 
 // Helper for Supabase mocks
 const createMockQueryBuilder = (returnData: any = null, error: any = null) => {

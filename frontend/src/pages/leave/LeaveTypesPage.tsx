@@ -101,12 +101,12 @@ function LeaveTypeFormModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div role="dialog" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-auto">
-                <form onSubmit={handleSubmit} className="p-6">
+                <form onSubmit={handleSubmit} noValidate className="p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-surface-800">
-                            {leaveType ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'}
+                            {leaveType ? 'แก้ไขประเภทการลา' : 'สร้างประเภทการลาใหม่'}
                         </h2>
                         <button
                             type="button"
@@ -126,10 +126,11 @@ function LeaveTypeFormModal({
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 mb-1">
-                                    ชื่อ (English) <span className="text-error-500">*</span>
+                                <label htmlFor="name" className="block text-sm font-medium text-surface-700 mb-1">
+                                    ชื่อ (ภาษาอังกฤษ) <span className="text-error-500">*</span>
                                 </label>
                                 <input
+                                    id="name"
                                     type="text"
                                     className="input-base"
                                     value={formData.name}
@@ -139,10 +140,11 @@ function LeaveTypeFormModal({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-surface-700 mb-1">
+                                <label htmlFor="nameTh" className="block text-sm font-medium text-surface-700 mb-1">
                                     ชื่อ (ภาษาไทย)
                                 </label>
                                 <input
+                                    id="nameTh"
                                     type="text"
                                     className="input-base"
                                     value={formData.nameTh}
@@ -153,10 +155,11 @@ function LeaveTypeFormModal({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-1">
-                                รายละเอียด
+                            <label htmlFor="description" className="block text-sm font-medium text-surface-700 mb-1">
+                                คำอธิบาย
                             </label>
                             <textarea
+                                id="description"
                                 className="input-base"
                                 rows={2}
                                 value={formData.description}
@@ -166,10 +169,11 @@ function LeaveTypeFormModal({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-surface-700 mb-1">
+                            <label htmlFor="maxDaysPerYear" className="block text-sm font-medium text-surface-700 mb-1">
                                 จำนวนวันสูงสุดต่อปี
                             </label>
                             <input
+                                id="maxDaysPerYear"
                                 type="number"
                                 className="input-base"
                                 value={formData.maxDaysPerYear || ''}
@@ -216,7 +220,7 @@ function LeaveTypeFormModal({
                                     checked={formData.requiresApproval}
                                     onChange={(e) => setFormData({ ...formData, requiresApproval: e.target.checked })}
                                 />
-                                <span className="text-surface-700">ต้องรออนุมัติ</span>
+                                <span className="text-surface-700">ต้องขออนุมัติ</span>
                             </label>
 
                             <label className="flex items-center gap-3 cursor-pointer">
@@ -292,7 +296,7 @@ export default function LeaveTypesPage() {
 
         } catch (err) {
             console.error('Error loading data:', err);
-            setError('ไม่สามารถโหลดข้อมูลได้');
+            setError(err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลได้');
         } finally {
             setLoading(false);
         }
@@ -316,9 +320,31 @@ export default function LeaveTypesPage() {
     };
 
     const handleSave = async () => {
-        setSuccess(editingType ? 'อัพเดทประเภทการลาสำเร็จ' : 'เพิ่มประเภทการลาสำเร็จ');
+        setSuccess(editingType ? 'อัปเดตสำเร็จ' : 'เพิ่มประเภทการลาสำเร็จ');
         await loadData();
         setTimeout(() => setSuccess(null), 3000);
+    };
+
+    const handleToggleActive = async (type: LeaveType) => {
+        try {
+            setError(null);
+            await leaveService.updateLeaveType(type.id, {
+                name: type.name,
+                nameTh: type.nameTh,
+                description: type.description,
+                maxDaysPerYear: type.maxDaysPerYear,
+                isPaid: type.isPaid,
+                requiresApproval: type.requiresApproval,
+                requiresDocument: type.requiresDocument,
+                isActive: !type.isActive,
+            });
+            setSuccess('อัปเดตสำเร็จ');
+            await loadData();
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            console.error('Error toggling active state:', err);
+            setError(err instanceof Error ? err.message : 'ไม่สามารถเปลี่ยนสถานะประเภทการลาได้');
+        }
     };
 
     const handleUpdateResetMonth = async (month: number) => {
@@ -341,7 +367,7 @@ export default function LeaveTypesPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-800">ประเภทการลา</h1>
+                    <h1 className="text-2xl font-bold text-surface-800">จัดการประเภทการลา</h1>
                     <p className="text-surface-500">กำหนดประเภทการลาและจำนวนวันลาต่อปี</p>
                 </div>
                 <button
@@ -407,7 +433,7 @@ export default function LeaveTypesPage() {
                         checked={includeInactive}
                         onChange={(e) => setIncludeInactive(e.target.checked)}
                     />
-                    <span className="text-sm text-surface-600">แสดงประเภทที่ปิดใช้งาน</span>
+                    <span className="text-sm text-surface-600">แสดงที่ไม่ใช้งาน</span>
                 </label>
             </div>
 
@@ -415,7 +441,7 @@ export default function LeaveTypesPage() {
             <div className="space-y-4">
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="w-8 h-8 spinner"></div>
+                        <div data-testid="icon-loader" className="w-8 h-8 spinner"></div>
                     </div>
                 ) : leaveTypes.length === 0 ? (
                     <div className="card text-center py-12">
@@ -485,6 +511,21 @@ export default function LeaveTypesPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
+                                        <button
+                                            role="switch"
+                                            aria-checked={type.isActive}
+                                            onClick={() => handleToggleActive(type)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                                                type.isActive ? 'bg-primary-600' : 'bg-surface-300'
+                                            }`}
+                                            title={type.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                    type.isActive ? 'translate-x-6' : 'translate-x-1'
+                                                }`}
+                                            />
+                                        </button>
                                         <button
                                             onClick={() => {
                                                 setEditingType(type);

@@ -27,14 +27,19 @@ vi.mock('../../middleware/auth.middleware.js', () => {
 });
 
 // Mock Logger
-vi.mock('../../utils/logger.js', () => ({
-    default: {
+vi.mock('../../utils/logger.js', () => {
+    const mockLogger = {
         info: vi.fn(),
-        error: vi.fn(),
         warn: vi.fn(),
-        request: vi.fn()
-    }
-}));
+        error: vi.fn(),
+        debug: vi.fn(),
+        request: vi.fn(),
+    };
+    return {
+        logger: mockLogger,
+        default: mockLogger,
+    };
+});
 
 // Mock Sentry
 vi.mock('@sentry/node', () => ({

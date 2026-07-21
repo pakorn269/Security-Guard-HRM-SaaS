@@ -37,6 +37,7 @@ vi.mock('../../services/storage.service.js', () => ({
 const { mockAuthUser } = vi.hoisted(() => ({
     mockAuthUser: {
         id: 'user-1',
+        userId: 'user-1',
         companyId: 'company-1',
         role: 'employee',
         employeeId: 'employee-1',

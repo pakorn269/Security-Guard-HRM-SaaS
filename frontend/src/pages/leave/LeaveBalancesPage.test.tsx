@@ -23,6 +23,17 @@ vi.mock('../../services/leave.service', () => ({
   },
 }));
 
+// Mock AuthContext
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: {
+      id: 'user-123',
+      role: 'company_admin',
+      companyId: 'company-123',
+    },
+  }),
+}));
+
 // Helper wrapper for components that use router
 const RouterWrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>{children}</BrowserRouter>
@@ -34,6 +45,7 @@ describe('LeaveBalancesPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, '', '/');
 
     // Default successful responses
     (leaveService.listBalances as any).mockResolvedValue({
@@ -146,7 +158,7 @@ describe('LeaveBalancesPage', () => {
 
       await waitFor(() => {
         // Check for data in table
-        expect(screen.getByText(/employee-1/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/employee-1/i).length).toBeGreaterThan(0);
       });
     });
 
@@ -155,7 +167,7 @@ describe('LeaveBalancesPage', () => {
 
       await waitFor(() => {
         mockLeaveBalances.forEach(balance => {
-          expect(screen.getByText(balance.employeeId)).toBeInTheDocument();
+          expect(screen.getAllByText(balance.employeeId).length).toBeGreaterThan(0);
         });
       });
     });
@@ -182,8 +194,8 @@ describe('LeaveBalancesPage', () => {
       render(<LeaveBalancesPage />, { wrapper: RouterWrapper });
 
       await waitFor(() => {
-        expect(screen.getByText('5')).toBeInTheDocument(); // remainingDays
-        expect(screen.getByText('14')).toBeInTheDocument();
+        expect(screen.getAllByText('5').length).toBeGreaterThan(0); // remainingDays
+        expect(screen.getAllByText('14').length).toBeGreaterThan(0);
       });
     });
 

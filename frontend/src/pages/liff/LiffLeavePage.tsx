@@ -83,10 +83,13 @@ function SwipeableRequestCard({ request, onCancel }: SwipeableRequestCardProps) 
                 className={`absolute inset-0 bg-red-500 rounded-2xl flex items-center justify-end px-6 transition-opacity duration-300 ${swiped ? 'opacity-100' : 'opacity-0'
                     }`}
             >
-                <div className="flex items-center gap-2 text-white font-bold">
+                <button
+                    onClick={() => onCancel(request.id)}
+                    className="flex items-center gap-2 text-white font-bold hover:scale-105 active:scale-95 transition-transform"
+                >
                     <span>ยกเลิก</span>
                     <X size={20} />
-                </div>
+                </button>
             </div>
 
             {/* Content Card */}
@@ -200,7 +203,13 @@ const BalanceCard = ({ balance, index }: { balance: LeaveBalanceWithType; index:
 
                 {/* Progress Bar */}
                 <div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                        role="progressbar"
+                        aria-valuenow={percentage}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        className="h-2 bg-white/20 rounded-full overflow-hidden"
+                    >
                         <div
                             className="h-full bg-white rounded-full transition-all duration-1000"
                             style={{ width: `${percentage}%` }}
@@ -474,13 +483,14 @@ export default function LiffLeavePage() {
                 reason: formData.reason || undefined,
             });
 
+            let uploadFailed = false;
             if (documentFile.length > 0 && createdRequest.id) {
                 try {
                     setUploading(true);
                     await leaveService.uploadLeaveDocument(createdRequest.id, documentFile[0]);
                 } catch (uploadErr) {
                     console.error('Error uploading document:', uploadErr);
-                    setError('คำขอลาถูกสร้างแล้ว แต่การอัพโหลดเอกสารล้มเหลว');
+                    uploadFailed = true;
                 } finally {
                     setUploading(false);
                 }
@@ -496,6 +506,9 @@ export default function LiffLeavePage() {
             }
 
             await loadData();
+            if (uploadFailed) {
+                setError('คำขอลาถูกสร้างแล้ว แต่การอัพโหลดเอกสารล้มเหลว');
+            }
             setTimeout(() => setSuccess(null), 3000);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'ไม่สามารถส่งคำขอลาได้';
@@ -687,7 +700,9 @@ export default function LiffLeavePage() {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white">ขอลาใหม่</h2>
                             <button
+                                data-testid="close-modal-button"
                                 onClick={() => {
+                                    console.log('[LiffLeavePage CLOSE CLICK DIAGNOSTIC]');
                                     setShowForm(false);
                                     setFormData({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
                                 }}
@@ -719,10 +734,11 @@ export default function LiffLeavePage() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label htmlFor="leaveTypeId" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                     ประเภทการลา <span className="text-red-500">*</span>
                                 </label>
                                 <select
+                                    id="leaveTypeId"
                                     className="input-base"
                                     value={formData.leaveTypeId}
                                     onChange={(e) => setFormData({ ...formData, leaveTypeId: e.target.value })}
@@ -740,10 +756,11 @@ export default function LiffLeavePage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         วันที่เริ่ม <span className="text-red-500">*</span>
                                     </label>
                                     <input
+                                        id="startDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.startDate}
@@ -753,10 +770,11 @@ export default function LiffLeavePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         วันที่สิ้นสุด <span className="text-red-500">*</span>
                                     </label>
                                     <input
+                                        id="endDate"
                                         type="date"
                                         className="input-base"
                                         value={formData.endDate}
@@ -800,10 +818,11 @@ export default function LiffLeavePage() {
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label htmlFor="reason" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                     เหตุผล
                                 </label>
                                 <textarea
+                                    id="reason"
                                     className="input-base"
                                     rows={3}
                                     placeholder="ระบุเหตุผลการลา..."
@@ -845,7 +864,7 @@ export default function LiffLeavePage() {
                                 {submitting || uploading ? (
                                     <span className="flex items-center justify-center gap-2">
                                         <Loader2 size={20} className="animate-spin" />
-                                        {uploading ? 'กำลังอัพโหลด...' : 'กำลังส่ง...'}
+                                        {uploading ? 'กำลังอัพโหลดเอกสาร...' : 'กำลังส่ง...'}
                                     </span>
                                 ) : (
                                     'ส่งคำขอ'

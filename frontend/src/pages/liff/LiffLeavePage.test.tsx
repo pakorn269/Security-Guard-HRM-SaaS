@@ -47,6 +47,34 @@ vi.mock('../../components/forms/FileUpload', () => ({
   ),
 }));
 
+vi.mock('lucide-react', () => ({
+  Palmtree: () => <div data-testid="icon-palmtree">Palmtree</div>,
+  CheckCircle: () => <div data-testid="icon-check-circle">CheckCircle</div>,
+  AlertTriangle: () => <div data-testid="icon-alert-triangle">AlertTriangle</div>,
+  Plus: () => <div data-testid="icon-plus">Plus</div>,
+  Clock: () => <div data-testid="icon-clock">Clock</div>,
+  X: () => <div data-testid="icon-x">X</div>,
+  Loader2: () => <div data-testid="icon-loader" className="animate-spin">Loader2</div>,
+  Sparkles: () => <div data-testid="icon-sparkles">Sparkles</div>,
+  Wifi: () => <div data-testid="icon-wifi">Wifi</div>,
+  WifiOff: () => <div data-testid="icon-wifi-off">WifiOff</div>,
+  TrendingDown: () => <div data-testid="icon-trending-down">TrendingDown</div>,
+  Camera: () => <div data-testid="icon-camera">Camera</div>,
+  Calendar: () => <div data-testid="icon-calendar">Calendar</div>,
+  FileText: () => <div data-testid="icon-file-text">FileText</div>,
+}));
+
+vi.mock('../../services/offline-queue.service', () => ({
+  __esModule: true,
+  default: {
+    getOnlineStatus: vi.fn().mockReturnValue(true),
+    getPendingCount: vi.fn().mockResolvedValue(0),
+    on: vi.fn().mockReturnValue(() => {}),
+    queueRequest: vi.fn(),
+    sync: vi.fn(),
+  },
+}));
+
 describe('LiffLeavePage', () => {
   const user = userEvent.setup();
 
@@ -91,7 +119,7 @@ describe('LiffLeavePage', () => {
       });
 
       // Check if balances are displayed
-      expect(screen.getByText(/ลาพักผ่อน/)).toBeInTheDocument();
+      expect(screen.getAllByText(/ลาพักผ่อน/)[0]).toBeInTheDocument();
       expect(screen.getByText(/ลาป่วย/)).toBeInTheDocument();
     });
 
@@ -99,7 +127,7 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/คำขอที่รออนุมัติ/i)).toBeInTheDocument();
+        expect(screen.getByText('รออนุมัติ', { selector: 'h2' })).toBeInTheDocument();
       });
     });
 
@@ -133,13 +161,13 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      const requestButton = screen.getByText('ขอลาใหม่');
+      const requestButton = screen.getByText('ขอลาใหม่', { selector: 'span' });
       await user.click(requestButton);
 
-      expect(screen.getByText(/ประเภทการลา/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^ประเภทการลา/i)).toBeInTheDocument();
       expect(screen.getByText(/วันที่เริ่ม/i)).toBeInTheDocument();
       expect(screen.getByText(/วันที่สิ้นสุด/i)).toBeInTheDocument();
     });
@@ -148,17 +176,13 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
-      const closeButton = screen.getAllByRole('button').find((btn) =>
-        btn.querySelector('[data-testid]')
-      );
-      if (closeButton) {
-        await user.click(closeButton);
-      }
+      const closeButton = screen.getByTestId('close-modal-button');
+      fireEvent.click(closeButton);
 
       await waitFor(() => {
         expect(screen.queryByText(/วันที่เริ่ม/i)).not.toBeInTheDocument();
@@ -169,20 +193,20 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Select dates
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
 
       await user.clear(startDateInput);
-      await user.type(startDateInput, '2024-07-15');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-15' } });
 
       await user.clear(endDateInput);
-      await user.type(endDateInput, '2024-07-17');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-17' } });
 
       await waitFor(() => {
         expect(screen.getByText(/จำนวนวันลา: 3 วัน/i)).toBeInTheDocument();
@@ -193,14 +217,14 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Click submit without filling form
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(screen.getByText(/กรุณากรอกข้อมูลให้ครบถ้วน/i)).toBeInTheDocument();
@@ -213,27 +237,27 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       const reasonTextarea = screen.getByPlaceholderText(/ระบุเหตุผลการลา/i);
       await user.type(reasonTextarea, 'Summer vacation');
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(leaveService.createLeaveRequest).toHaveBeenCalledWith({
@@ -258,24 +282,24 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(
@@ -294,10 +318,10 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       expect(screen.getByTestId('file-upload')).toBeInTheDocument();
       expect(screen.getByText(/แนบเอกสาร/i)).toBeInTheDocument();
@@ -307,13 +331,13 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Select leave type that requires document (Sick Leave)
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-2');
 
       // Check if required indicator appears
@@ -326,24 +350,24 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Select leave type that requires document
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-2');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-25');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-25' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-26');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-26' } });
 
       // Submit without document
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(
@@ -356,20 +380,20 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-2');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-25');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-25' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-26');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-26' } });
 
       // Upload file (simulated)
       const fileInput = screen.getByTestId('file-input');
@@ -384,7 +408,7 @@ describe('LiffLeavePage', () => {
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(leaveService.createLeaveRequest).toHaveBeenCalled();
@@ -403,20 +427,20 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form with document
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-25');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-25' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-26');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-26' } });
 
       // Upload file
       const fileInput = screen.getByTestId('file-input');
@@ -431,7 +455,7 @@ describe('LiffLeavePage', () => {
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(
@@ -461,7 +485,7 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/คำขอที่รออนุมัติ/i)).toBeInTheDocument();
+        expect(screen.getByText('รออนุมัติ', { selector: 'h2' })).toBeInTheDocument();
       });
 
       const cancelButton = screen.getAllByText('ยกเลิก')[0];
@@ -478,7 +502,7 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/คำขอที่รออนุมัติ/i)).toBeInTheDocument();
+        expect(screen.getByText('รออนุมัติ', { selector: 'h2' })).toBeInTheDocument();
       });
 
       const initialCallCount = (leaveService.getMyLeaveData as any).mock.calls
@@ -515,7 +539,7 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/รอ 2/i)).toBeInTheDocument(); // Pending days for Annual Leave
+        expect(screen.getByText(/รออนุมัติ 2/i)).toBeInTheDocument(); // Pending days for Annual Leave
       });
     });
 
@@ -543,24 +567,24 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       // Check for loading text
       expect(screen.getByText(/กำลังส่ง/i)).toBeInTheDocument();
@@ -575,20 +599,20 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form with document
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-25');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-25' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-26');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-26' } });
 
       // Upload file
       const fileInput = screen.getByTestId('file-input');
@@ -603,7 +627,7 @@ describe('LiffLeavePage', () => {
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       // Check for uploading text
       await waitFor(() => {
@@ -615,24 +639,24 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       // Submit
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       expect(submitButton).toBeDisabled();
     });
@@ -647,23 +671,23 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill and submit form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i);
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i);
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i);
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i);
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       await waitFor(() => {
         expect(screen.getByText(/ส่งคำขอลาสำเร็จ/i)).toBeInTheDocument();
@@ -674,32 +698,32 @@ describe('LiffLeavePage', () => {
       render(<LiffLeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
       // Fill form
-      const leaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i) as HTMLSelectElement;
+      const leaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i) as HTMLSelectElement;
       await user.selectOptions(leaveTypeSelect, 'leave-type-1');
 
       const startDateInput = screen.getByLabelText(/วันที่เริ่ม/i) as HTMLInputElement;
-      await user.type(startDateInput, '2024-07-20');
+      fireEvent.change(startDateInput, { target: { value: '2024-07-20' } });
 
       const endDateInput = screen.getByLabelText(/วันที่สิ้นสุด/i) as HTMLInputElement;
-      await user.type(endDateInput, '2024-07-22');
+      fireEvent.change(endDateInput, { target: { value: '2024-07-22' } });
 
       const submitButton = screen.getByText('ส่งคำขอ');
-      await user.click(submitButton);
+      fireEvent.submit(submitButton.closest('form')!);
 
       // Open form again and check if cleared
       await waitFor(() => {
-        expect(screen.getByText('ขอลาใหม่')).toBeInTheDocument();
+        expect(screen.getByText('ขอลาใหม่', { selector: 'span' })).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      await user.click(screen.getByText('ขอลาใหม่'));
+      await user.click(screen.getByText('ขอลาใหม่', { selector: 'span' }));
 
-      const newLeaveTypeSelect = screen.getByLabelText(/ประเภทการลา/i) as HTMLSelectElement;
+      const newLeaveTypeSelect = screen.getByLabelText(/^ประเภทการลา/i) as HTMLSelectElement;
       expect(newLeaveTypeSelect.value).toBe('');
     });
   });

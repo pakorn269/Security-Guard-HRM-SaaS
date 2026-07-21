@@ -14,14 +14,19 @@ vi.mock('../../config/env.js', () => ({
     },
 }));
 
-vi.mock('../../utils/logger.js', () => ({
-    default: {
+vi.mock('../../utils/logger.js', () => {
+    const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
-    },
-}));
+        request: vi.fn(),
+    };
+    return {
+        default: mockLogger,
+        logger: mockLogger,
+    };
+});
 
 vi.mock('../notifications/notifications.service.js', () => ({
     NotificationService: {
@@ -31,6 +36,27 @@ vi.mock('../notifications/notifications.service.js', () => ({
 
 vi.mock('../../jobs/lineNotifications.js', () => ({
     sendLeaveNotification: vi.fn(),
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    cacheService: {
+        getOrSet: vi.fn().mockImplementation((key, fn) => fn()),
+        get: vi.fn().mockReturnValue(null),
+        set: vi.fn(),
+        del: vi.fn(),
+        flush: vi.fn(),
+        invalidateLeaveTypes: vi.fn(),
+        invalidateLeaveBalances: vi.fn(),
+    },
+    CACHE_KEYS: {
+        LEAVE_TYPES: (companyId: string) => `leave_types:${companyId}`,
+        LEAVE_TYPE: (companyId: string, typeId: string) => `leave_type:${companyId}:${typeId}`,
+        LEAVE_BALANCES: (companyId: string, year: number, employeeId?: string) => `leave_balances:${companyId}:${year}${employeeId ? `:${employeeId}` : ''}`,
+    },
+    CACHE_TTL: {
+        LEAVE_TYPES: 600,
+        LEAVE_BALANCES: 300,
+    },
 }));
 
 import { leaveService } from './leave.service.js';

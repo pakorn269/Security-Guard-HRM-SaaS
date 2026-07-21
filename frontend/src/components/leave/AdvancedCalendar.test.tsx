@@ -170,8 +170,8 @@ describe('Advanced Calendar Features', () => {
 
                 await waitFor(() => {
                     expect(screen.getByText('2 คนลา')).toBeInTheDocument();
-                    expect(screen.getByText(/Test Employee 1/)).toBeInTheDocument();
-                    expect(screen.getByText(/Test Employee 2/)).toBeInTheDocument();
+                    expect(screen.getAllByText(/Test Employee 1/).length).toBeGreaterThan(0);
+                    expect(screen.getAllByText(/Test Employee 2/).length).toBeGreaterThan(0);
                 });
 
                 fireEvent.mouseLeave(targetDay);

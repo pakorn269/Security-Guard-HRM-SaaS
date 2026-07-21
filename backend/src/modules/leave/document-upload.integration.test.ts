@@ -3,7 +3,61 @@
  * Tests the complete flow from upload to retrieval to deletion
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+
+const { mockUploadedFiles, mockStorageFrom } = vi.hoisted(() => {
+  const uploadedFiles = new Set<string>();
+  const storageFrom = {
+    upload: vi.fn().mockImplementation(async (path: string) => {
+      uploadedFiles.add(path);
+      return { data: { path }, error: null };
+    }),
+    remove: vi.fn().mockImplementation(async (paths: string[]) => {
+      paths.forEach(p => uploadedFiles.delete(p));
+      return { data: paths.map(p => ({ name: p })), error: null };
+    }),
+    list: vi.fn().mockImplementation(async (folderPath: string, options?: { search?: string }) => {
+      const filename = options?.search;
+      if (!filename) {
+        return { data: [], error: null };
+      }
+      const fullPath = `${folderPath}/${filename}`;
+      if (uploadedFiles.has(fullPath)) {
+        return { data: [{ name: filename }], error: null };
+      }
+      return { data: [], error: null };
+    }),
+    createSignedUrl: vi.fn().mockImplementation(async (path: string, expires: number) => {
+      if (!uploadedFiles.has(path)) {
+        throw new Error('Object not found');
+      }
+      return { data: { signedUrl: `https://example.com/signed-url?token=mocked&path=${path}&expires=${expires}` }, error: null };
+    }),
+  };
+  return {
+    mockUploadedFiles: uploadedFiles,
+    mockStorageFrom: storageFrom,
+  };
+});
+
+vi.mock('../../config/supabase.js', () => ({
+  supabaseAdmin: {
+    storage: {
+      listBuckets: vi.fn().mockResolvedValue({ data: [{ id: 'leave-documents' }], error: null }),
+      from: vi.fn().mockReturnValue(mockStorageFrom),
+    },
+    from: vi.fn().mockImplementation((table: string) => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { id: 'test-request-id', document_url: 'path' }, error: null }),
+      };
+      return mockQueryBuilder;
+    }),
+  },
+}));
+
 import { storageService } from '../../services/storage.service.js';
 import { leaveService } from './leave.service.js';
 import { supabaseAdmin } from '../../config/supabase.js';

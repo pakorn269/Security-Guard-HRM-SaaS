@@ -21,6 +21,11 @@ vi.mock('lucide-react', () => ({
   ChevronRight: () => <div data-testid="icon-chevron-right">ChevronRight</div>,
   AlertTriangle: () => <div data-testid="icon-alert-triangle">AlertTriangle</div>,
   Loader2: () => <div data-testid="icon-loader" className="animate-spin">Loader2</div>,
+  Download: () => <div data-testid="icon-download">Download</div>,
+  Filter: () => <div data-testid="icon-filter">Filter</div>,
+  Grid3x3: () => <div data-testid="icon-grid3x3">Grid3x3</div>,
+  List: () => <div data-testid="icon-list">List</div>,
+  Eye: () => <div data-testid="icon-eye">Eye</div>,
 }));
 
 describe('LeaveCalendar', () => {
@@ -72,12 +77,15 @@ describe('LeaveCalendar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2024-07-15'));
 
     // Default successful response
     (leaveService.getLeaveCalendar as any).mockResolvedValue(mockCalendarData);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -385,7 +393,7 @@ describe('LeaveCalendar', () => {
 
         await waitFor(() => {
           // Details panel should show employee info
-          expect(screen.getByText(/สมชาย ใจดี/)).toBeInTheDocument();
+          expect(screen.getAllByText(/สมชาย ใจดี/)[0]).toBeInTheDocument();
         });
       }
     });
@@ -407,7 +415,7 @@ describe('LeaveCalendar', () => {
         await user.click(dayWithLeave);
 
         await waitFor(() => {
-          expect(screen.getByText(/สมชาย ใจดี/)).toBeInTheDocument();
+          expect(screen.getAllByText(/สมชาย ใจดี/)[0]).toBeInTheDocument();
           expect(screen.getByText(/EMP001/)).toBeInTheDocument();
         });
       }
@@ -430,7 +438,7 @@ describe('LeaveCalendar', () => {
         await user.click(dayWithLeave);
 
         await waitFor(() => {
-          expect(screen.getByText(/ลาพักผ่อน/)).toBeInTheDocument();
+          expect(screen.getAllByText(/ลาพักผ่อน/)[0]).toBeInTheDocument();
         });
       }
     });
@@ -453,7 +461,7 @@ describe('LeaveCalendar', () => {
         await user.click(dayWithLeave);
 
         await waitFor(() => {
-          expect(screen.getByText(/สมชาย ใจดี/)).toBeInTheDocument();
+          expect(screen.getAllByText(/สมชาย ใจดี/)[0]).toBeInTheDocument();
         });
 
         // Find and click close button in details panel
@@ -599,13 +607,8 @@ describe('LeaveCalendar', () => {
 
     it('should handle month transition correctly (December to January)', async () => {
       // Set current date to December
-      const decemberDate = new Date(2024, 11, 15); // December 15, 2024
-      vi.spyOn(global, 'Date').mockImplementation((...args) => {
-        if (args.length === 0) {
-          return decemberDate;
-        }
-        return new (Date as any)(...args);
-      });
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2024, 11, 15)); // December 15, 2024
 
       render(<LeaveCalendar />);
 
@@ -614,7 +617,7 @@ describe('LeaveCalendar', () => {
       });
 
       const nextButton = screen.getByTestId('icon-chevron-right').closest('button');
-      await user.click(nextButton!);
+      fireEvent.click(nextButton!);
 
       await waitFor(() => {
         // Should show January 2025
@@ -625,18 +628,13 @@ describe('LeaveCalendar', () => {
         expect(screen.getByText(januaryText)).toBeInTheDocument();
       });
 
-      vi.restoreAllMocks();
+      vi.useRealTimers();
     });
 
     it('should handle year transition correctly (January to December)', async () => {
       // Set current date to January
-      const januaryDate = new Date(2024, 0, 15); // January 15, 2024
-      vi.spyOn(global, 'Date').mockImplementation((...args) => {
-        if (args.length === 0) {
-          return januaryDate;
-        }
-        return new (Date as any)(...args);
-      });
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2024, 0, 15)); // January 15, 2024
 
       render(<LeaveCalendar />);
 
@@ -645,7 +643,7 @@ describe('LeaveCalendar', () => {
       });
 
       const prevButton = screen.getByTestId('icon-chevron-left').closest('button');
-      await user.click(prevButton!);
+      fireEvent.click(prevButton!);
 
       await waitFor(() => {
         // Should show December 2023
@@ -656,7 +654,7 @@ describe('LeaveCalendar', () => {
         expect(screen.getByText(decemberText)).toBeInTheDocument();
       });
 
-      vi.restoreAllMocks();
+      vi.useRealTimers();
     });
   });
 });

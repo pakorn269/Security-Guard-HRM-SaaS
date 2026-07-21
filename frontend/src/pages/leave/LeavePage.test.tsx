@@ -155,6 +155,7 @@ describe('LeavePage', () => {
     (leaveService.getLeaveSummary as any).mockResolvedValue(mockLeaveSummary);
     (leaveService.getPendingCount as any).mockResolvedValue(mockLeaveSummary.pendingRequests);
     (leaveService.listLeaveTypes as any).mockResolvedValue(mockLeaveTypes);
+    (leaveService.getLeaveDocumentUrl as any).mockResolvedValue({ url: 'http://example.com/doc.pdf' });
   });
 
   afterEach(() => {
@@ -179,7 +180,10 @@ describe('LeavePage', () => {
       render(<LeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('2')).toBeInTheDocument(); // mockLeaveSummary.pendingRequests
+        const stats = screen.getAllByTestId('stat');
+        const pendingStat = stats.find(s => within(s).queryByText(/รออนุมัติ/i));
+        expect(pendingStat).toBeDefined();
+        expect(within(pendingStat!).getByText('2')).toBeInTheDocument();
       });
     });
 
@@ -187,7 +191,10 @@ describe('LeavePage', () => {
       render(<LeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('5')).toBeInTheDocument(); // mockLeaveSummary.approvedThisMonth
+        const stats = screen.getAllByTestId('stat');
+        const approvedStat = stats.find(s => within(s).queryByText(/อนุมัติเดือนนี้/i));
+        expect(approvedStat).toBeDefined();
+        expect(within(approvedStat!).getByText('5')).toBeInTheDocument();
       });
     });
 
@@ -195,7 +202,10 @@ describe('LeavePage', () => {
       render(<LeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('3')).toBeInTheDocument(); // mockLeaveSummary.employeesOnLeaveToday
+        const stats = screen.getAllByTestId('stat');
+        const leaveTodayStat = stats.find(s => within(s).queryByText(/ลาวันนี้/i));
+        expect(leaveTodayStat).toBeDefined();
+        expect(within(leaveTodayStat!).getByText('3')).toBeInTheDocument();
       });
     });
 
@@ -203,7 +213,10 @@ describe('LeavePage', () => {
       render(<LeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText('8')).toBeInTheDocument(); // mockLeaveSummary.upcomingLeaves
+        const stats = screen.getAllByTestId('stat');
+        const upcomingStat = stats.find(s => within(s).queryByText(/ลาสัปดาห์หน้า/i));
+        expect(upcomingStat).toBeDefined();
+        expect(within(upcomingStat!).getByText('8')).toBeInTheDocument();
       });
     });
 
@@ -239,8 +252,8 @@ describe('LeavePage', () => {
       render(<LeavePage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/สมชาย ใจดี/)).toBeInTheDocument();
-        expect(screen.getByText(/ลาพักผ่อน/)).toBeInTheDocument();
+        expect(screen.getAllByText(/สมชาย ใจดี/).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/ลาพักผ่อน/).length).toBeGreaterThan(0);
       });
     });
 
@@ -343,7 +356,7 @@ describe('LeavePage', () => {
 
       await waitFor(() => {
         const modal = screen.getByTestId('modal');
-        expect(within(modal).getByText(/สมชาย ใจดี/)).toBeInTheDocument();
+        expect(within(modal).getAllByText(/สมชาย ใจดี/).length).toBeGreaterThan(0);
       });
     });
 
@@ -359,8 +372,9 @@ describe('LeavePage', () => {
       await user.click(reviewButton);
 
       await waitFor(() => {
-        const approveButton = screen.getByText('อนุมัติ');
-        const rejectButton = screen.getByText('ไม่อนุมัติ');
+        const modal = screen.getByTestId('modal');
+        const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
+        const rejectButton = within(modal).getByRole('button', { name: 'ไม่อนุมัติ' });
         expect(approveButton).toBeInTheDocument();
         expect(rejectButton).toBeInTheDocument();
       });
@@ -384,8 +398,12 @@ describe('LeavePage', () => {
       await user.click(viewButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('อนุมัติ')).not.toBeInTheDocument();
-        expect(screen.queryByText('ไม่อนุมัติ')).not.toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        const buttons = within(modal).queryAllByRole('button');
+        const approveButton = buttons.find(b => b.textContent === 'อนุมัติ');
+        const rejectButton = buttons.find(b => b.textContent === 'ไม่อนุมัติ');
+        expect(approveButton).toBeUndefined();
+        expect(rejectButton).toBeUndefined();
       });
     });
 
@@ -400,10 +418,12 @@ describe('LeavePage', () => {
       await user.click(reviewButton);
 
       await waitFor(() => {
-        expect(screen.getByText('อนุมัติ')).toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        expect(within(modal).getByRole('button', { name: 'อนุมัติ' })).toBeInTheDocument();
       });
 
-      const approveButton = screen.getByText('อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
       await user.click(approveButton);
 
       await waitFor(() => {
@@ -422,10 +442,12 @@ describe('LeavePage', () => {
       await user.click(reviewButton);
 
       await waitFor(() => {
-        expect(screen.getByText('ไม่อนุมัติ')).toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        expect(within(modal).getByRole('button', { name: 'ไม่อนุมัติ' })).toBeInTheDocument();
       });
 
-      const rejectButton = screen.getByText('ไม่อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const rejectButton = within(modal).getByRole('button', { name: 'ไม่อนุมัติ' });
       await user.click(rejectButton);
 
       await waitFor(() => {
@@ -447,10 +469,12 @@ describe('LeavePage', () => {
       await user.click(reviewButton);
 
       await waitFor(() => {
-        expect(screen.getByText('อนุมัติ')).toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        expect(within(modal).getByRole('button', { name: 'อนุมัติ' })).toBeInTheDocument();
       });
 
-      const approveButton = screen.getByText('อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
       await user.click(approveButton);
 
       await waitFor(() => {
@@ -460,7 +484,8 @@ describe('LeavePage', () => {
       const notesInput = screen.getByPlaceholderText(/ระบุหมายเหตุ/i);
       await user.type(notesInput, 'Approved for vacation');
 
-      const confirmButton = screen.getByText('ยืนยันอนุมัติ');
+      const modalEl = screen.getByTestId('modal');
+      const confirmButton = within(modalEl).getByText('ยืนยันอนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -484,10 +509,12 @@ describe('LeavePage', () => {
       await user.click(reviewButton);
 
       await waitFor(() => {
-        expect(screen.getByText('ไม่อนุมัติ')).toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        expect(within(modal).getByRole('button', { name: 'ไม่อนุมัติ' })).toBeInTheDocument();
       });
 
-      const rejectButton = screen.getByText('ไม่อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const rejectButton = within(modal).getByRole('button', { name: 'ไม่อนุมัติ' });
       await user.click(rejectButton);
 
       await waitFor(() => {
@@ -497,7 +524,7 @@ describe('LeavePage', () => {
       const reasonInput = screen.getByPlaceholderText(/ระบุเหตุผล/i);
       await user.type(reasonInput, 'Insufficient notice');
 
-      const confirmButton = screen.getByText('ยืนยันไม่อนุมัติ');
+      const confirmButton = within(modal).getByText('ยืนยันไม่อนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -522,14 +549,16 @@ describe('LeavePage', () => {
       const reviewButton = screen.getAllByText('พิจารณา')[0];
       await user.click(reviewButton);
 
-      const approveButton = screen.getByText('อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
       await user.click(approveButton);
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/ระบุหมายเหตุ/i)).toBeInTheDocument();
       });
 
-      const confirmButton = screen.getByText('ยืนยันอนุมัติ');
+      const modalEl = screen.getByTestId('modal');
+      const confirmButton = within(modalEl).getByText('ยืนยันอนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -551,14 +580,16 @@ describe('LeavePage', () => {
       const reviewButton = screen.getAllByText('พิจารณา')[0];
       await user.click(reviewButton);
 
-      const approveButton = screen.getByText('อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
       await user.click(approveButton);
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/ระบุหมายเหตุ/i)).toBeInTheDocument();
       });
 
-      const confirmButton = screen.getByText('ยืนยันอนุมัติ');
+      const modalEl = screen.getByTestId('modal');
+      const confirmButton = within(modalEl).getByText('ยืนยันอนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -580,14 +611,16 @@ describe('LeavePage', () => {
       const reviewButton = screen.getAllByText('พิจารณา')[0];
       await user.click(reviewButton);
 
-      const approveButton = screen.getByText('อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const approveButton = within(modal).getByRole('button', { name: 'อนุมัติ' });
       await user.click(approveButton);
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/ระบุหมายเหตุ/i)).toBeInTheDocument();
       });
 
-      const confirmButton = screen.getByText('ยืนยันอนุมัติ');
+      const modalEl = screen.getByTestId('modal');
+      const confirmButton = within(modalEl).getByText('ยืนยันอนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -734,11 +767,14 @@ describe('LeavePage', () => {
         expect(screen.getByTestId('data-table')).toBeInTheDocument();
       });
 
-      const viewButton = screen.getAllByText('ดู')[0];
+      const viewButton = screen.queryByText('ดู') || screen.getByText('พิจารณา');
       await user.click(viewButton);
 
       await waitFor(() => {
-        expect(screen.queryByText('ดูเอกสาร')).not.toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        const buttons = within(modal).queryAllByRole('link');
+        const docLink = buttons.find(b => b.textContent?.includes('ดูเอกสาร'));
+        expect(docLink).toBeUndefined();
       });
     });
 
@@ -799,18 +835,20 @@ describe('LeavePage', () => {
         expect(screen.getByTestId('data-table')).toBeInTheDocument();
       });
 
-      const firstRow = screen.getByTestId('table-row-0');
-      await user.click(firstRow);
+      const reviewButton = screen.getAllByText('พิจารณา')[0];
+      await user.click(reviewButton);
 
-      const rejectButton = screen.getByText('ไม่อนุมัติ');
+      const modal = screen.getByTestId('modal');
+      const rejectButton = within(modal).getByRole('button', { name: 'ไม่อนุมัติ' });
       await user.click(rejectButton);
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/ระบุเหตุผล/i)).toBeInTheDocument();
+        const modal = screen.getByTestId('modal');
+        expect(within(modal).getByPlaceholderText(/ระบุเหตุผล/i)).toBeInTheDocument();
       });
 
       // Try to confirm without entering reason
-      const confirmButton = screen.getByText('ยืนยันไม่อนุมัติ');
+      const confirmButton = within(modal).getByText('ยืนยันไม่อนุมัติ');
       await user.click(confirmButton);
 
       await waitFor(() => {

@@ -3,15 +3,19 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ShiftConflictAlert from './ShiftConflictAlert';
 import ReplacementModal from './ReplacementModal';
-import { leaveService } from '@/services/leave.service';
+import leaveService from '@/services/leave.service';
 import type { ReplacementConflict, AvailableReplacement } from '@/types/leave.types';
 
 // Mock the leaveService
-vi.mock('@/services/leave.service', () => ({
-    leaveService: {
+vi.mock('@/services/leave.service', () => {
+    const mockService = {
         getAvailableReplacements: vi.fn(),
-    },
-}));
+    };
+    return {
+        leaveService: mockService,
+        default: mockService,
+    };
+});
 
 // Mock the Modal component to simplify testing (avoid Portals)
 vi.mock('../common/Modal', () => ({

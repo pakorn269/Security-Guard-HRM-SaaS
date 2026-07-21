@@ -1,4 +1,4 @@
-import { Client, ClientConfig, messagingApi } from '@line/bot-sdk';
+import { LineBotClient, ClientConfig, messagingApi } from '@line/bot-sdk';
 import { env } from './env.js';
 
 // LINE Bot configuration
@@ -8,7 +8,7 @@ const lineConfig: ClientConfig = {
 };
 
 // LINE Bot client for webhook verification
-export const lineClient = new Client(lineConfig);
+export const lineClient = new LineBotClient(lineConfig);
 
 // LINE Messaging API client for sending messages
 export const messagingApiClient = new messagingApi.MessagingApiClient({

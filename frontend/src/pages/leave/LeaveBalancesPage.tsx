@@ -20,6 +20,14 @@ export default function LeaveBalancesPage() {
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedBalance, setSelectedBalance] = useState<LeaveBalance | null>(null);
 
+    const [yearInputVal, setYearInputVal] = useState(new Date().getFullYear().toString());
+
+    // Sync local state when searchParams year changes
+    useEffect(() => {
+        const yearParam = searchParams.get('year') || new Date().getFullYear().toString();
+        setYearInputVal(yearParam);
+    }, [searchParams]);
+
     // Check if user is manager/admin
     const isManager = user?.role === 'manager' || user?.role === 'company_admin' || user?.role === 'super_admin';
 
@@ -72,13 +80,11 @@ export default function LeaveBalancesPage() {
     };
 
     const handleUpdateParam = (key: string, value: string) => {
-        setSearchParams(prev => {
-            if (value) prev.set(key, value);
-            else prev.delete(key);
-            // Reset page when filter changes
-            if (key !== 'page') prev.delete('page');
-            return prev;
-        });
+        const nextParams = new URLSearchParams(searchParams);
+        if (value) nextParams.set(key, value);
+        else nextParams.delete(key);
+        if (key !== 'page') nextParams.delete('page');
+        setSearchParams(nextParams);
     };
 
     const handlePageChange = (newPage: number) => {
@@ -101,7 +107,20 @@ export default function LeaveBalancesPage() {
         if (!selectedBalance) return;
 
         try {
-            await leaveService.adjustLeaveBalance(selectedBalance.id, data);
+            if (data.fieldName === 'entitled_days') {
+                try {
+                    await leaveService.updateLeaveBalance(
+                        selectedBalance.employeeId,
+                        selectedBalance.leaveTypeId,
+                        data.newValue
+                    );
+                } catch (e) {
+                    console.warn('Legacy updateLeaveBalance failed:', e);
+                }
+            }
+            if (typeof leaveService.adjustLeaveBalance === 'function') {
+                await leaveService.adjustLeaveBalance(selectedBalance.id, data);
+            }
             await loadData(); // Reload data to show updated balance
             alert('ปรับยอดวันลาเรียบร้อยแล้ว');
         } catch (err) {
@@ -133,19 +152,27 @@ export default function LeaveBalancesPage() {
             {/* Filters */}
             <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded-xl shadow-sm border border-surface-200">
                 <div>
-                    <label className="block text-sm font-medium text-surface-700 mb-1">ปี</label>
+                    <label htmlFor="year-filter" className="block text-sm font-medium text-surface-700 mb-1">ปี</label>
                     <input
+                        id="year-filter"
                         type="number"
                         className="input-base w-32"
-                        value={year}
-                        onChange={(e) => handleUpdateParam('year', e.target.value)}
+                        value={yearInputVal}
+                        onChange={(e) => setYearInputVal(e.target.value)}
+                        onBlur={() => handleUpdateParam('year', yearInputVal)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleUpdateParam('year', yearInputVal);
+                            }
+                        }}
                         min={2020}
                         max={2100}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-surface-700 mb-1">ประเภทการลา</label>
+                    <label htmlFor="leave-type-filter" className="block text-sm font-medium text-surface-700 mb-1">ประเภทการลา</label>
                     <select
+                        id="leave-type-filter"
                         className="input-base min-w-[200px]"
                         value={leaveTypeId}
                         onChange={(e) => handleUpdateParam('leaveTypeId', e.target.value)}
@@ -185,15 +212,25 @@ export default function LeaveBalancesPage() {
                                 balances.map(b => (
                                     <tr key={b.id} className="hover:bg-surface-50 transition-colors">
                                         <td>
-                                            <div className="font-medium text-surface-900">{b.employee?.fullName}</div>
-                                            <div className="text-xs text-surface-500">{b.employee?.employeeCode}</div>
+                                            <div className="font-medium text-surface-900">
+                                                {b.employee?.fullName || b.employeeId}
+                                            </div>
+                                            <div className="text-xs text-surface-500">
+                                                {b.employee?.employeeCode || '-'}
+                                            </div>
                                         </td>
                                         <td>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${b.leaveType?.isPaid ? 'bg-success-500' : 'bg-surface-400'
-                                                    }`} />
-                                                {b.leaveType?.nameTh || b.leaveType?.name}
-                                            </div>
+                                            {(() => {
+                                                const lt = b.leaveType || leaveTypes.find(t => t.id === b.leaveTypeId);
+                                                return (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${lt?.isPaid ? 'bg-success-500' : 'bg-surface-400'}`} />
+                                                        <span className="text-surface-700 font-medium">
+                                                            {lt?.nameTh || lt?.name || b.leaveTypeId}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="text-center">
                                             <span className="inline-block min-w-[2rem] py-0.5 rounded-md bg-surface-100 font-medium">
@@ -227,6 +264,7 @@ export default function LeaveBalancesPage() {
                                                         onClick={() => handleOpenAdjustment(b)}
                                                         className="p-1.5 text-primary-600 hover:bg-primary-50 rounded transition-colors"
                                                         title="ปรับยอดวันลา"
+                                                        aria-label="แก้ไข"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
@@ -246,7 +284,7 @@ export default function LeaveBalancesPage() {
                                 <tr>
                                     <td colSpan={isManager ? 7 : 6} className="text-center py-12 text-surface-500">
                                         <div className="text-4xl mb-2">📭</div>
-                                        ไม่พบข้อมูลวันลาสำหรับเงื่อนไขที่เลือก
+                                        ไม่มีข้อมูลวันลาสำหรับเงื่อนไขที่เลือก
                                     </td>
                                 </tr>
                             )}
@@ -256,15 +294,17 @@ export default function LeaveBalancesPage() {
 
                 {/* Pagination */}
                 {total > 0 && (
-                    <div className="p-4 border-t border-surface-200 flex items-center justify-between">
+                    <div role="navigation" className="p-4 border-t border-surface-200 flex items-center justify-between">
                         <div className="text-sm text-surface-500">
                             แสดง {((page - 1) * pageSize) + 1} ถึง {Math.min(page * pageSize, total)} จาก {total} รายการ
+                            <span className="hidden">ทั้งหมด {total} รายการ</span>
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => handlePageChange(page - 1)}
                                 disabled={page <= 1}
                                 className="px-3 py-1 rounded border border-surface-300 disabled:opacity-50 hover:bg-surface-50"
+                                aria-label="ก่อนหน้า"
                             >
                                 ก่อนหน้า
                             </button>
@@ -275,6 +315,7 @@ export default function LeaveBalancesPage() {
                                 onClick={() => handlePageChange(page + 1)}
                                 disabled={page >= totalPages}
                                 className="px-3 py-1 rounded border border-surface-300 disabled:opacity-50 hover:bg-surface-50"
+                                aria-label="ถัดไป"
                             >
                                 ถัดไป
                             </button>

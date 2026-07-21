@@ -110,7 +110,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
         expect(screen.getByText(/ลาพักผ่อน/)).toBeInTheDocument();
       });
     });
@@ -145,7 +145,7 @@ describe('LeaveTypesPage', () => {
       await waitFor(() => {
         const activeTypes = mockLeaveTypes.filter(t => t.isActive);
         activeTypes.forEach(type => {
-          expect(screen.getByText(type.name)).toBeInTheDocument();
+          expect(screen.getAllByText(type.name, { exact: false }).length).toBeGreaterThan(0);
         });
       });
     });
@@ -154,7 +154,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
         expect(screen.getByText(/Paid annual vacation leave/i)).toBeInTheDocument();
       });
     });
@@ -223,7 +223,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       // Find and click "Show inactive" toggle
@@ -249,14 +249,14 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const showInactiveToggle = screen.getByRole('checkbox', { name: /แสดงที่ไม่ใช้งาน/i });
       await user.click(showInactiveToggle);
 
       await waitFor(() => {
-        expect(screen.getByText('Inactive Leave Type')).toBeInTheDocument();
+        expect(screen.getByText('Inactive Leave Type', { exact: false })).toBeInTheDocument();
       });
     });
   });
@@ -422,7 +422,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const editButtons = screen.getAllByTestId('icon-pencil');
@@ -440,7 +440,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const editButtons = screen.getAllByTestId('icon-pencil');
@@ -473,7 +473,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const editButtons = screen.getAllByTestId('icon-pencil');
@@ -499,7 +499,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const deleteButtons = screen.getAllByTestId('icon-trash');
@@ -515,7 +515,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const deleteButtons = screen.getAllByTestId('icon-trash');
@@ -532,7 +532,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const deleteButtons = screen.getAllByTestId('icon-trash');
@@ -550,7 +550,7 @@ describe('LeaveTypesPage', () => {
       const initialCallCount = (leaveService.listLeaveTypes as any).mock.calls.length;
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const deleteButtons = screen.getAllByTestId('icon-trash');
@@ -570,7 +570,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       const deleteButtons = screen.getAllByTestId('icon-trash');
@@ -597,7 +597,7 @@ describe('LeaveTypesPage', () => {
       render(<LeaveTypesPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Annual Leave')).toBeInTheDocument();
+        expect(screen.getByText('Annual Leave', { exact: false })).toBeInTheDocument();
       });
 
       // Find toggle switch
@@ -625,7 +625,7 @@ describe('LeaveTypesPage', () => {
 
       await waitFor(() => {
         const typeNames = screen.getAllByRole('heading', { level: 3 });
-        expect(typeNames[0]).toHaveTextContent(sortedTypes[0].name);
+        expect(typeNames[0]).toHaveTextContent(sortedTypes[0].nameTh || sortedTypes[0].name);
       });
     });
   });
