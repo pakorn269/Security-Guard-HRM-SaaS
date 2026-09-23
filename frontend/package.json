@@ -5,8 +5,8 @@
   "type": "module",
   "optionalDependencies": {
     "@esbuild/linux-x64": "0.28.2",
-    "@rollup/rollup-linux-x64-gnu": "4.63.3",
-    "@rollup/rollup-linux-x64-musl": "4.63.3",
+    "@rollup/rollup-linux-x64-gnu": "4.63.4",
+    "@rollup/rollup-linux-x64-musl": "4.63.4",
     "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
     "@tailwindcss/oxide-linux-x64-musl": "4.3.3",
     "lightningcss-linux-x64-gnu": "^1.32.0",
