@@ -29,8 +29,8 @@
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@line/bot-sdk": "^11.4.0",
-    "@sentry/node": "^11.10.0",
-    "@supabase/supabase-js": "^2.118.0",
+    "@sentry/node": "^11.11.0",
+    "@supabase/supabase-js": "^2.119.0",
     "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.21.0",
     "bcryptjs": "^2.4.3",
